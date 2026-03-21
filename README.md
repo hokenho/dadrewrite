@@ -1,2 +1,2 @@
-# dadrewritetest.github.io
-Ken DAD Rewrite Test
+# dadrewrite
+Ken DAD Rewrite Frontend Website Test
