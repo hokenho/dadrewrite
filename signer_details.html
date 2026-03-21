@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DAD - Signer Details</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="page-header">
+            <h1>Disbursement Authorization Database <span class="subtitle">– Signer Details</span></h1>
+        </div>
+
+        <!-- Action Bar -->
+        <div class="action-bar action-bar--blue" id="actionBar">
+            <span class="action-bar-label">Actions:</span>
+            <span id="viewActions" style="display:contents;">
+                <a id="btnUpdate" href="#">Request Update</a>
+                <button onclick="location.reload()">Refresh</button>
+                <button onclick="doExport()">Export</button>
+                <button onclick="window.print()">Print</button>
+                <a id="btnAudit" href="#">View Audit Log</a>
+            </span>
+            <span id="editActions" style="display:none;">
+                <button onclick="saveChanges()">Submit for Review</button>
+                <button onclick="cancelEdit()">Cancel</button>
+            </span>
+        </div>
+
+        <!-- Signer Profile -->
+        <div class="panel panel--blue">
+            <div class="panel-title">Signer Profile <button id="btnDeleteSigner" class="btn-delete-signer" style="display:none;" onclick="deleteSigner()">Delete</button></div>
+            <table class="detail-table">
+                <tr><th>GAD ID</th><td id="gadId">hokenho@mfcgd.com</td></tr>
+                <tr><th>Last Name</th><td>Ken</td></tr>
+                <tr><th>First Name</th><td>Ho</td></tr>
+                <tr><th>Business Unit</th><td>Canadian IS</td></tr>
+                <tr><th>Signers Cost Center</th><td>1010</td></tr>
+                <tr><th>Job Level / Job Grade</th><td>Level 8</td></tr>
+                <tr><th>Job Title</th><td>Senior Full-stack Software Engineer</td></tr>
+                <tr><th>Employee No.</th><td>12345678</td></tr>
+                <tr><th>Pickup Cheques</th><td>Y</td></tr>
+            </table>
+        </div>
+
+        <!-- Signing Limit Authorizations -->
+        <div class="panel panel--blue">
+            <div class="panel-title">Signing Limit Authorizations</div>
+            <div class="data-table-wrapper">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th style="width:8%">Countries (Territories)</th>
+                            <th style="width:7%">Policy Category</th>
+                            <th style="width:8%">Limit Amounts</th>
+                            <th style="width:6%">Currency</th>
+                            <th style="width:9%">Approval Cost Center</th>
+                            <th style="width:5%">Exception</th>
+                            <th style="width:5%">Temporary</th>
+                            <th style="width:5%">Business Rationale</th>
+                            <th style="width:5%">Business Controls</th>
+                            <th style="width:6%">System</th>
+                            <th style="width:12%">Accounts Restriction</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>NA</td>
+                            <td>EXP</td>
+                            <td>10,000</td>
+                            <td>CAD</td>
+                            <td>1010</td>
+                            <td class="text-center">N</td>
+                            <td class="text-center">N</td>
+                            <td class="text-center">N</td>
+                            <td class="text-center">N</td>
+                            <td>AP</td>
+                            <td>000000-123456</td>
+                        </tr>
+                        <tr>
+                            <td>NA</td>
+                            <td>PAC</td>
+                            <td>25,000</td>
+                            <td>USD</td>
+                            <td>8352</td>
+                            <td class="text-center">Y</td>
+                            <td class="text-center">N</td>
+                            <td class="text-center">Y</td>
+                            <td class="text-center">N</td>
+                            <td>SNOW</td>
+                            <td>000000-789012</td>
+                        </tr>
+                        <tr>
+                            <td>HK</td>
+                            <td>EXT</td>
+                            <td>50,000</td>
+                            <td>HKD</td>
+                            <td>T08</td>
+                            <td class="text-center">N</td>
+                            <td class="text-center">Y</td>
+                            <td class="text-center">N</td>
+                            <td class="text-center">Y</td>
+                            <td>Concur</td>
+                            <td>000000-345678</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // Read UPN from URL
+        var params = new URLSearchParams(window.location.search);
+        var upn = params.get('upn') || '';
+        var isEditMode = false;
+        var originalData = [];
+
+        // Allowed values for each column in the limits table
+        var limitOptions = {
+            0: ['NA','HK','US'],
+            1: ['EXP','PAC','EXT'],
+            2: null, // number input
+            3: ['CAD','USD','HKD'],
+            4: ['1010','8352','T08'],
+            5: ['Y','N'],
+            6: ['Y','N'],
+            7: ['Y','N'],
+            8: ['Y','N'],
+            9: ['AP','SNOW','Concur'],
+            10: ['000000-123456','000000-789012','000000-345678']
+        };
+
+        // Wire up action links with UPN
+        if (upn) {
+            document.getElementById('btnAudit').href = 'audit_signer.html?upn=' + encodeURIComponent(upn);
+        }
+
+        // Request Update toggle
+        document.getElementById('btnUpdate').addEventListener('click', function(e) {
+            e.preventDefault();
+            if (!isEditMode) {
+                enterEditMode();
+            }
+        });
+
+        function enterEditMode() {
+            isEditMode = true;
+            // Show delete button on profile
+            document.getElementById('btnDeleteSigner').style.display = 'inline-block';
+
+            // Show Save/Cancel in action bar, hide view actions
+            document.getElementById('editActions').style.display = 'contents';
+            document.getElementById('viewActions').style.display = 'none';
+
+            // Convert limits table cells to inputs
+            var rows = document.querySelectorAll('.data-table tbody tr');
+            originalData = [];
+            rows.forEach(function(row, rIdx) {
+                var rowData = [];
+                var cells = row.querySelectorAll('td');
+                cells.forEach(function(cell, idx) {
+                    var val = cell.textContent.trim();
+                    rowData.push(val);
+                    cell.className = '';
+                    if (limitOptions[idx] === null) {
+                        // Number input
+                        var origNum = val.replace(/,/g, '');
+                        cell.innerHTML = '<input type="number" class="edit-input" data-orig="' + origNum + '" value="' + origNum + '">';
+                    } else {
+                        // Text input with datalist dropdown
+                        var opts = limitOptions[idx];
+                        var listId = 'dl_' + rIdx + '_' + idx;
+                        var html = '<input type="text" class="edit-input" data-orig="' + val + '" list="' + listId + '" value="' + val + '">';
+                        html += '<datalist id="' + listId + '">';
+                        opts.forEach(function(o) {
+                            html += '<option value="' + o + '">';
+                        });
+                        html += '</datalist>';
+                        cell.innerHTML = html;
+                    }
+                });
+                originalData.push(rowData);
+            });
+
+            // Attach change listeners
+            document.querySelectorAll('.edit-input').forEach(function(input) {
+                input.addEventListener('input', function() {
+                    if (this.value !== this.getAttribute('data-orig')) {
+                        this.classList.add('changed');
+                    } else {
+                        this.classList.remove('changed');
+                    }
+                });
+            });
+        }
+
+        function exitEditMode() {
+            isEditMode = false;
+            document.getElementById('btnDeleteSigner').style.display = 'none';
+            document.getElementById('editActions').style.display = 'none';
+            document.getElementById('viewActions').style.display = 'contents';
+
+            // Restore original cell values
+            var rows = document.querySelectorAll('.data-table tbody tr');
+            rows.forEach(function(row, rIdx) {
+                var cells = row.querySelectorAll('td');
+                cells.forEach(function(cell, cIdx) {
+                    cell.innerHTML = originalData[rIdx][cIdx];
+                    if (cIdx >= 5 && cIdx <= 8) cell.className = 'text-center';
+                });
+            });
+        }
+
+        function saveChanges() {
+            // Collect edited values
+            var rows = document.querySelectorAll('.data-table tbody tr');
+            var data = [];
+            rows.forEach(function(row) {
+                var rowData = {};
+                var inputs = row.querySelectorAll('.edit-input');
+                var headers = ['countries','policyCategory','limitAmounts','currency','approvalCostCenter','exception','temporary','businessRationale','businessControls','system','accountsRestriction'];
+                inputs.forEach(function(input, idx) {
+                    rowData[headers[idx]] = input.value;
+                });
+                data.push(rowData);
+            });
+            alert('Save triggered – connect to backend API.\n\n' + JSON.stringify(data, null, 2));
+            // After save, convert back to read-only
+            rows.forEach(function(row) {
+                var cells = row.querySelectorAll('td');
+                cells.forEach(function(cell, cIdx) {
+                    var input = cell.querySelector('.edit-input');
+                    if (input) {
+                        var val = input.value;
+                        if (cIdx === 2) val = Number(val).toLocaleString();
+                        cell.innerHTML = val;
+                        if (cIdx >= 5 && cIdx <= 8) cell.className = 'text-center';
+                    }
+                });
+            });
+            isEditMode = false;
+            document.getElementById('btnDeleteSigner').style.display = 'none';
+            document.getElementById('editActions').style.display = 'none';
+            document.getElementById('viewActions').style.display = 'contents';
+        }
+
+        function cancelEdit() {
+            exitEditMode();
+        }
+
+        function deleteSigner() {
+            if (confirm('Are you sure you want to delete this signer?')) {
+                alert('Delete triggered – connect to backend API.');
+            }
+        }
+
+        function doExport() {
+            // Placeholder: export logic
+            alert('Export triggered for ' + (upn || 'unknown user'));
+        }
+    </script>
+    <script src="js/navbar.js"></script>
+</body>
+</html>
+
