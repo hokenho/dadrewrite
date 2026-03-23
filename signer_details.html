@@ -33,9 +33,25 @@
             </span>
         </div>
 
+        <!-- DAD Change Request Panel (hidden by default, shown in DADREQ mode) -->
+        <div class="panel panel--blue" id="dadreqPanel" style="display:none;">
+            <div class="panel-title" style="position:relative;">DAD Change Request
+                <button id="btnApproveSigner" style="display:none; margin-left:10px; padding:3px 14px; font-size:0.82rem; font-weight:600; color:#fff; background:#2e7d32; border:none; border-radius:4px; cursor:pointer;" onclick="approveSigner()">Approve</button>
+                <button id="btnRejectSigner" style="display:none; margin-left:6px; padding:3px 14px; font-size:0.82rem; font-weight:600; color:#fff; background:#c62828; border:none; border-radius:4px; cursor:pointer;" onclick="openRejectModal()">Reject</button>
+                <button id="btnCancelRequest" style="display:none; margin-left:6px; padding:3px 14px; font-size:0.82rem; font-weight:600; color:#fff; background:#757575; border:none; border-radius:4px; cursor:pointer;" onclick="openCancelModal()">Cancel Request</button>
+                <div id="approvalToast" style="display:none; position:absolute; top:0; right:0; padding:8px 18px; border-radius:6px; font-size:0.82rem; font-weight:600; color:#fff; z-index:100;"></div>
+            </div>
+            <table class="detail-table">
+                <tr><th>Request ID</th><td id="dadreqId"></td></tr>
+                <tr><th>Requester</th><td id="dadreqRequester"></td></tr>
+                <tr><th>Request Status</th><td id="dadreqStatus"></td></tr>
+                <tr id="dadreqReasonRow" style="display:none;"><th>Reason</th><td id="dadreqReason"></td></tr>
+            </table>
+        </div>
+
         <!-- Signer Profile -->
         <div class="panel panel--blue">
-            <div class="panel-title">Signer Profile <span id="reqIdBadge" style="display:none; margin-left:10px; background:#2e86c1; color:#fff; padding:2px 8px; border-radius:4px; font-size:0.82rem; font-weight:600;"></span> <button id="btnDeleteSigner" class="btn-delete-signer" style="display:none;" onclick="deleteSigner()">Delete</button></div>
+            <div class="panel-title">Signer Profile <button id="btnDeleteSigner" class="btn-delete-signer" style="display:none;" onclick="deleteSigner()">Delete</button></div>
             <table class="detail-table">
                 <tr><th>GAD ID</th><td id="gadId">hokenho@mfcgd.com</td></tr>
                 <tr><th>Last Name</th><td>Ken</td></tr>
@@ -118,6 +134,36 @@
             </div>
         </div>
 
+        <!-- Cancel Reason Modal -->
+        <div id="cancelModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center;">
+            <div style="background:#fff; width:400px; border-radius:8px; padding:24px; box-shadow:0 4px 12px rgba(0,0,0,0.15);">
+                <h3 style="margin:0 0 16px 0;">Cancel Reason</h3>
+                <div style="margin-bottom:12px;">
+                    <input type="text" id="cancelReasonInput" placeholder="Enter reason for cancellation" style="width:100%; padding:8px; font-size:0.9rem; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;">
+                    <div id="cancelError" style="display:none; color:#d32f2f; font-size:0.8rem; margin-top:6px;">Please enter a reason.</div>
+                </div>
+                <div style="text-align:right;">
+                    <button style="padding:6px 14px; margin-right:8px; cursor:pointer;" onclick="closeCancelModal()">Close</button>
+                    <button style="padding:6px 14px; background:#757575; color:#fff; border:none; border-radius:4px; cursor:pointer;" onclick="confirmCancel()">Confirm</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Reject Reason Modal -->
+        <div id="rejectModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center;">
+            <div style="background:#fff; width:400px; border-radius:8px; padding:24px; box-shadow:0 4px 12px rgba(0,0,0,0.15);">
+                <h3 style="margin:0 0 16px 0;">Reject Reason</h3>
+                <div style="margin-bottom:12px;">
+                    <input type="text" id="rejectReasonInput" placeholder="Enter reason for rejection" style="width:100%; padding:8px; font-size:0.9rem; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;">
+                    <div id="rejectError" style="display:none; color:#d32f2f; font-size:0.8rem; margin-top:6px;">Please enter a reason.</div>
+                </div>
+                <div style="text-align:right;">
+                    <button style="padding:6px 14px; margin-right:8px; cursor:pointer;" onclick="closeRejectModal()">Cancel</button>
+                    <button style="padding:6px 14px; background:#c62828; color:#fff; border:none; border-radius:4px; cursor:pointer;" onclick="confirmReject()">Confirm</button>
+                </div>
+            </div>
+        </div>
+
         <!-- Submit For Review Modal -->
         <div id="reviewModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center;">
             <div style="background:#fff; width:90%; max-height:90%; border-radius:8px; padding:24px; box-shadow:0 4px 12px rgba(0,0,0,0.15); display:flex; flex-direction:column;">
@@ -132,29 +178,32 @@
 
     </div>
 
+    <script src="js/sql-js/sql-wasm.js"></script>
+    <script src="js/dadreq_data.js"></script>
     <script>
         // Read URL params
         var params = new URLSearchParams(window.location.search);
         var upn = params.get('upn') || '';
         var action = params.get('action') || '';
         var reqid = params.get('reqid') || '';
+        var isApprovalMode = params.get('approval') === 'true';
         var isDADREQMode = reqid && reqid.toUpperCase().indexOf('DADREQ') !== -1;
         var isEditMode = false;
         var originalData = [];
 
-        // Dummy DADREQ change data keyed by reqid
+        // Dummy DADREQ change data keyed by reqid (local demo entry + shared data from db/dadreq.db)
         var dadreqChanges = {
             'DADREQ123456': {
+                requestStatus: 'Open',
+                requester: 'jane.doe@manulife.com',
+                reason: '',
                 profile: {
                     'Business Unit': 'Global Tech',
                     'Job Title': 'Principal Engineer'
                 },
                 limits: [
-                    // Update row index 0: limit amount and currency changed
                     { type: 'update', rowIndex: 0, newData: ['NA', 'EXP', '20,000', 'USD', '1010', 'N', 'N', 'N', 'N', 'AP', '000000-123456'] },
-                    // Delete row index 1
                     { type: 'delete', rowIndex: 1 },
-                    // Add a brand new row
                     { type: 'new', newData: ['US', 'EXP', '5,000', 'CAD', '1010', 'N', 'N', 'N', 'N', 'AP', '000000-999999'] }
                 ]
             }
@@ -455,19 +504,115 @@
             enterEditMode();
         }
 
-        if (isDADREQMode) {
+        // Simulate current logged-in user
+        var currentUser = 'alice.smith@manulife.com';
+
+        function initDADREQPanel() {
+            if (!isDADREQMode) return;
+
             // Hide normal view actions, show DADREQ-only actions
             document.getElementById('viewActions').style.display = 'none';
             document.getElementById('dadreqActions').style.display = 'contents';
 
-            // Show reqid badge next to Signer Profile
-            var badge = document.getElementById('reqIdBadge');
-            badge.textContent = reqid.toUpperCase();
-            badge.style.display = 'inline-block';
+            // Show DADREQ panel
+            var dadreqPanel = document.getElementById('dadreqPanel');
+            dadreqPanel.style.display = '';
+
+            // Populate DADREQ info
+            var changes = dadreqChanges[reqid.toUpperCase()] || { requestStatus: 'Open', requester: 'unknown', reason: '' };
+            document.getElementById('dadreqId').textContent = reqid.toUpperCase();
+            document.getElementById('dadreqRequester').textContent = changes.requester || 'unknown';
+
+            var statusColors = { Open: '#2a5a8a', Complete: '#2e7d32', Reject: '#c62828', Cancel: '#757575' };
+            var color = statusColors[changes.requestStatus] || '#555';
+            document.getElementById('dadreqStatus').innerHTML = '<span style="display:inline-block;padding:2px 10px;border-radius:12px;font-size:0.78rem;font-weight:600;color:#fff;background:' + color + ';">' + changes.requestStatus + '</span>';
+
+            // Show Reason row only for Reject or Cancel
+            if ((changes.requestStatus === 'Reject' || changes.requestStatus === 'Cancel') && changes.reason) {
+                document.getElementById('dadreqReasonRow').style.display = '';
+                document.getElementById('dadreqReason').textContent = changes.reason;
+            }
+
+            // Show Approve/Reject buttons only if approval mode AND status is Open
+            if (isApprovalMode && changes.requestStatus === 'Open') {
+                document.getElementById('btnApproveSigner').style.display = 'inline-block';
+                document.getElementById('btnRejectSigner').style.display = 'inline-block';
+            }
+
+            // Show Cancel Request button if requester is current user AND status is Open
+            if (changes.requester === currentUser && changes.requestStatus === 'Open') {
+                document.getElementById('btnCancelRequest').style.display = 'inline-block';
+            }
 
             // Apply the DADREQ changes as a read-only view
-            var changes = dadreqChanges[reqid.toUpperCase()] || null;
             if (changes) applyDADREQView(changes);
+        }
+
+        // Load shared DADREQ data from db, merge into dadreqChanges, then render
+        window.DADREQ_READY.then(function() {
+            Object.assign(dadreqChanges, window.DADREQ_MAP);
+            initDADREQPanel();
+        });
+
+        function showApprovalToast(message, bgColor) {
+            var toast = document.getElementById('approvalToast');
+            toast.textContent = message;
+            toast.style.background = bgColor;
+            toast.style.display = 'block';
+            setTimeout(function() { toast.style.display = 'none'; }, 60000);
+        }
+
+        function hideApprovalButtons() {
+            document.getElementById('btnApproveSigner').style.display = 'none';
+            document.getElementById('btnRejectSigner').style.display = 'none';
+            document.getElementById('btnCancelRequest').style.display = 'none';
+        }
+
+        function approveSigner() {
+            showApprovalToast('Approve successfully', '#2e7d32');
+            hideApprovalButtons();
+        }
+
+        function openRejectModal() {
+            document.getElementById('rejectReasonInput').value = '';
+            document.getElementById('rejectError').style.display = 'none';
+            document.getElementById('rejectModal').style.display = 'flex';
+        }
+
+        function closeRejectModal() {
+            document.getElementById('rejectModal').style.display = 'none';
+        }
+
+        function confirmReject() {
+            var reason = document.getElementById('rejectReasonInput').value.trim();
+            if (!reason) {
+                document.getElementById('rejectError').style.display = 'block';
+                return;
+            }
+            closeRejectModal();
+            showApprovalToast('Reject successfully', '#c62828');
+            hideApprovalButtons();
+        }
+
+        function openCancelModal() {
+            document.getElementById('cancelReasonInput').value = '';
+            document.getElementById('cancelError').style.display = 'none';
+            document.getElementById('cancelModal').style.display = 'flex';
+        }
+
+        function closeCancelModal() {
+            document.getElementById('cancelModal').style.display = 'none';
+        }
+
+        function confirmCancel() {
+            var reason = document.getElementById('cancelReasonInput').value.trim();
+            if (!reason) {
+                document.getElementById('cancelError').style.display = 'block';
+                return;
+            }
+            closeCancelModal();
+            showApprovalToast('Cancel successfully', '#757575');
+            hideApprovalButtons();
         }
 
         function applyDADREQView(changes) {

@@ -12,6 +12,8 @@
             <h1>Disbursement Authorization Database <span class="subtitle">– Signer Request Status</span></h1>
         </div>
 
+        <script src="js/sql-js/sql-wasm.js"></script>
+        <script src="js/dadreq_data.js"></script>
         <script src="js/navbar.js"></script>
 
         <!-- Action Bar -->
@@ -50,6 +52,7 @@
                         <option value="Open">Open</option>
                         <option value="Complete">Complete</option>
                         <option value="Reject">Reject</option>
+                        <option value="Cancel">Cancel</option>
                     </select>
                 </div>
             </div>
@@ -74,27 +77,6 @@
                         </tr>
                     </thead>
                     <tbody id="resultsBody">
-                        <tr onclick="handleRowClick('DADREQ123456')" style="cursor: pointer;">
-                            <td>DADREQ123456</td>
-                            <td>2026-03-10</td>
-                            <td>jane.doe@manulife.com</td>
-                            <td>john.smith@manulife.com</td>
-                            <td><span class="status-badge status-open">Open</span></td>
-                        </tr>
-                        <tr onclick="handleRowClick('DADREQ123456')" style="cursor: pointer;">
-                            <td>DADREQ123457</td>
-                            <td>2026-03-05</td>
-                            <td>wei.chan@manulife.com</td>
-                            <td>mary.lee@manulife.com</td>
-                            <td><span class="status-badge status-complete">Complete</span></td>
-                        </tr>
-                        <tr onclick="handleRowClick('DADREQ123456')" style="cursor: pointer;">
-                            <td>DADREQ123458</td>
-                            <td>2026-02-28</td>
-                            <td>john.smith@manulife.com</td>
-                            <td>peter.ng@manulife.com</td>
-                            <td><span class="status-badge status-reject">Reject</span></td>
-                        </tr>
                     </tbody>
                 </table>
             </div>
@@ -118,6 +100,25 @@
             var panel = document.getElementById('searchPanel');
             panel.style.display = (panel.style.display === 'none') ? 'block' : 'none';
         }
+
+        // Load DADREQ rows from db/dadreq.db via sql.js
+        window.DADREQ_READY.then(function() {
+            var list = window.DADREQ_LIST || [];
+            var statusClasses = { Open: 'status-open', Complete: 'status-complete', Reject: 'status-reject', Cancel: 'status-cancel' };
+            var tbody = document.getElementById('resultsBody');
+            list.forEach(function(item) {
+                var tr = document.createElement('tr');
+                tr.style.cursor = 'pointer';
+                tr.setAttribute('onclick', "handleRowClick('" + item.reqId + "')");
+                tr.innerHTML =
+                    '<td>' + item.reqId + '</td>' +
+                    '<td>' + item.date + '</td>' +
+                    '<td>' + item.submitter + '</td>' +
+                    '<td>' + item.submittedFor + '</td>' +
+                    '<td><span class="status-badge ' + statusClasses[item.status] + '">' + item.status + '</span></td>';
+                tbody.appendChild(tr);
+            });
+        });
 
         function filterTable() {
             var reqId     = document.getElementById('requestId').value.trim().toLowerCase();
@@ -176,6 +177,7 @@
         .status-open    { background: #dbeafe; color: #1e40af; }
         .status-complete { background: #dcfce7; color: #166534; }
         .status-reject  { background: #fee2e2; color: #991b1b; }
+        .status-cancel  { background: #f3f4f6; color: #4b5563; }
     </style>
 </body>
 </html>

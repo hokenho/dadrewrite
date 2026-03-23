@@ -30,6 +30,8 @@
             <h1>Disbursement Authorization Database <span class="subtitle">– Dashboard</span></h1>
         </div>
 
+        <script src="js/sql-js/sql-wasm.js"></script>
+        <script src="js/dadreq_data.js"></script>
         <script src="js/navbar.js"></script>
 
         <!-- Action Bar -->
@@ -63,23 +65,30 @@
             </div>
         </div>
 
-        <!-- Table 1: Signers with Exception -->
+        <!-- Table 1: Request Status -->
         <div class="panel panel--blue">
-            <div class="panel-title">Signers with Exception <button style="margin-left:10px; font-size:0.75rem; padding:2px 10px;" onclick="exportTable('exceptionTable','signers_with_exception')">Export all data</button></div>
+            <div class="panel-title">Request Status (Past 90 days)
+                <select id="fReqStatus" style="margin-left:10px; font-size:0.75rem; padding:2px 6px;" onchange="filterRequestStatus()">
+                    <option value="">-- All --</option>
+                    <option value="Open">Open</option>
+                    <option value="Reject">Reject</option>
+                    <option value="Complete">Complete</option>
+                    <option value="Cancel">Cancel</option>
+                </select>
+                <button style="margin-left:10px; font-size:0.75rem; padding:2px 10px;" onclick="exportTable('requestTable','request_status')">Export all data</button>
+            </div>
             <div class="data-table-wrapper">
-                <table class="data-table dash-table" id="exceptionTable">
+                <table class="data-table dash-table" id="requestTable">
                     <thead>
                         <tr>
-                            <th>GAD ID</th><th>Last Name</th><th>First Name</th><th>Business Unit</th>
-                            <th>Signers Cost Center</th><th>Job Level / Job Grade</th><th>Job Title</th>
-                            <th>Employee No.</th><th>Pickup Cheques</th><th>Countries</th>
-                            <th>Policy Category</th><th>Limit Amounts</th><th>Currency</th>
-                            <th>Approval Cost Center</th><th>Exception</th><th>Temporary</th>
-                            <th>Business Rationale</th><th>Business Controls</th><th>System</th>
-                            <th>Accounts Restriction</th>
+                            <th>Request ID</th>
+                            <th>Date Submitted</th>
+                            <th>Submitted By</th>
+                            <th>Submitted For</th>
+                            <th>Request Status</th>
                         </tr>
                     </thead>
-                    <tbody id="exceptionBody"></tbody>
+                    <tbody id="requestBody"></tbody>
                 </table>
             </div>
         </div>
@@ -105,21 +114,23 @@
             </div>
         </div>
 
-        <!-- Table 3: Request Status -->
+        <!-- Table 3: Signers with Exception -->
         <div class="panel panel--blue">
-            <div class="panel-title">Request Status (Top 30) <button style="margin-left:10px; font-size:0.75rem; padding:2px 10px;" onclick="exportTable('requestTable','request_status')">Export all data</button></div>
+            <div class="panel-title">Signers with Exception (Top 30) <button style="margin-left:10px; font-size:0.75rem; padding:2px 10px;" onclick="exportTable('exceptionTable','signers_with_exception')">Export all data</button></div>
             <div class="data-table-wrapper">
-                <table class="data-table dash-table" id="requestTable">
+                <table class="data-table dash-table" id="exceptionTable">
                     <thead>
                         <tr>
-                            <th>Request ID</th>
-                            <th>Date Submitted</th>
-                            <th>Submitted By</th>
-                            <th>Submitted For</th>
-                            <th>Request Status</th>
+                            <th>GAD ID</th><th>Last Name</th><th>First Name</th><th>Business Unit</th>
+                            <th>Signers Cost Center</th><th>Job Level / Job Grade</th><th>Job Title</th>
+                            <th>Employee No.</th><th>Pickup Cheques</th><th>Countries</th>
+                            <th>Policy Category</th><th>Limit Amounts</th><th>Currency</th>
+                            <th>Approval Cost Center</th><th>Exception</th><th>Temporary</th>
+                            <th>Business Rationale</th><th>Business Controls</th><th>System</th>
+                            <th>Accounts Restriction</th>
                         </tr>
                     </thead>
-                    <tbody id="requestBody"></tbody>
+                    <tbody id="exceptionBody"></tbody>
                 </table>
             </div>
         </div>
@@ -211,41 +222,41 @@
             });
         }
 
-        // Table 1: Exception = Y, 50 rows
-        renderSignerTable('exceptionBody', genSignerRows(50, { exc: 'Y' }));
+        // Table 1: Request Status, past 90 days (data from db/dadreq.db via sql.js)
+        window.DADREQ_READY.then(function() {
+            var list = window.DADREQ_LIST || [];
+            var tbody = document.getElementById('requestBody');
+            var statusColors = { Open: '#2a5a8a', Complete: '#2e7d32', Reject: '#c62828', Cancel: '#757575' };
+
+            list.forEach(function(item) {
+                var tr = document.createElement('tr');
+                tr.style.cursor = 'pointer';
+                tr.setAttribute('onclick', "window.location='signer_details.html?reqid=" + item.reqId + "&approval=true'");
+                tr.innerHTML =
+                    '<td>' + item.reqId + '</td>' +
+                    '<td>' + item.date + '</td>' +
+                    '<td>' + item.submitter + '</td>' +
+                    '<td>' + item.submittedFor + '</td>' +
+                    '<td><span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:0.75rem;color:#fff;background:' + statusColors[item.status] + ';">' + item.status + '</span></td>';
+                tbody.appendChild(tr);
+            });
+        });
 
         // Table 2: Temporary = Y, top 30
         renderSignerTable('tempBody', genSignerRows(30, { temp: 'Y' }));
 
-        // Table 3: Request Status, top 30
-        (function() {
-            var statuses = ['Open','Complete','Reject'];
-            var submitters = ['alice.smith@manulife.com','bob.chan@manulife.com','charlie.johnson@manulife.com',
-                              'diana.lee@manulife.com','eric.brown@manulife.com','fiona.wang@manulife.com',
-                              'george.taylor@manulife.com','hannah.ho@manulife.com','ivan.wilson@manulife.com',
-                              'julia.ng@manulife.com'];
-            var submittedFor = ['ken.ho@manulife.com','laura.chen@manulife.com','mike.thomas@manulife.com',
-                                'nancy.yang@manulife.com','oscar.jackson@manulife.com','patricia.wu@manulife.com',
-                                'quinn.white@manulife.com','rachel.liu@manulife.com','sam.harris@manulife.com',
-                                'tina.kim@manulife.com'];
-            var tbody = document.getElementById('requestBody');
-            var statusColors = { Open: '#2a5a8a', Complete: '#2e7d32', Reject: '#c62828' };
+        // Table 3: Exception = Y, top 30
+        renderSignerTable('exceptionBody', genSignerRows(30, { exc: 'Y' }));
 
-            for (var i = 0; i < 30; i++) {
-                var reqId = 'DADREQ' + String(100001 + i);
-                var d = new Date(2026, 0, 1 + i);
-                var dateStr = d.toISOString().split('T')[0];
-                var status = statuses[i % 3];
-                var tr = document.createElement('tr');
-                tr.innerHTML =
-                    '<td>' + reqId + '</td>' +
-                    '<td>' + dateStr + '</td>' +
-                    '<td>' + submitters[i % submitters.length] + '</td>' +
-                    '<td>' + submittedFor[i % submittedFor.length] + '</td>' +
-                    '<td><span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:0.75rem;color:#fff;background:' + statusColors[status] + ';">' + status + '</span></td>';
-                tbody.appendChild(tr);
-            }
-        })();
+        function filterRequestStatus() {
+            var val = document.getElementById('fReqStatus').value;
+            document.querySelectorAll('#requestBody tr').forEach(function(row) {
+                var statusCell = row.querySelectorAll('td')[4];
+                if (!statusCell) return;
+                var rowStatus = statusCell.textContent.trim();
+                row.style.display = (!val || rowStatus === val) ? '' : 'none';
+            });
+        }
 
         // Export helper
         function exportTable(tableId, filename) {

@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DAD - User Access</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="page-header">
+            <h1>Disbursement Authorization Database <span class="subtitle">– User Access</span></h1>
+        </div>
+
+        <script src="js/sql-js/sql-wasm.js"></script>
+        <script src="js/navbar.js"></script>
+
+        <!-- Section 1: Search User -->
+        <div class="panel panel--blue">
+            <div class="panel-title">Search User</div>
+            <div class="filter-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
+                <div class="filter-field">
+                    <label for="gadId">GAD ID</label>
+                    <input type="text" id="gadId" placeholder="e.g. john.smith@manulife.com">
+                </div>
+                <div class="filter-field">
+                    <label for="firstName">First Name</label>
+                    <input type="text" id="firstName" placeholder="First name">
+                </div>
+                <div class="filter-field">
+                    <label for="lastName">Last Name</label>
+                    <input type="text" id="lastName" placeholder="Last name">
+                </div>
+            </div>
+            <div class="filter-actions">
+                <button class="btn btn-primary" onclick="doSearch()">Search</button>
+                <button class="btn btn-secondary" onclick="clearFilters()">Clear</button>
+            </div>
+        </div>
+
+        <!-- Section 2: Results -->
+        <div class="panel panel--blue" style="position:relative;">
+            <div id="toast" style="display:none; position:absolute; top:10px; right:14px; padding:8px 18px; border-radius:6px; font-size:0.82rem; font-weight:600; color:#fff; background:#2e7d32; z-index:100;"></div>
+            <div class="panel-title">Results</div>
+            <p style="margin: 0 0 15px 0; font-style: italic; color: #555;">Click the row to request change</p>
+            <div class="data-table-wrapper">
+                <table class="data-table" id="resultsTable">
+                    <thead>
+                        <tr>
+                            <th>GAD ID</th>
+                            <th>First Name</th>
+                            <th>Last Name</th>
+                            <th>Access</th>
+                        </tr>
+                    </thead>
+                    <tbody id="resultsBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal -->
+    <div id="modalOverlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.4); z-index:1000; justify-content:center; align-items:center;">
+        <div style="background:#fff; border-radius:8px; padding:24px 32px; min-width:380px; box-shadow:0 4px 20px rgba(0,0,0,0.25);">
+            <h3 style="margin:0 0 16px 0; color:#003366; font-size:1rem;">Change User Access</h3>
+            <table style="width:100%; border-collapse:collapse; margin-bottom:16px;">
+                <tr><td style="padding:6px 12px 6px 0; font-weight:600; color:#555;">GAD ID</td><td id="modalGadId" style="padding:6px 0;"></td></tr>
+                <tr><td style="padding:6px 12px 6px 0; font-weight:600; color:#555;">First Name</td><td id="modalFirstName" style="padding:6px 0;"></td></tr>
+                <tr><td style="padding:6px 12px 6px 0; font-weight:600; color:#555;">Last Name</td><td id="modalLastName" style="padding:6px 0;"></td></tr>
+                <tr>
+                    <td style="padding:6px 12px 6px 0; font-weight:600; color:#555;">Access</td>
+                    <td style="padding:6px 0;">
+                        <select id="modalAccess" style="padding:4px 8px; border:1px solid #ccc; border-radius:4px; font-size:0.85rem;">
+                            <option value="No Access">No Access</option>
+                            <option value="DAD User">DAD User</option>
+                            <option value="TSA">TSA</option>
+                        </select>
+                    </td>
+                </tr>
+            </table>
+            <div style="text-align:right;">
+                <button class="btn btn-secondary" onclick="closeModal()" style="margin-right:8px;">Cancel</button>
+                <button class="btn btn-primary" onclick="submitAccess()">Submit</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Load user data from db/data.db -> user_access table
+        var users = [];
+        var selectedIndex = -1;
+
+        initSqlJs({
+            locateFile: function(file) { return 'js/sql-js/' + file; }
+        }).then(function(SQL) {
+            return fetch('db/data.db').then(function(r) { return r.arrayBuffer(); }).then(function(buf) {
+                var db = new SQL.Database(new Uint8Array(buf));
+                var results = db.exec('SELECT gad_id, first_name, last_name, access FROM user_access ORDER BY gad_id');
+                db.close();
+                if (results.length) {
+                    results[0].values.forEach(function(r) {
+                        users.push({ gadId: r[0], fn: r[1], ln: r[2], access: r[3] });
+                    });
+                }
+                renderTable();
+            });
+        });
+
+        var accessColors = { 'DAD User': '#2e7d32', 'TSA': '#b8860b', 'No Access': '#c62828' };
+
+        function renderTable() {
+            var tbody = document.getElementById('resultsBody');
+            tbody.innerHTML = '';
+            users.forEach(function(u, i) {
+                var tr = document.createElement('tr');
+                tr.style.cursor = 'pointer';
+                tr.setAttribute('onclick', 'openModal(' + i + ')');
+                var color = accessColors[u.access] || '#555';
+                tr.innerHTML =
+                    '<td>' + u.gadId + '</td>' +
+                    '<td>' + u.fn + '</td>' +
+                    '<td>' + u.ln + '</td>' +
+                    '<td><span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:0.75rem;color:#fff;background:' + color + ';">' + u.access + '</span></td>';
+                tbody.appendChild(tr);
+            });
+        }
+
+        function openModal(index) {
+            selectedIndex = index;
+            var u = users[index];
+            document.getElementById('modalGadId').textContent = u.gadId;
+            document.getElementById('modalFirstName').textContent = u.fn;
+            document.getElementById('modalLastName').textContent = u.ln;
+            document.getElementById('modalAccess').value = u.access;
+            document.getElementById('modalOverlay').style.display = 'flex';
+        }
+
+        function closeModal() {
+            document.getElementById('modalOverlay').style.display = 'none';
+            selectedIndex = -1;
+        }
+
+        function submitAccess() {
+            var newAccess = document.getElementById('modalAccess').value;
+            users[selectedIndex].access = newAccess;
+            closeModal();
+            renderTable();
+
+            var toast = document.getElementById('toast');
+            toast.textContent = 'Access change successfully';
+            toast.style.display = 'block';
+            setTimeout(function() { toast.style.display = 'none'; }, 60000);
+        }
+
+        function doSearch() {
+            alert('Search triggered – connect to backend API to fetch results.');
+        }
+
+        function clearFilters() {
+            document.querySelectorAll('.filter-field input').forEach(function(el) {
+                el.value = '';
+            });
+        }
+    </script>
+</body>
+</html>

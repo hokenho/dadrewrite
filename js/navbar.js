@@ -9,20 +9,21 @@
             { label: 'Signer Request Status', href: 'request_status.html' }
         ]},
         { label: 'Tables Administration', children: [
-            { label: 'Policies Categories', href: 'policy.html' },
-            { label: 'Countries/Territories', href: 'country.html' },
-            { label: 'Business Units', href: 'bu.html' },
-            { label: 'Cost Centres', href: 'cc.html' },
-            { label: 'Currencies', href: 'currency.html' },
-            { label: 'Exchange Rates', href: 'exrate.html' },
-            { label: 'Job Levels', href: 'joblevel.html' }
+            { label: 'Policies Categories', href: 'table_policy.html' },
+            { label: 'Countries/Territories', href: 'table_country.html' },
+            { label: 'Business Units', href: 'table_bu.html' },
+            { label: 'Cost Centres', href: 'table_cc.html' },
+            { label: 'Currencies', href: 'table_currency.html' },
+            { label: 'Exchange Rates', href: 'table_exrate.html' },
+            { label: 'Job Levels', href: 'table_joblevel.html' }
         ]},
         { label: 'Reports', children: [
             { label: 'Reports and Extracts', href: 'report.html' }
         ]},
         { label: 'Utilities', children: [
             { label: 'Upload Tool', href: 'upload.html' },
-            { label: 'Dashboard', href: 'dashboard.html' }
+            { label: 'Dashboard', href: 'dashboard.html' },
+            { label: 'User Access', href: 'user.html' }
         ]}
     ];
 
