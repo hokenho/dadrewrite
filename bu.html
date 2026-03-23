@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DAD - Business Units</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="page-header">
+            <h1>Disbursement Authorization Database <span class="subtitle">– Business Units</span></h1>
+        </div>
+
+        <script src="js/navbar.js"></script>
+
+        <div class="action-bar action-bar--blue">
+            <span class="action-bar-label">Actions:</span>
+            <button onclick="doSearch()">Search</button>
+            <button onclick="location.reload()">Refresh</button>
+            <button onclick="doExport()">Export</button>
+            <button onclick="window.print()">Print</button>
+            <a href="audit_bu.html" class="action-bar-link">View Audit Log</a>
+        </div>
+
+        <div class="panel panel--blue" id="searchPanel" style="display:none;">
+            <div class="panel-title">Search Business Units</div>
+            <div class="filter-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
+                <div class="filter-field">
+                    <label for="fSecGroup">Security Group</label>
+                    <input type="text" id="fSecGroup" placeholder="e.g. GRP-FIN">
+                </div>
+                <div class="filter-field">
+                    <label for="fBuName">Business Unit Name</label>
+                    <input type="text" id="fBuName" placeholder="e.g. Canadian IS">
+                </div>
+            </div>
+            <div class="filter-actions">
+                <button class="btn btn-primary" onclick="filterTable()">Apply Filter</button>
+                <button class="btn btn-secondary" onclick="clearFilters()">Clear</button>
+            </div>
+        </div>
+
+        <div class="panel panel--blue">
+            <div class="panel-title">Business Units</div>
+            <div class="data-table-wrapper">
+                <table class="data-table" id="resultsTable">
+                    <thead>
+                        <tr>
+                            <th>Security Group</th>
+                            <th>Business Unit Name</th>
+                        </tr>
+                    </thead>
+                    <tbody id="resultsBody">
+                        <tr><td>GRP-CGB</td><td>Cdn Group Benefits</td></tr>
+                        <tr><td>GRP-CHR</td><td>CDN HR</td></tr>
+                        <tr><td>GRP-IGP</td><td>Cdn IGP</td></tr>
+                        <tr><td>GRP-IIC</td><td>Cdn IIC</td></tr>
+                        <tr><td>GRP-CIA</td><td>Cdn Ind Annuities</td></tr>
+                        <tr><td>GRP-CIM</td><td>CDN INFORCE MGMT</td></tr>
+                        <tr><td>GRP-CIAD</td><td>CDN INST ADVISORY</td></tr>
+                        <tr><td>GRP-CINM</td><td>CDN INSURANCE MANAGEMENT</td></tr>
+                        <tr><td>GRP-CINS</td><td>CDN INSURANCE SALES</td></tr>
+                        <tr><td>GRP-CIUW</td><td>CDN INSURANCE UW</td></tr>
+                        <tr><td>GRP-CITO</td><td>CDN IT OTHER</td></tr>
+                        <tr><td>GRP-CLG</td><td>CDN Legacy</td></tr>
+                        <tr><td>GRP-CLI</td><td>CDN LEGAL INSURANCE</td></tr>
+                        <tr><td>GRP-CLT</td><td>CDN Litigation</td></tr>
+                        <tr><td>GRP-CMB1</td><td>Cdn Manulife Bank</td></tr>
+                        <tr><td>GRP-CMB2</td><td>Cdn Manulife Bank</td></tr>
+                        <tr><td>GRP-CMF</td><td>Cdn Mutual Funds-Non-SMA</td></tr>
+                        <tr><td>GRP-COIM</td><td>CDN OPS INSURANCE MGMT</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function doSearch() {
+            var panel = document.getElementById('searchPanel');
+            panel.style.display = (panel.style.display === 'none') ? 'block' : 'none';
+        }
+        function filterTable() {
+            var sg   = document.getElementById('fSecGroup').value.trim().toLowerCase();
+            var name = document.getElementById('fBuName').value.trim().toLowerCase();
+            document.querySelectorAll('#resultsBody tr').forEach(function(row) {
+                var cells = row.querySelectorAll('td');
+                var match = (!sg   || cells[0].textContent.trim().toLowerCase().includes(sg))
+                         && (!name || cells[1].textContent.trim().toLowerCase().includes(name));
+                row.style.display = match ? '' : 'none';
+            });
+        }
+        function clearFilters() {
+            document.getElementById('fSecGroup').value = '';
+            document.getElementById('fBuName').value = '';
+            document.querySelectorAll('#resultsBody tr').forEach(function(r) { r.style.display = ''; });
+        }
+        function doExport() { alert('Export triggered – connect to backend API.'); }
+    </script>
+</body>
+</html>

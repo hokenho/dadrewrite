@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DAD - Countries/Territories</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="page-header">
+            <h1>Disbursement Authorization Database <span class="subtitle">– Countries/Territories</span></h1>
+        </div>
+
+        <script src="js/navbar.js"></script>
+
+        <div class="action-bar action-bar--blue">
+            <span class="action-bar-label">Actions:</span>
+            <button onclick="doSearch()">Search</button>
+            <button onclick="location.reload()">Refresh</button>
+            <button onclick="doExport()">Export</button>
+            <button onclick="window.print()">Print</button>
+            <a href="audit_country.html" class="action-bar-link">View Audit Log</a>
+        </div>
+
+        <div class="panel panel--blue" id="searchPanel" style="display:none;">
+            <div class="panel-title">Search Countries/Territories</div>
+            <div class="filter-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
+                <div class="filter-field">
+                    <label for="fCode">Country Code</label>
+                    <input type="text" id="fCode" placeholder="e.g. NA">
+                </div>
+                <div class="filter-field">
+                    <label for="fTerritory">Territory</label>
+                    <input type="text" id="fTerritory" placeholder="e.g. North America">
+                </div>
+            </div>
+            <div class="filter-actions">
+                <button class="btn btn-primary" onclick="filterTable()">Apply Filter</button>
+                <button class="btn btn-secondary" onclick="clearFilters()">Clear</button>
+            </div>
+        </div>
+
+        <div class="panel panel--blue">
+            <div class="panel-title">Countries/Territories</div>
+            <div class="data-table-wrapper">
+                <table class="data-table" id="resultsTable">
+                    <thead>
+                        <tr>
+                            <th>Country Code</th>
+                            <th>Territory</th>
+                        </tr>
+                    </thead>
+                    <tbody id="resultsBody">
+                        <tr><td>NA</td><td>North America</td></tr>
+                        <tr><td>US</td><td>United States</td></tr>
+                        <tr><td>HK</td><td>Hong Kong</td></tr>
+                        <tr><td>CA</td><td>Canada</td></tr>
+                        <tr><td>SG</td><td>Singapore</td></tr>
+                        <tr><td>AU</td><td>Australia</td></tr>
+                        <tr><td>JP</td><td>Japan</td></tr>
+                        <tr><td>GB</td><td>United Kingdom</td></tr>
+                        <tr><td>IN</td><td>India</td></tr>
+                        <tr><td>PH</td><td>Philippines</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function doSearch() {
+            var panel = document.getElementById('searchPanel');
+            panel.style.display = (panel.style.display === 'none') ? 'block' : 'none';
+        }
+        function filterTable() {
+            var code = document.getElementById('fCode').value.trim().toLowerCase();
+            var terr = document.getElementById('fTerritory').value.trim().toLowerCase();
+            document.querySelectorAll('#resultsBody tr').forEach(function(row) {
+                var cells = row.querySelectorAll('td');
+                var match = (!code || cells[0].textContent.trim().toLowerCase().includes(code))
+                         && (!terr || cells[1].textContent.trim().toLowerCase().includes(terr));
+                row.style.display = match ? '' : 'none';
+            });
+        }
+        function clearFilters() {
+            document.getElementById('fCode').value = '';
+            document.getElementById('fTerritory').value = '';
+            document.querySelectorAll('#resultsBody tr').forEach(function(r) { r.style.display = ''; });
+        }
+        function doExport() { alert('Export triggered – connect to backend API.'); }
+    </script>
+</body>
+</html>

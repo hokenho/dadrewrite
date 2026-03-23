@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DAD - Reports and Extracts</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        @media print {
+            @page { size: landscape; margin: 5mm; }
+            body { background: #fff !important; }
+            .container { max-width: 100% !important; padding: 0 !important; }
+            #resultsTable { font-size: 5.5pt; table-layout: auto; }
+            #resultsTable th { font-size: 5pt; white-space: normal; word-break: break-word; max-width: 30px; }
+            #resultsTable td { padding: 1px 2px; white-space: nowrap; }
+            .action-bar, .alerts-toggle, .alerts-panel, .alerts-overlay, nav, #searchPanel { display: none !important; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="page-header">
+            <h1>Disbursement Authorization Database <span class="subtitle">– Reports and Extracts</span></h1>
+        </div>
+
+        <script src="js/navbar.js"></script>
+
+        <!-- Action Bar -->
+        <div class="action-bar action-bar--blue">
+            <span class="action-bar-label">Actions:</span>
+            <button onclick="window.print()">Print</button>
+        </div>
+
+        <!-- Section 1: Filter (shown by default) -->
+        <div class="panel panel--blue" id="searchPanel">
+            <div class="panel-title">Filter Signer Data</div>
+            <div class="filter-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
+                <div class="filter-field">
+                    <label for="fBU">Business Unit</label>
+                    <select id="fBU" onchange="handleFilterChange(this)">
+                        <option value="">-- All --</option>
+                        <option value="Cdn Group Benefits">Cdn Group Benefits</option>
+                        <option value="CDN HR">CDN HR</option>
+                        <option value="Cdn IGP">Cdn IGP</option>
+                        <option value="Cdn IIC">Cdn IIC</option>
+                        <option value="Cdn Ind Annuities">Cdn Ind Annuities</option>
+                        <option value="CDN INFORCE MGMT">CDN INFORCE MGMT</option>
+                        <option value="CDN INST ADVISORY">CDN INST ADVISORY</option>
+                        <option value="CDN INSURANCE MANAGEMENT">CDN INSURANCE MANAGEMENT</option>
+                        <option value="CDN INSURANCE SALES">CDN INSURANCE SALES</option>
+                        <option value="CDN INSURANCE UW">CDN INSURANCE UW</option>
+                    </select>
+                </div>
+                <div class="filter-field">
+                    <label for="fCC">Signer Cost Center</label>
+                    <select id="fCC" onchange="handleFilterChange(this)">
+                        <option value="">-- All --</option>
+                        <option value="1010">1010</option>
+                        <option value="2020">2020</option>
+                        <option value="3030">3030</option>
+                        <option value="4040">4040</option>
+                        <option value="8352">8352</option>
+                        <option value="T08">T08</option>
+                    </select>
+                </div>
+                <div class="filter-field">
+                    <label for="fJL">Job Level / Job Grade</label>
+                    <select id="fJL" onchange="handleFilterChange(this)">
+                        <option value="">-- All --</option>
+                        <option value="Level 4">Level 4</option>
+                        <option value="Level 5">Level 5</option>
+                        <option value="Level 6">Level 6</option>
+                        <option value="Level 7">Level 7</option>
+                        <option value="Level 8">Level 8</option>
+                        <option value="Level 9">Level 9</option>
+                        <option value="Level 10">Level 10</option>
+                    </select>
+                </div>
+                <div class="filter-field">
+                    <label for="fCheque">Pickup Cheques</label>
+                    <select id="fCheque" onchange="handleFilterChange(this)">
+                        <option value="">-- All --</option>
+                        <option value="Y">Y</option>
+                        <option value="N">N</option>
+                    </select>
+                </div>
+                <div class="filter-field">
+                    <label for="fCountry">Countries</label>
+                    <select id="fCountry" onchange="handleFilterChange(this)">
+                        <option value="">-- All --</option>
+                        <option value="NA">NA</option>
+                        <option value="US">US</option>
+                        <option value="HK">HK</option>
+                    </select>
+                </div>
+                <div class="filter-field">
+                    <label for="fPolicyCat">Policy Category</label>
+                    <select id="fPolicyCat" onchange="handleFilterChange(this)">
+                        <option value="">-- All --</option>
+                        <option value="EXP">EXP</option>
+                        <option value="PAC">PAC</option>
+                        <option value="EXT">EXT</option>
+                    </select>
+                </div>
+                <div class="filter-field">
+                    <label for="fLimit">Limit Amounts (max)</label>
+                    <input type="number" id="fLimit" placeholder="e.g. 50000" min="0" oninput="handleFilterChange(this)">
+                </div>
+                <div class="filter-field">
+                    <label for="fCurrency">Currency</label>
+                    <select id="fCurrency" onchange="handleFilterChange(this)">
+                        <option value="">-- All --</option>
+                        <option value="CAD">CAD</option>
+                        <option value="USD">USD</option>
+                        <option value="HKD">HKD</option>
+                    </select>
+                </div>
+                <div class="filter-field">
+                    <label for="fApprCC">Approval Cost Center</label>
+                    <select id="fApprCC" onchange="handleFilterChange(this)">
+                        <option value="">-- All --</option>
+                        <option value="1010">1010</option>
+                        <option value="2020">2020</option>
+                        <option value="3030">3030</option>
+                        <option value="8352">8352</option>
+                        <option value="T08">T08</option>
+                    </select>
+                </div>
+                <div class="filter-field">
+                    <label for="fSystem">System</label>
+                    <select id="fSystem" onchange="handleFilterChange(this)">
+                        <option value="">-- All --</option>
+                        <option value="AP">AP</option>
+                        <option value="SNOW">SNOW</option>
+                        <option value="Concur">Concur</option>
+                    </select>
+                </div>
+            </div>
+            <div id="filterError" style="display:none; color:#d32f2f; font-weight:600; margin-bottom:8px;">Please select exactly one filter before applying.</div>
+            <div class="filter-actions">
+                <button class="btn btn-primary" onclick="applyFilter()">Apply</button>
+                <button class="btn btn-secondary" onclick="clearFilters()">Clear</button>
+            </div>
+        </div>
+
+        <!-- Section 2: Results (hidden until Apply) -->
+        <div class="panel panel--blue" id="resultsPanel" style="display:none;">
+            <div class="panel-title">Results (Top 50 rows) <button style="margin-left:10px; font-size:0.75rem; padding:2px 10px;" onclick="exportCSV()">Export all data</button></div>
+            <div class="data-table-wrapper">
+                <table class="data-table" id="resultsTable" style="font-size:0.7rem; word-break:break-word; width:100%;">
+                    <style>
+                        #resultsTable th { font-size: 0.6rem; white-space: normal; }
+                        #resultsTable td { padding: 4px 5px; white-space: nowrap; min-width: 25px; }
+                    </style>
+                    <thead>
+                        <tr>
+                            <th>GAD ID</th>
+                            <th>Last Name</th>
+                            <th>First Name</th>
+                            <th>Business Unit</th>
+                            <th>Signers Cost Center</th>
+                            <th>Job Level / Job Grade</th>
+                            <th>Job Title</th>
+                            <th>Employee No.</th>
+                            <th>Pickup Cheques</th>
+                            <th>Countries</th>
+                            <th>Policy Category</th>
+                            <th>Limit Amounts</th>
+                            <th>Currency</th>
+                            <th>Approval Cost Center</th>
+                            <th>Exception</th>
+                            <th>Temporary</th>
+                            <th>Business Rationale</th>
+                            <th>Business Controls</th>
+                            <th>System</th>
+                            <th>Accounts Restriction</th>
+                        </tr>
+                    </thead>
+                    <tbody id="resultsBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Dummy data arrays
+        var bus = ['Cdn Group Benefits','CDN HR','Cdn IGP','Cdn IIC','Cdn Ind Annuities',
+                   'CDN INFORCE MGMT','CDN INST ADVISORY','CDN INSURANCE MANAGEMENT',
+                   'CDN INSURANCE SALES','CDN INSURANCE UW'];
+        var fnames = ['Alice','Bob','Charlie','Diana','Eric','Fiona','George','Hannah','Ivan','Julia',
+                      'Ken','Laura','Mike','Nancy','Oscar','Patricia','Quinn','Rachel','Sam','Tina'];
+        var lnames = ['Smith','Chan','Johnson','Lee','Brown','Wang','Taylor','Ho','Wilson','Ng',
+                      'Anderson','Chen','Thomas','Yang','Jackson','Wu','White','Liu','Harris','Kim'];
+        var ccs    = ['1010','2020','3030','4040','8352','T08'];
+        var jlevels= ['Level 4','Level 5','Level 6','Level 7','Level 8','Level 9','Level 10'];
+        var jtitles= ['Associate Analyst','Analyst','Senior Analyst','Software Engineer','Senior Engineer',
+                      'Lead Engineer','Principal Engineer','Manager','Senior Manager','Director'];
+        var cheques= ['Y','N'];
+        var countries = ['NA','US','HK'];
+        var pcats  = ['EXP','PAC','EXT'];
+        var limits = [5000,10000,15000,20000,25000,30000,50000,75000,100000];
+        var currs  = ['CAD','USD','HKD'];
+        var apprCCs= ['1010','2020','3030','8352','T08'];
+        var yesno  = ['Y','N'];
+        var systems= ['AP','SNOW','Concur'];
+        var accts  = ['000000-123456','000000-234567','000000-345678','000000-456789','000000-567890',
+                      '000000-678901','000000-789012','000000-890123','000000-901234','000000-999999'];
+
+        function pick(arr, i) { return arr[i % arr.length]; }
+
+        var rows = [];
+        for (var i = 0; i < 50; i++) {
+            var fn = pick(fnames, i);
+            var ln = pick(lnames, i);
+            var gadId = fn.toLowerCase() + '.' + ln.toLowerCase() + '@manulife.com';
+            var empNo = String(10000001 + i);
+            rows.push({
+                bu: pick(bus, i),
+                gadId: gadId,
+                ln: ln,
+                fn: fn,
+                cc: pick(ccs, i),
+                jl: pick(jlevels, i),
+                jt: pick(jtitles, i),
+                emp: empNo,
+                chq: pick(cheques, i),
+                country: pick(countries, i),
+                pcat: pick(pcats, i),
+                limit: pick(limits, i),
+                curr: pick(currs, i),
+                apprCC: pick(apprCCs, i),
+                exc: pick(yesno, i + 1),
+                temp: pick(yesno, i + 2),
+                br: pick(yesno, i + 3),
+                bc: pick(yesno, i),
+                sys: pick(systems, i),
+                acct: pick(accts, i)
+            });
+        }
+        // Sort dummy data by Business Unit ascending
+        rows.sort(function(a, b) { return a.bu.localeCompare(b.bu); });
+
+        function renderTable(data) {
+            var tbody = document.getElementById('resultsBody');
+            tbody.innerHTML = '';
+            data.forEach(function(r) {
+                var tr = document.createElement('tr');
+                tr.innerHTML =
+                    '<td>' + r.gadId + '</td>' +
+                    '<td>' + r.ln + '</td>' +
+                    '<td>' + r.fn + '</td>' +
+                    '<td>' + r.bu + '</td>' +
+                    '<td>' + r.cc + '</td>' +
+                    '<td>' + r.jl + '</td>' +
+                    '<td>' + r.jt + '</td>' +
+                    '<td>' + r.emp + '</td>' +
+                    '<td class="text-center">' + r.chq + '</td>' +
+                    '<td>' + r.country + '</td>' +
+                    '<td>' + r.pcat + '</td>' +
+                    '<td>' + Number(r.limit).toLocaleString() + '</td>' +
+                    '<td>' + r.curr + '</td>' +
+                    '<td>' + r.apprCC + '</td>' +
+                    '<td class="text-center">' + r.exc + '</td>' +
+                    '<td class="text-center">' + r.temp + '</td>' +
+                    '<td class="text-center">' + r.br + '</td>' +
+                    '<td class="text-center">' + r.bc + '</td>' +
+                    '<td>' + r.sys + '</td>' +
+                    '<td>' + r.acct + '</td>';
+                tbody.appendChild(tr);
+            });
+        }
+
+        function applyFilter() {
+            var fBU      = document.getElementById('fBU').value;
+            var fCC      = document.getElementById('fCC').value;
+            var fJL      = document.getElementById('fJL').value;
+            var fChq     = document.getElementById('fCheque').value;
+            var fCnt     = document.getElementById('fCountry').value;
+            var fPC      = document.getElementById('fPolicyCat').value;
+            var fLim     = document.getElementById('fLimit').value;
+            var fCur     = document.getElementById('fCurrency').value;
+            var fACC     = document.getElementById('fApprCC').value;
+            var fSys     = document.getElementById('fSystem').value;
+
+            // Count how many filters are selected
+            var selectedCount = [fBU, fCC, fJL, fChq, fCnt, fPC, fLim, fCur, fACC, fSys]
+                .filter(function(v) { return v !== ''; }).length;
+
+            var errMsg = document.getElementById('filterError');
+            if (selectedCount !== 1) {
+                errMsg.textContent = 'Please select exactly one filter before applying.';
+                errMsg.style.display = 'block';
+                document.getElementById('resultsPanel').style.display = 'none';
+                return;
+            }
+            errMsg.style.display = 'none';
+
+            var filtered = rows.filter(function(r) {
+                return (!fBU  || r.bu === fBU)
+                    && (!fCC  || r.cc === fCC)
+                    && (!fJL  || r.jl === fJL)
+                    && (!fChq || r.chq === fChq)
+                    && (!fCnt || r.country === fCnt)
+                    && (!fPC  || r.pcat === fPC)
+                    && (!fLim || r.limit <= Number(fLim))
+                    && (!fCur || r.curr === fCur)
+                    && (!fACC || r.apprCC === fACC)
+                    && (!fSys || r.sys === fSys);
+            });
+            document.getElementById('resultsPanel').style.display = 'block';
+            renderTable(filtered);
+        }
+
+        var filterIds = ['fBU','fCC','fJL','fCheque','fCountry','fPolicyCat','fLimit','fCurrency','fApprCC','fSystem'];
+
+        function handleFilterChange(el) {
+            var hasValue = el.value !== '';
+            document.getElementById('filterError').style.display = 'none';
+            filterIds.forEach(function(id) {
+                var field = document.getElementById(id).closest('.filter-field');
+                if (id === el.id) return;
+                field.style.display = hasValue ? 'none' : '';
+            });
+        }
+
+        function clearFilters() {
+            filterIds.forEach(function(id) {
+                document.getElementById(id).value = '';
+                document.getElementById(id).closest('.filter-field').style.display = '';
+            });
+            document.getElementById('filterError').style.display = 'none';
+            document.getElementById('resultsPanel').style.display = 'none';
+        }
+
+        function exportCSV() {
+            var table = document.getElementById('resultsTable');
+            var csv = [];
+            var headerRow = table.querySelectorAll('thead th');
+            var headers = [];
+            headerRow.forEach(function(th) { headers.push('"' + th.textContent.trim() + '"'); });
+            csv.push(headers.join(','));
+
+            table.querySelectorAll('tbody tr').forEach(function(tr) {
+                if (tr.style.display === 'none') return;
+                var rowData = [];
+                tr.querySelectorAll('td').forEach(function(td) {
+                    rowData.push('"' + td.textContent.trim().replace(/"/g, '""') + '"');
+                });
+                csv.push(rowData.join(','));
+            });
+
+            var blob = new Blob([csv.join('\n')], { type: 'text/csv;charset=utf-8;' });
+            var link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'signer_report_extract.csv';
+            link.click();
+            URL.revokeObjectURL(link.href);
+        }
+    </script>
+</body>
+</html>

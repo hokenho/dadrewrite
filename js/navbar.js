@@ -9,16 +9,16 @@
             { label: 'Signer Request Status', href: 'request_status.html' }
         ]},
         { label: 'Tables Administration', children: [
-            { label: 'Policies', href: 'policy.html' },
+            { label: 'Policies Categories', href: 'policy.html' },
+            { label: 'Countries/Territories', href: 'country.html' },
             { label: 'Business Units', href: 'bu.html' },
             { label: 'Cost Centres', href: 'cc.html' },
-            { label: 'Countries', href: 'country.html' },
             { label: 'Currencies', href: 'currency.html' },
             { label: 'Exchange Rates', href: 'exrate.html' },
             { label: 'Job Levels', href: 'joblevel.html' }
         ]},
         { label: 'Reports', children: [
-            { label: 'Reports and Extracts', href: '#' }
+            { label: 'Reports and Extracts', href: 'report.html' }
         ]},
         { label: 'Utilities', children: [
             { label: 'Upload Tool', href: 'upload.html' },

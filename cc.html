@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DAD - Cost Centres</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="page-header">
+            <h1>Disbursement Authorization Database <span class="subtitle">– Cost Centres</span></h1>
+        </div>
+
+        <script src="js/navbar.js"></script>
+
+        <div class="action-bar action-bar--blue">
+            <span class="action-bar-label">Actions:</span>
+            <button onclick="doSearch()">Search</button>
+            <button onclick="location.reload()">Refresh</button>
+            <button onclick="doExport()">Export</button>
+            <button onclick="window.print()">Print</button>
+            <a href="audit_cc.html" class="action-bar-link">View Audit Log</a>
+        </div>
+
+        <div class="panel panel--blue" id="searchPanel" style="display:none;">
+            <div class="panel-title">Search Cost Centres</div>
+            <div class="filter-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
+                <div class="filter-field">
+                    <label for="fCcNo">Cost Centre No.</label>
+                    <input type="text" id="fCcNo" placeholder="e.g. 1010">
+                </div>
+                <div class="filter-field">
+                    <label for="fCcDesc">Cost Centre Description</label>
+                    <input type="text" id="fCcDesc" placeholder="e.g. IT Operations">
+                </div>
+                <div class="filter-field">
+                    <label for="fStatus">Status</label>
+                    <select id="fStatus">
+                        <option value="">-- All --</option>
+                        <option value="Active">Active</option>
+                        <option value="Inactive">Inactive</option>
+                    </select>
+                </div>
+            </div>
+            <div class="filter-actions">
+                <button class="btn btn-primary" onclick="filterTable()">Apply Filter</button>
+                <button class="btn btn-secondary" onclick="clearFilters()">Clear</button>
+            </div>
+        </div>
+
+        <div class="panel panel--blue">
+            <div class="panel-title">Cost Centres</div>
+            <div class="data-table-wrapper">
+                <table class="data-table" id="resultsTable">
+                    <thead>
+                        <tr>
+                            <th>Cost Centre No.</th>
+                            <th>Cost Centre Description</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="resultsBody">
+                        <tr><td>1010</td><td>Canadian IS – Technology</td><td>Active</td></tr>
+                        <tr><td>2020</td><td>Finance Operations – AP</td><td>Active</td></tr>
+                        <tr><td>3030</td><td>HR Technology</td><td>Active</td></tr>
+                        <tr><td>4040</td><td>Global Tech Services</td><td>Active</td></tr>
+                        <tr><td>5050</td><td>Actuarial – Modelling</td><td>Active</td></tr>
+                        <tr><td>6060</td><td>Marketing – Digital</td><td>Inactive</td></tr>
+                        <tr><td>7070</td><td>Legal & Compliance</td><td>Active</td></tr>
+                        <tr><td>8080</td><td>Operations – Claims</td><td>Active</td></tr>
+                        <tr><td>8352</td><td>Risk Management</td><td>Active</td></tr>
+                        <tr><td>T08</td><td>Investments – Treasury</td><td>Inactive</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function doSearch() {
+            var panel = document.getElementById('searchPanel');
+            panel.style.display = (panel.style.display === 'none') ? 'block' : 'none';
+        }
+        function filterTable() {
+            var no   = document.getElementById('fCcNo').value.trim().toLowerCase();
+            var desc = document.getElementById('fCcDesc').value.trim().toLowerCase();
+            var stat = document.getElementById('fStatus').value.toLowerCase();
+            document.querySelectorAll('#resultsBody tr').forEach(function(row) {
+                var cells = row.querySelectorAll('td');
+                var match = (!no   || cells[0].textContent.trim().toLowerCase().includes(no))
+                         && (!desc || cells[1].textContent.trim().toLowerCase().includes(desc))
+                         && (!stat || cells[2].textContent.trim().toLowerCase() === stat);
+                row.style.display = match ? '' : 'none';
+            });
+        }
+        function clearFilters() {
+            document.getElementById('fCcNo').value = '';
+            document.getElementById('fCcDesc').value = '';
+            document.getElementById('fStatus').value = '';
+            document.querySelectorAll('#resultsBody tr').forEach(function(r) { r.style.display = ''; });
+        }
+        function doExport() { alert('Export triggered – connect to backend API.'); }
+    </script>
+</body>
+</html>

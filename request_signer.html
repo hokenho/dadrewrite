@@ -40,7 +40,7 @@
         <!-- Section 2: Results Table -->
         <div class="panel panel--blue">
             <div class="panel-title">Section 2: Results</div>
-            <p style="margin: 0 0 15px 0; font-style: italic; color: #555;">Double click the row to request change</p>
+            <p style="margin: 0 0 15px 0; font-style: italic; color: #555;">Click the row to request change</p>
             <div class="data-table-wrapper">
                 <table class="data-table" id="resultsTable">
                     <thead>
@@ -52,19 +52,19 @@
                         </tr>
                     </thead>
                     <tbody id="resultsBody">
-                        <tr ondblclick="handleRowDblClick('Y', 'john.smith@manulife.com')" style="cursor: pointer;">
+                        <tr onclick="handleRowClick('Y', 'john.smith@manulife.com')" style="cursor: pointer;">
                             <td>john.smith@manulife.com</td>
                             <td>John</td>
                             <td>Smith</td>
                             <td>Y</td>
                         </tr>
-                        <tr ondblclick="handleRowDblClick('N', 'jane.doe@manulife.com')" style="cursor: pointer;">
+                        <tr onclick="handleRowClick('N', 'jane.doe@manulife.com')" style="cursor: pointer;">
                             <td>jane.doe@manulife.com</td>
                             <td>Jane</td>
                             <td>Doe</td>
                             <td>N</td>
                         </tr>
-                        <tr ondblclick="handleRowDblClick('Y', 'wei.chan@manulife.com')" style="cursor: pointer;">
+                        <tr onclick="handleRowClick('Y', 'wei.chan@manulife.com')" style="cursor: pointer;">
                             <td>wei.chan@manulife.com</td>
                             <td>Wei</td>
                             <td>Chan</td>
@@ -87,12 +87,8 @@
             });
         }
 
-        function handleRowDblClick(isExisting, gadId) {
-            if (isExisting === 'Y') {
-                window.location = 'signer_details.html?upn=' + encodeURIComponent(gadId);
-            } else {
-                window.location = 'signer_new.html?upn=' + encodeURIComponent(gadId);
-            }
+        function handleRowClick(isExisting, gadId) {
+            window.location = 'signer_details.html?reqid=DADREQ123456';
         }
     </script>
 </body>

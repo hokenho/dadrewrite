@@ -12,12 +12,12 @@ Signer Authorization (signer.html) [search and display all signer's information]
 [when user click any row on the results, will redirect to signer_details.html with url parameter upn=user_upn@manulife.com]
 Signer Onboarding 
 - Signer Onboarding - Request New Signer Form (request_signer.html) [to request signer data change]
-- Signer Request Status (request_status.html) [to check the user's request status]
+- Signer Request Status (request_status.html) [to check signer request status]
 Tables Administration
-- Policies (policy.html)
+- Policies Categories (policy.html)
+- Countries/Territories (country.html)
 - Business Units (bu.html)
 - Cost Centres (cc.html)
-- Countries (country.html)
 - Currencies (currency.html)
 - Exchange Rates (exrate.html)
 - Job levels (joblevel.html)
@@ -161,6 +161,17 @@ Accounts Restriction
 
 (please help to draft 2 more rows for the second table based on this one)
 
+
+signer_details.html?reqid=DADREQ123456
+when url parameter contains DADREQ, load the page in viewing DADREQ mode
+ACTIONS - only keep "Refresh/Export/Print"
+the page will put the DADREQ123456 next to "SIGNER PROFILE"
+will lookup and load the original signer data (both first and second table) using GADID=hokenho@mfcgd.com, 
+and then load the change requested from DADREQ123456
+on table 1, put the new value using 255,255,0 yellow color next to the current value
+on second table, put the new row below the original row, use 255,255,0 yellow color to highligh the change, and group them with a thick border
+
+
 ===============================================================================
 
 Page: Signer Onboarding - Request New Signer Form (request_signer.html) 
@@ -177,41 +188,274 @@ First Name
 Last Name
 Existing Signer
 
-double click on section 2's row
-if existing signer - open signer_details.html?upn=john.smith@manulife.com
-if new signer - open signer_new.html?upn=john.smith@manulife.com
-
+click on section 2's row
+open signer_details.html?reqid=DADREQ123456
 ===============================================================================
 
 Page: Signer Request Status (request_status.html) 
-[to check the user's request status]
+[to check signer request status]
+
+Actions: Refresh/Export/Print
+
+Section 1: Search Request
+Search Filters:
+Request ID
+free text input
+
+Date Submitted
+Date Selection 
+
+Submitted By
+free text input
+
+Submitted For
+free text input
+
+Request Status 
+Dropdown - Open/Complete/Reject
+
+
+Section 2: Results (showing search result, please create 3 dummy records)
+Request ID
+Date Submitted
+Submitted By
+Submitted For
+Request Status 
+
+click on section 2's row
+open signer_details.html?dadreqid=DADREQ123456
+
+
 ===============================================================================
 
-Page: Policies (policy.html)
-===============================================================================
+Page: Policies Categories (policy.html)
+Actions: Search/Refresh/Export/Print/View Audit Log
+
+like request_status.html,
+show the second table showing the data by default
+first table is hidden by default, when clicking "Search" in Action, 
+will show the search table, which will filter table 2 in frontend only using javascript
+
+Counties 
+text input, with dropdown select (NA, US, HK)
+
+Policy Category 
+text input, with dropdown select (EXT, PAC, EXP)
+
+Description 
+free text input
+
+System Type 
+text input, with dropdown select (AP, SNOW, Concur)
+
+Number of Approvals 
+number input
+
+Threshold Amount 
+number input
+
+Manual Approval Required 
+Dropdown Y/N
+
+Please create 10 dummy rows
+
+
+Please follow the same for the below pages:
+Page: Countries/Territories (country.html)
+
+Country Code 
+free text input
+
+Territory 
+free text input
+
 
 Page: Business Units (bu.html)
-===============================================================================
+
+Security Group 
+free text input
+
+Business Unit Name 
+free text input
+
 
 Page: Cost Centres (cc.html)
-===============================================================================
 
-Page: Countries (country.html)
-===============================================================================
+Cost Centre No. 
+free text input
+
+Cost Centre Description 
+free text input
+
+Status 
+Dropdown - Active/Inactive
+
 
 Page: Currencies (currency.html)
-===============================================================================
+Currency 
+free text input
+
+Currency Name 
+free text input
+
 
 Page: Exchange Rates (exrate.html)
-===============================================================================
+
+Source Currency 
+free text input
+
+Target Currency 
+free text input
+
+Plan Rate 
+float number input
+
 
 Page: Job levels (joblevel.html)
+
+Job Grade 
+free text input
+
+Job Title 
+free text input
+
+
 ===============================================================================
 
 Page: Reports and Extracts (report.html)
+Actions: Search/Print
+
+Section 1: Filter Signer Data 
+Business Unit
+Signer Cost Center
+Job Level/Job Grade
+Pickup Cheques
+Countries
+Policy Category
+Limit Amounts (with number input)
+Currency
+Approval Cost Center
+System
+(Single selection only, "Apply" button at bottom)
+
+Section 2: Results (Top 50 rows)
+(showing Signer data search result based on Section 1 filter/apply)
+"Export" button next to "Results" - which will export the full data as csv/xlsx file
+
+GAD ID
+Last Name
+First Name
+Business Unit
+Signers Cost Center
+Job Level / Job Grade
+Job Title
+Employee No.
+Pickup Cheques
+
+Countries (Territories)	
+Policy Category	
+Limit Amounts	
+Currency	
+Approval Cost Center	
+Exception	Temporary	
+Business Rationale	
+Business Controls	
+System	
+Accounts Restriction
+
+
+Please draft 50 dummy rows for "Business Unit" filter, and "Business Unit" as the first column
+
+fyi
+Section 1 selected filter should be the first column in table 2 
+later when we have database, the table headers and column order will be from database/backend directly
+no need to worry on frontend
+
 ===============================================================================
 
 Page: Upload tool (upload.html) [UI to upload csv file to bulk update the data]
+
+showing 3 items only
+Item 1:
+"Download all Signer Data"
+- csv file, with these columns:
+GAD ID
+Approval ID
+Countries (Territories)	
+Policy Category	
+Limit Amounts	
+Currency	
+Approval Cost Center	
+Exception	
+Temporary	
+Business Rationale	
+Business Controls	
+System	
+Accounts Restriction
+
+Item 2:
+Disable/Enable Signers
+Button 1 - "Download Template File"
+- csv file, with these columns:
+Action (Enable/Disable)
+GAD ID
+Button 2 - "Upload Changes"
+
+Item 3:
+Update Signer Approval Data
+Button 1 - "Download Template File"
+- csv file, with these columns:
+Approval ID
+Countries (Territories)	
+Policy Category	
+Limit Amounts	
+Currency	
+Approval Cost Center	
+Exception	
+Temporary	
+Business Rationale	
+Business Controls	
+System	
+Accounts Restriction
+Button 2 - "Upload Changes"
+
+Item 4:
+Add Signer Approval Data
+Button 1 - "Download Template File"
+- csv file, with these columns:
+GAD ID
+Countries (Territories)	
+Policy Category	
+Limit Amounts	
+Currency	
+Approval Cost Center	
+Exception	
+Temporary	
+Business Rationale	
+Business Controls	
+System	
+Accounts Restriction
+Button 2 - "Upload Changes"
+
+Item 5:
+Delete Signer Approval Data
+Button 1 - "Download Template File"
+- csv file, with these columns:
+GAD ID
+Approval ID
+Button 2 - "Upload Changes"
+
 ===============================================================================
 
 Page: Dashboard (dashboard.html) [summary page showing the all status and changes]
+A dashboard page, showing the following information 
+# of requests submitted - 600 (KPI)
+# of requests approved - 900
+# of signers with updated Job Level - 300
+# of signers inactivated/deleted (Inactive Signer) - 500
+# of cost centres inactivated/recycled - 200
+Signers with exception - table, showing the same result table on "report.html" with 50 dummy rows, but filter with "Exception=Y", with a "Export all data" button
+Temporary delegated Signers set to expire - table, showing the same result table on "report.html" with 50 dummy rows, but filter with "Temporary=Y", TOP 30 only, with a "Export all data" button
+Request status - table, showing the same result tables on request_status.html, TOP 30 only, with a "Export all data" button
+
+

@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DAD - Job Levels</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="page-header">
+            <h1>Disbursement Authorization Database <span class="subtitle">– Job Levels</span></h1>
+        </div>
+
+        <script src="js/navbar.js"></script>
+
+        <div class="action-bar action-bar--blue">
+            <span class="action-bar-label">Actions:</span>
+            <button onclick="doSearch()">Search</button>
+            <button onclick="location.reload()">Refresh</button>
+            <button onclick="doExport()">Export</button>
+            <button onclick="window.print()">Print</button>
+            <a href="audit_joblevel.html" class="action-bar-link">View Audit Log</a>
+        </div>
+
+        <div class="panel panel--blue" id="searchPanel" style="display:none;">
+            <div class="panel-title">Search Job Levels</div>
+            <div class="filter-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
+                <div class="filter-field">
+                    <label for="fGrade">Job Grade</label>
+                    <input type="text" id="fGrade" placeholder="e.g. Level 8">
+                </div>
+                <div class="filter-field">
+                    <label for="fTitle">Job Title</label>
+                    <input type="text" id="fTitle" placeholder="e.g. Engineer">
+                </div>
+            </div>
+            <div class="filter-actions">
+                <button class="btn btn-primary" onclick="filterTable()">Apply Filter</button>
+                <button class="btn btn-secondary" onclick="clearFilters()">Clear</button>
+            </div>
+        </div>
+
+        <div class="panel panel--blue">
+            <div class="panel-title">Job Levels</div>
+            <div class="data-table-wrapper">
+                <table class="data-table" id="resultsTable">
+                    <thead>
+                        <tr>
+                            <th>Job Grade</th>
+                            <th>Job Title</th>
+                        </tr>
+                    </thead>
+                    <tbody id="resultsBody">
+                        <tr><td>Level 4</td><td>Associate Analyst</td></tr>
+                        <tr><td>Level 5</td><td>Analyst</td></tr>
+                        <tr><td>Level 6</td><td>Senior Analyst</td></tr>
+                        <tr><td>Level 7</td><td>Software Engineer</td></tr>
+                        <tr><td>Level 8</td><td>Senior Full-stack Software Engineer</td></tr>
+                        <tr><td>Level 9</td><td>Lead Engineer</td></tr>
+                        <tr><td>Level 10</td><td>Principal Engineer</td></tr>
+                        <tr><td>Level 11</td><td>Manager</td></tr>
+                        <tr><td>Level 12</td><td>Senior Manager</td></tr>
+                        <tr><td>Level 13</td><td>Director</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function doSearch() {
+            var panel = document.getElementById('searchPanel');
+            panel.style.display = (panel.style.display === 'none') ? 'block' : 'none';
+        }
+        function filterTable() {
+            var grade = document.getElementById('fGrade').value.trim().toLowerCase();
+            var title = document.getElementById('fTitle').value.trim().toLowerCase();
+            document.querySelectorAll('#resultsBody tr').forEach(function(row) {
+                var cells = row.querySelectorAll('td');
+                var match = (!grade || cells[0].textContent.trim().toLowerCase().includes(grade))
+                         && (!title || cells[1].textContent.trim().toLowerCase().includes(title));
+                row.style.display = match ? '' : 'none';
+            });
+        }
+        function clearFilters() {
+            document.getElementById('fGrade').value = '';
+            document.getElementById('fTitle').value = '';
+            document.querySelectorAll('#resultsBody tr').forEach(function(r) { r.style.display = ''; });
+        }
+        function doExport() { alert('Export triggered – connect to backend API.'); }
+    </script>
+</body>
+</html>

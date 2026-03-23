@@ -23,14 +23,19 @@
                 <a id="btnAudit" href="#">View Audit Log</a>
             </span>
             <span id="editActions" style="display:none;">
-                <button onclick="saveChanges()">Submit for Review</button>
+                <button onclick="reviewChanges()">Submit for Review</button>
                 <button onclick="cancelEdit()">Cancel</button>
+            </span>
+            <span id="dadreqActions" style="display:none;">
+                <button onclick="location.reload()">Refresh</button>
+                <button onclick="doExport()">Export</button>
+                <button onclick="window.print()">Print</button>
             </span>
         </div>
 
         <!-- Signer Profile -->
         <div class="panel panel--blue">
-            <div class="panel-title">Signer Profile <button id="btnDeleteSigner" class="btn-delete-signer" style="display:none;" onclick="deleteSigner()">Delete</button></div>
+            <div class="panel-title">Signer Profile <span id="reqIdBadge" style="display:none; margin-left:10px; background:#2e86c1; color:#fff; padding:2px 8px; border-radius:4px; font-size:0.82rem; font-weight:600;"></span> <button id="btnDeleteSigner" class="btn-delete-signer" style="display:none;" onclick="deleteSigner()">Delete</button></div>
             <table class="detail-table">
                 <tr><th>GAD ID</th><td id="gadId">hokenho@mfcgd.com</td></tr>
                 <tr><th>Last Name</th><td>Ken</td></tr>
@@ -46,11 +51,12 @@
 
         <!-- Signing Limit Authorizations -->
         <div class="panel panel--blue">
-            <div class="panel-title">Signing Limit Authorizations</div>
+            <div class="panel-title">Signing Limit Authorizations <button id="btnNewRow" style="display:none; margin-left:10px; font-size: 0.75rem; padding: 2px 8px;" onclick="addNewRow()">New Row</button></div>
             <div class="data-table-wrapper">
-                <table class="data-table">
+                <table class="data-table" id="limitsTable">
                     <thead>
                         <tr>
+                            <th class="action-col" style="display:none; width:4%">Delete Row</th>
                             <th style="width:8%">Countries (Territories)</th>
                             <th style="width:7%">Policy Category</th>
                             <th style="width:8%">Limit Amounts</th>
@@ -64,8 +70,9 @@
                             <th style="width:12%">Accounts Restriction</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        <tr>
+                    <tbody id="limitsBody">
+                        <tr data-status="original">
+                            <td class="action-col" style="display:none; text-align:center;"><button onclick="deleteRow(this)" style="color:red; cursor:pointer;" title="Delete">X</button></td>
                             <td>NA</td>
                             <td>EXP</td>
                             <td>10,000</td>
@@ -78,7 +85,8 @@
                             <td>AP</td>
                             <td>000000-123456</td>
                         </tr>
-                        <tr>
+                        <tr data-status="original">
+                            <td class="action-col" style="display:none; text-align:center;"><button onclick="deleteRow(this)" style="color:red; cursor:pointer;" title="Delete">X</button></td>
                             <td>NA</td>
                             <td>PAC</td>
                             <td>25,000</td>
@@ -91,7 +99,8 @@
                             <td>SNOW</td>
                             <td>000000-789012</td>
                         </tr>
-                        <tr>
+                        <tr data-status="original">
+                            <td class="action-col" style="display:none; text-align:center;"><button onclick="deleteRow(this)" style="color:red; cursor:pointer;" title="Delete">X</button></td>
                             <td>HK</td>
                             <td>EXT</td>
                             <td>50,000</td>
@@ -109,14 +118,47 @@
             </div>
         </div>
 
+        <!-- Submit For Review Modal -->
+        <div id="reviewModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center;">
+            <div style="background:#fff; width:90%; max-height:90%; border-radius:8px; padding:24px; box-shadow:0 4px 12px rgba(0,0,0,0.15); display:flex; flex-direction:column;">
+                <h2 style="margin-bottom:16px;">Review Changes - Signing Limit Authorizations</h2>
+                <div id="reviewModalContent" style="margin-bottom:24px; overflow-y:auto; flex-grow:1;"></div>
+                <div style="text-align:right;">
+                    <button style="padding: 6px 12px; margin-right: 8px;" onclick="closeReviewModal()">Cancel</button>
+                    <button id="btnConfirmSubmit" style="padding: 6px 12px;" onclick="confirmSubmit()">Confirm Submit</button>
+                </div>
+            </div>
+        </div>
+
     </div>
 
     <script>
-        // Read UPN from URL
+        // Read URL params
         var params = new URLSearchParams(window.location.search);
         var upn = params.get('upn') || '';
+        var action = params.get('action') || '';
+        var reqid = params.get('reqid') || '';
+        var isDADREQMode = reqid && reqid.toUpperCase().indexOf('DADREQ') !== -1;
         var isEditMode = false;
         var originalData = [];
+
+        // Dummy DADREQ change data keyed by reqid
+        var dadreqChanges = {
+            'DADREQ123456': {
+                profile: {
+                    'Business Unit': 'Global Tech',
+                    'Job Title': 'Principal Engineer'
+                },
+                limits: [
+                    // Update row index 0: limit amount and currency changed
+                    { type: 'update', rowIndex: 0, newData: ['NA', 'EXP', '20,000', 'USD', '1010', 'N', 'N', 'N', 'N', 'AP', '000000-123456'] },
+                    // Delete row index 1
+                    { type: 'delete', rowIndex: 1 },
+                    // Add a brand new row
+                    { type: 'new', newData: ['US', 'EXP', '5,000', 'CAD', '1010', 'N', 'N', 'N', 'N', 'AP', '000000-999999'] }
+                ]
+            }
+        };
 
         // Allowed values for each column in the limits table
         var limitOptions = {
@@ -150,18 +192,25 @@
             isEditMode = true;
             // Show delete button on profile
             document.getElementById('btnDeleteSigner').style.display = 'inline-block';
+            document.getElementById('btnNewRow').style.display = 'inline-block';
 
             // Show Save/Cancel in action bar, hide view actions
             document.getElementById('editActions').style.display = 'contents';
             document.getElementById('viewActions').style.display = 'none';
 
+            // Show action column
+            document.querySelectorAll('.action-col').forEach(el => el.style.display = 'table-cell');
+
             // Convert limits table cells to inputs
-            var rows = document.querySelectorAll('.data-table tbody tr');
+            var rows = document.querySelectorAll('#limitsBody tr');
             originalData = [];
             rows.forEach(function(row, rIdx) {
                 var rowData = [];
                 var cells = row.querySelectorAll('td');
-                cells.forEach(function(cell, idx) {
+                // Skip the first cell (action-col) in originalData storing
+                cells.forEach(function(cell, cIdx) {
+                    if (cIdx === 0) return;
+                    var idx = cIdx - 1;
                     var val = cell.textContent.trim();
                     rowData.push(val);
                     cell.className = '';
@@ -182,7 +231,7 @@
                         cell.innerHTML = html;
                     }
                 });
-                originalData.push(rowData);
+                originalData.push({ status: 'original', data: rowData, rowRef: row });
             });
 
             // Attach change listeners
@@ -190,8 +239,10 @@
                 input.addEventListener('input', function() {
                     if (this.value !== this.getAttribute('data-orig')) {
                         this.classList.add('changed');
+                        this.style.backgroundColor = '#ffff00';
                     } else {
                         this.classList.remove('changed');
+                        this.style.backgroundColor = '';
                     }
                 });
             });
@@ -200,51 +251,189 @@
         function exitEditMode() {
             isEditMode = false;
             document.getElementById('btnDeleteSigner').style.display = 'none';
+            document.getElementById('btnNewRow').style.display = 'none';
             document.getElementById('editActions').style.display = 'none';
             document.getElementById('viewActions').style.display = 'contents';
 
-            // Restore original cell values
-            var rows = document.querySelectorAll('.data-table tbody tr');
-            rows.forEach(function(row, rIdx) {
-                var cells = row.querySelectorAll('td');
-                cells.forEach(function(cell, cIdx) {
-                    cell.innerHTML = originalData[rIdx][cIdx];
-                    if (cIdx >= 5 && cIdx <= 8) cell.className = 'text-center';
+            document.querySelectorAll('.action-col').forEach(el => el.style.display = 'none');
+
+            // Restore original rows and drop new ones
+            var tbody = document.getElementById('limitsBody');
+            tbody.innerHTML = '';
+            
+            originalData.forEach(function(item) {
+                var tr = document.createElement('tr');
+                tr.setAttribute('data-status', 'original');
+                
+                var actionTd = document.createElement('td');
+                actionTd.className = 'action-col';
+                actionTd.style.display = 'none';
+                actionTd.style.textAlign = 'center';
+                actionTd.innerHTML = '<button onclick="deleteRow(this)" style="color:red; cursor:pointer;" title="Delete">X</button>';
+                tr.appendChild(actionTd);
+
+                item.data.forEach(function(val, cIdx) {
+                    var td = document.createElement('td');
+                    td.innerText = val;
+                    if (cIdx >= 5 && cIdx <= 8) td.className = 'text-center';
+                    tr.appendChild(td);
                 });
+                tbody.appendChild(tr);
             });
         }
 
-        function saveChanges() {
-            // Collect edited values
-            var rows = document.querySelectorAll('.data-table tbody tr');
-            var data = [];
-            rows.forEach(function(row) {
-                var rowData = {};
-                var inputs = row.querySelectorAll('.edit-input');
-                var headers = ['countries','policyCategory','limitAmounts','currency','approvalCostCenter','exception','temporary','businessRationale','businessControls','system','accountsRestriction'];
-                inputs.forEach(function(input, idx) {
-                    rowData[headers[idx]] = input.value;
-                });
-                data.push(rowData);
-            });
-            alert('Save triggered – connect to backend API.\n\n' + JSON.stringify(data, null, 2));
-            // After save, convert back to read-only
-            rows.forEach(function(row) {
-                var cells = row.querySelectorAll('td');
-                cells.forEach(function(cell, cIdx) {
-                    var input = cell.querySelector('.edit-input');
-                    if (input) {
-                        var val = input.value;
-                        if (cIdx === 2) val = Number(val).toLocaleString();
-                        cell.innerHTML = val;
-                        if (cIdx >= 5 && cIdx <= 8) cell.className = 'text-center';
+        function deleteRow(btn) {
+            var tr = btn.closest('tr');
+            if (tr.getAttribute('data-status') === 'new') {
+                tr.remove();
+            } else {
+                tr.setAttribute('data-status', 'deleted');
+                tr.style.display = 'none';
+            }
+        }
+
+        var newRowCounter = 0;
+        function addNewRow() {
+            var tbody = document.getElementById('limitsBody');
+            var tr = document.createElement('tr');
+            tr.setAttribute('data-status', 'new');
+            
+            var actionTd = document.createElement('td');
+            actionTd.className = 'action-col';
+            actionTd.style.textAlign = 'center';
+            actionTd.innerHTML = '<button onclick="deleteRow(this)" style="color:red; cursor:pointer;" title="Delete">X</button>';
+            tr.appendChild(actionTd);
+
+            for (var i = 0; i < 11; i++) {
+                var td = document.createElement('td');
+                var val = '';
+                if (limitOptions[i] === null) {
+                    td.innerHTML = '<input type="number" class="edit-input" data-orig="" value="">';
+                } else {
+                    var opts = limitOptions[i];
+                    var listId = 'new_dl_' + newRowCounter + '_' + i;
+                    var html = '<input type="text" class="edit-input" data-orig="" list="' + listId + '" value="">';
+                    html += '<datalist id="' + listId + '">';
+                    opts.forEach(function(o) { html += '<option value="' + o + '">'; });
+                    html += '</datalist>';
+                    td.innerHTML = html;
+                }
+                tr.appendChild(td);
+            }
+            tbody.appendChild(tr);
+
+            // Attach listener to new inputs
+            tr.querySelectorAll('.edit-input').forEach(function(input) {
+                input.addEventListener('input', function() {
+                    if (this.value !== this.getAttribute('data-orig')) {
+                        this.classList.add('changed');
+                        this.style.backgroundColor = '#ffff00';
+                    } else {
+                        this.classList.remove('changed');
+                        this.style.backgroundColor = '';
                     }
                 });
             });
-            isEditMode = false;
-            document.getElementById('btnDeleteSigner').style.display = 'none';
-            document.getElementById('editActions').style.display = 'none';
-            document.getElementById('viewActions').style.display = 'contents';
+
+            newRowCounter++;
+        }
+
+        function reviewChanges() {
+            var contentDiv = document.getElementById('reviewModalContent');
+            contentDiv.innerHTML = '';
+            
+            var tableHTML = '<table class="data-table" style="width:100%; border-collapse:collapse;">';
+            var headerHTML = document.querySelector('#limitsTable thead').innerHTML;
+            tableHTML += headerHTML.replace(/<th class="action-col"[\s\S]*?<\/th>/, '<th>Change Type</th>');
+            tableHTML += '<tbody>';
+
+            var hasChanges = false;
+            var rows = document.querySelectorAll('#limitsBody tr');
+            
+            rows.forEach(function(row, rIdx) {
+                var status = row.getAttribute('data-status');
+                var cells = row.querySelectorAll('td');
+                
+                if (status === 'deleted') {
+                    hasChanges = true;
+                    // Find original data
+                    var origData = originalData.find(item => item.rowRef === row).data;
+                    tableHTML += '<tr style="background:#ffe6e6; text-decoration:line-through; border-top: 3px solid #999; border-bottom: 3px solid #999;"><td style="font-weight:bold; color:red;">Deleted</td>';
+                    origData.forEach(val => tableHTML += '<td>' + val + '</td>');
+                    tableHTML += '</tr>';
+                } 
+                else if (status === 'new') {
+                    hasChanges = true;
+                    tableHTML += '<tr style="background:#e6ffe6; border-top: 3px solid #999; border-bottom: 3px solid #999;"><td style="font-weight:bold; color:green;">New</td>';
+                    cells.forEach((cell, cIdx) => {
+                        if (cIdx === 0) return;
+                        var input = cell.querySelector('.edit-input');
+                        var val = input ? input.value : cell.textContent;
+                        tableHTML += '<td style="background-color:#ffff00;">' + val + '</td>';
+                    });
+                    tableHTML += '</tr>';
+                } 
+                else if (status === 'original') {
+                    var inputs = row.querySelectorAll('.edit-input');
+                    var isChanged = false;
+                    inputs.forEach(input => {
+                        if (input.value !== input.getAttribute('data-orig')) isChanged = true;
+                    });
+                    
+                    if (isChanged) {
+                        hasChanges = true;
+                        var origData = originalData.find(item => item.rowRef === row).data;
+                        
+                        // Before row
+                        tableHTML += '<tr style="color:#777; border-top: 3px solid #999; border-bottom: 1px dashed #ddd;"><td style="font-weight:bold; font-size:0.85rem;">Before</td>';
+                        origData.forEach(val => tableHTML += '<td>' + val + '</td>');
+                        tableHTML += '</tr>';
+                        
+                        // After row
+                        tableHTML += '<tr style="border-bottom: 3px solid #999;"><td style="font-weight:bold; color:#2e86c1;">After</td>';
+                        cells.forEach((cell, cIdx) => {
+                            if (cIdx === 0) return;
+                            var input = cell.querySelector('.edit-input');
+                            if (input) {
+                                var val = input.value;
+                                var orig = input.getAttribute('data-orig');
+                                if (val !== orig) {
+                                    tableHTML += '<td style="background-color:#ffff00; font-weight:bold;">' + val + '</td>';
+                                } else {
+                                    tableHTML += '<td>' + val + '</td>';
+                                }
+                            } else {
+                                tableHTML += '<td>' + cell.textContent + '</td>';
+                            }
+                        });
+                        tableHTML += '</tr>';
+                    }
+                }
+            });
+
+            tableHTML += '</tbody></table>';
+
+            if (!hasChanges) {
+                contentDiv.innerHTML = '<p style="color:#555;">No changes detected in Signing Limit Authorizations.</p>';
+                document.getElementById('btnConfirmSubmit').style.display = 'none';
+            } else {
+                contentDiv.innerHTML = tableHTML;
+                document.getElementById('btnConfirmSubmit').style.display = 'inline-block';
+            }
+
+            document.getElementById('reviewModal').style.display = 'flex';
+        }
+
+        function closeReviewModal() {
+            document.getElementById('reviewModal').style.display = 'none';
+        }
+
+        function confirmSubmit() {
+            alert('Changes submitted to backend API.');
+            // After save logic, realistically we would reload or re-fetch data.
+            // For now, close modal and reload
+            closeReviewModal();
+            location.reload();
         }
 
         function cancelEdit() {
@@ -260,6 +449,165 @@
         function doExport() {
             // Placeholder: export logic
             alert('Export triggered for ' + (upn || 'unknown user'));
+        }
+
+        if (action === 'update') {
+            enterEditMode();
+        }
+
+        if (isDADREQMode) {
+            // Hide normal view actions, show DADREQ-only actions
+            document.getElementById('viewActions').style.display = 'none';
+            document.getElementById('dadreqActions').style.display = 'contents';
+
+            // Show reqid badge next to Signer Profile
+            var badge = document.getElementById('reqIdBadge');
+            badge.textContent = reqid.toUpperCase();
+            badge.style.display = 'inline-block';
+
+            // Apply the DADREQ changes as a read-only view
+            var changes = dadreqChanges[reqid.toUpperCase()] || null;
+            if (changes) applyDADREQView(changes);
+        }
+
+        function applyDADREQView(changes) {
+            // Inject "Change Type" header column into limits table
+            var headerRow = document.querySelector('#limitsTable thead tr');
+            var chTypeTh = document.createElement('th');
+            chTypeTh.textContent = 'Change Type';
+            chTypeTh.style.width = '8%';
+            headerRow.insertBefore(chTypeTh, headerRow.firstChild);
+
+            // Table 1: show changed profile fields inline with yellow highlight
+            if (changes.profile) {
+                document.querySelectorAll('.detail-table tr').forEach(function(row) {
+                    var th = row.querySelector('th');
+                    var td = row.querySelector('td');
+                    if (!th || !td) return;
+                    var fieldName = th.textContent.trim();
+                    if (changes.profile[fieldName] !== undefined) {
+                        var origText = td.textContent.trim();
+                        td.innerHTML = origText +
+                            ' <span style="color:#999; margin:0 4px;">&#8594;</span>' +
+                            '<span style="background:#ffff00; padding:2px 6px; border-radius:3px; font-weight:bold;">' +
+                            changes.profile[fieldName] + '</span>';
+                    }
+                });
+            }
+
+            // Helper: create a Change Type cell
+            function makeChangeTypeTd(label, color, rowspan) {
+                var td = document.createElement('td');
+                td.textContent = label;
+                td.style.fontWeight = 'bold';
+                td.style.fontSize = '0.78rem';
+                td.style.color = color;
+                td.style.verticalAlign = 'middle';
+                td.style.textAlign = 'center';
+                td.style.whiteSpace = 'nowrap';
+                if (rowspan > 1) td.rowSpan = rowspan;
+                return td;
+            }
+
+            // Table 2: insert requested rows below originals with yellow highlights + thick border
+            if (changes.limits) {
+                var tbody = document.getElementById('limitsBody');
+                var origRows = Array.from(tbody.querySelectorAll('tr[data-status="original"]'));
+                // Track which row indexes are touched by a change
+                var touchedIndexes = new Set();
+                changes.limits.forEach(function(c) {
+                    if (c.rowIndex !== undefined) touchedIndexes.add(c.rowIndex);
+                });
+
+                // Mark untouched rows with light green background + "No Change" label
+                origRows.forEach(function(row, idx) {
+                    if (!touchedIndexes.has(idx)) {
+                        row.style.backgroundColor = '#e6ffe6';
+                        row.style.border = '3px solid #555';
+                        row.insertBefore(makeChangeTypeTd('No Change', '#27ae60', 1), row.firstChild);
+                    }
+                });
+
+                changes.limits.forEach(function(change) {
+                    if (change.type === 'update') {
+                        var origRow = origRows[change.rowIndex];
+                        if (!origRow) return;
+
+                        var origCells = Array.from(origRow.querySelectorAll('td')).slice(1); // skip action-col
+                        var origData = origCells.map(function(c) { return c.textContent.trim(); });
+
+                        // Style original row with thick top/left/right border to start group
+                        origRow.style.borderTop = '3px solid #555';
+                        origRow.style.borderLeft = '3px solid #555';
+                        origRow.style.borderRight = '3px solid #555';
+
+                        // Build the "Requested" row
+                        var newTr = document.createElement('tr');
+                        newTr.setAttribute('data-status', 'dadreq');
+                        newTr.style.borderBottom = '3px solid #555';
+                        newTr.style.borderLeft = '3px solid #555';
+                        newTr.style.borderRight = '3px solid #555';
+
+                        // Placeholder for action-col
+                        var skipTd = document.createElement('td');
+                        skipTd.className = 'action-col';
+                        skipTd.style.display = 'none';
+                        newTr.appendChild(skipTd);
+
+                        change.newData.forEach(function(val, idx) {
+                            var td = document.createElement('td');
+                            if (idx >= 5 && idx <= 8) td.className = 'text-center';
+                            if (val !== origData[idx]) {
+                                td.style.backgroundColor = '#ffff00';
+                                td.style.fontWeight = 'bold';
+                            }
+                            td.textContent = val;
+                            newTr.appendChild(td);
+                        });
+
+                        origRow.parentNode.insertBefore(newTr, origRow.nextSibling);
+
+                        // Add separate "Data Change - before/after" cells on each row
+                        origRow.insertBefore(makeChangeTypeTd('Change (Before)', '#2e86c1', 1), origRow.firstChild);
+                        newTr.insertBefore(makeChangeTypeTd('Change (After)', '#2e86c1', 1), newTr.firstChild);
+
+                    } else if (change.type === 'delete') {
+                        var origRow = origRows[change.rowIndex];
+                        if (!origRow) return;
+                        // Style as deletion: light red background + strikethrough
+                        origRow.style.backgroundColor = '#ffe6e6';
+                        origRow.style.border = '3px solid #555';
+                        Array.from(origRow.querySelectorAll('td')).forEach(function(td) {
+                            td.style.textDecoration = 'line-through';
+                            td.style.color = '#c0392b';
+                        });
+                        origRow.insertBefore(makeChangeTypeTd('Removal', '#c0392b', 1), origRow.firstChild);
+
+                    } else if (change.type === 'new') {
+                        var newTr = document.createElement('tr');
+                        newTr.setAttribute('data-status', 'dadreq');
+                        newTr.style.border = '3px solid #555';
+
+                        var skipTd = document.createElement('td');
+                        skipTd.className = 'action-col';
+                        skipTd.style.display = 'none';
+                        newTr.appendChild(skipTd);
+
+                        // Change Type cell
+                        newTr.appendChild(makeChangeTypeTd('Additional', '#8e44ad', 1));
+
+                        change.newData.forEach(function(val, idx) {
+                            var td = document.createElement('td');
+                            td.style.backgroundColor = '#ffff00';
+                            if (idx >= 5 && idx <= 8) td.className = 'text-center';
+                            td.textContent = val;
+                            newTr.appendChild(td);
+                        });
+
+                        tbody.appendChild(newTr);
+                    }
+                });
+            }
         }
     </script>
     <script src="js/navbar.js"></script>

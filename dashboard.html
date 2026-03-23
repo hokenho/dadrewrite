@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DAD - Dashboard</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 20px; }
+        .kpi-card { background: #fff; border: 1px solid #c5d4e8; border-radius: 8px; padding: 20px; text-align: center; }
+        .kpi-value { font-size: 2.2rem; font-weight: 700; color: #2a5a8a; line-height: 1.1; }
+        .kpi-label { font-size: 0.8rem; color: #666; margin-top: 6px; }
+        .dash-table th { font-size: 0.6rem; white-space: normal; }
+        .dash-table td { padding: 4px 5px; white-space: nowrap; min-width: 25px; }
+        .dash-table { font-size: 0.7rem; word-break: break-word; width: 100%; }
+        @media print {
+            @page { size: landscape; margin: 5mm; }
+            body { background: #fff !important; }
+            .container { max-width: 100% !important; padding: 0 !important; }
+            .dash-table { font-size: 5.5pt; table-layout: auto; }
+            .dash-table th { font-size: 5pt; white-space: normal; word-break: break-word; max-width: 30px; }
+            .dash-table td { padding: 1px 2px; white-space: nowrap; }
+            .action-bar, .alerts-toggle, .alerts-panel, .alerts-overlay, nav { display: none !important; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="page-header">
+            <h1>Disbursement Authorization Database <span class="subtitle">– Dashboard</span></h1>
+        </div>
+
+        <script src="js/navbar.js"></script>
+
+        <!-- Action Bar -->
+        <div class="action-bar action-bar--blue">
+            <span class="action-bar-label">Actions:</span>
+            <button onclick="location.reload()">Refresh</button>
+            <button onclick="window.print()">Print</button>
+        </div>
+
+        <!-- KPI Cards -->
+        <div class="kpi-grid">
+            <div class="kpi-card">
+                <div class="kpi-value">600</div>
+                <div class="kpi-label">Requests Submitted</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-value">900</div>
+                <div class="kpi-label">Requests Approved</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-value">300</div>
+                <div class="kpi-label">Signers with Updated Job Level</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-value">500</div>
+                <div class="kpi-label">Inactive Signers</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-value">200</div>
+                <div class="kpi-label">Cost Centres Inactivated / Recycled</div>
+            </div>
+        </div>
+
+        <!-- Table 1: Signers with Exception -->
+        <div class="panel panel--blue">
+            <div class="panel-title">Signers with Exception <button style="margin-left:10px; font-size:0.75rem; padding:2px 10px;" onclick="exportTable('exceptionTable','signers_with_exception')">Export all data</button></div>
+            <div class="data-table-wrapper">
+                <table class="data-table dash-table" id="exceptionTable">
+                    <thead>
+                        <tr>
+                            <th>GAD ID</th><th>Last Name</th><th>First Name</th><th>Business Unit</th>
+                            <th>Signers Cost Center</th><th>Job Level / Job Grade</th><th>Job Title</th>
+                            <th>Employee No.</th><th>Pickup Cheques</th><th>Countries</th>
+                            <th>Policy Category</th><th>Limit Amounts</th><th>Currency</th>
+                            <th>Approval Cost Center</th><th>Exception</th><th>Temporary</th>
+                            <th>Business Rationale</th><th>Business Controls</th><th>System</th>
+                            <th>Accounts Restriction</th>
+                        </tr>
+                    </thead>
+                    <tbody id="exceptionBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Table 2: Temporary Delegated Signers -->
+        <div class="panel panel--blue">
+            <div class="panel-title">Temporary Delegated Signers Set to Expire (Top 30) <button style="margin-left:10px; font-size:0.75rem; padding:2px 10px;" onclick="exportTable('tempTable','temp_delegated_signers')">Export all data</button></div>
+            <div class="data-table-wrapper">
+                <table class="data-table dash-table" id="tempTable">
+                    <thead>
+                        <tr>
+                            <th>GAD ID</th><th>Last Name</th><th>First Name</th><th>Business Unit</th>
+                            <th>Signers Cost Center</th><th>Job Level / Job Grade</th><th>Job Title</th>
+                            <th>Employee No.</th><th>Pickup Cheques</th><th>Countries</th>
+                            <th>Policy Category</th><th>Limit Amounts</th><th>Currency</th>
+                            <th>Approval Cost Center</th><th>Exception</th><th>Temporary</th>
+                            <th>Business Rationale</th><th>Business Controls</th><th>System</th>
+                            <th>Accounts Restriction</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tempBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Table 3: Request Status -->
+        <div class="panel panel--blue">
+            <div class="panel-title">Request Status (Top 30) <button style="margin-left:10px; font-size:0.75rem; padding:2px 10px;" onclick="exportTable('requestTable','request_status')">Export all data</button></div>
+            <div class="data-table-wrapper">
+                <table class="data-table dash-table" id="requestTable">
+                    <thead>
+                        <tr>
+                            <th>Request ID</th>
+                            <th>Date Submitted</th>
+                            <th>Submitted By</th>
+                            <th>Submitted For</th>
+                            <th>Request Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="requestBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Shared dummy data arrays (same as report.html)
+        var bus = ['Cdn Group Benefits','CDN HR','Cdn IGP','Cdn IIC','Cdn Ind Annuities',
+                   'CDN INFORCE MGMT','CDN INST ADVISORY','CDN INSURANCE MANAGEMENT',
+                   'CDN INSURANCE SALES','CDN INSURANCE UW'];
+        var fnames = ['Alice','Bob','Charlie','Diana','Eric','Fiona','George','Hannah','Ivan','Julia',
+                      'Ken','Laura','Mike','Nancy','Oscar','Patricia','Quinn','Rachel','Sam','Tina'];
+        var lnames = ['Smith','Chan','Johnson','Lee','Brown','Wang','Taylor','Ho','Wilson','Ng',
+                      'Anderson','Chen','Thomas','Yang','Jackson','Wu','White','Liu','Harris','Kim'];
+        var ccs    = ['1010','2020','3030','4040','8352','T08'];
+        var jlevels= ['Level 4','Level 5','Level 6','Level 7','Level 8','Level 9','Level 10'];
+        var jtitles= ['Associate Analyst','Analyst','Senior Analyst','Software Engineer','Senior Engineer',
+                      'Lead Engineer','Principal Engineer','Manager','Senior Manager','Director'];
+        var cheques= ['Y','N'];
+        var countries = ['NA','US','HK'];
+        var pcats  = ['EXP','PAC','EXT'];
+        var limits = [5000,10000,15000,20000,25000,30000,50000,75000,100000];
+        var currs  = ['CAD','USD','HKD'];
+        var apprCCs= ['1010','2020','3030','8352','T08'];
+        var yesno  = ['Y','N'];
+        var systems= ['AP','SNOW','Concur'];
+        var accts  = ['000000-123456','000000-234567','000000-345678','000000-456789','000000-567890',
+                      '000000-678901','000000-789012','000000-890123','000000-901234','000000-999999'];
+
+        function pick(arr, i) { return arr[i % arr.length]; }
+
+        function genSignerRows(count, overrides) {
+            var rows = [];
+            for (var i = 0; i < count; i++) {
+                var fn = pick(fnames, i);
+                var ln = pick(lnames, i);
+                rows.push({
+                    gadId: fn.toLowerCase() + '.' + ln.toLowerCase() + '@manulife.com',
+                    ln: ln, fn: fn,
+                    bu: pick(bus, i),
+                    cc: pick(ccs, i),
+                    jl: pick(jlevels, i),
+                    jt: pick(jtitles, i),
+                    emp: String(10000001 + i),
+                    chq: pick(cheques, i),
+                    country: pick(countries, i),
+                    pcat: pick(pcats, i),
+                    limit: pick(limits, i),
+                    curr: pick(currs, i),
+                    apprCC: pick(apprCCs, i),
+                    exc: overrides.exc || pick(yesno, i + 1),
+                    temp: overrides.temp || pick(yesno, i + 2),
+                    br: pick(yesno, i + 3),
+                    bc: pick(yesno, i),
+                    sys: pick(systems, i),
+                    acct: pick(accts, i)
+                });
+            }
+            return rows;
+        }
+
+        function renderSignerTable(bodyId, data) {
+            var tbody = document.getElementById(bodyId);
+            tbody.innerHTML = '';
+            data.forEach(function(r) {
+                var tr = document.createElement('tr');
+                tr.innerHTML =
+                    '<td>' + r.gadId + '</td>' +
+                    '<td>' + r.ln + '</td>' +
+                    '<td>' + r.fn + '</td>' +
+                    '<td>' + r.bu + '</td>' +
+                    '<td>' + r.cc + '</td>' +
+                    '<td>' + r.jl + '</td>' +
+                    '<td>' + r.jt + '</td>' +
+                    '<td>' + r.emp + '</td>' +
+                    '<td class="text-center">' + r.chq + '</td>' +
+                    '<td>' + r.country + '</td>' +
+                    '<td>' + r.pcat + '</td>' +
+                    '<td>' + Number(r.limit).toLocaleString() + '</td>' +
+                    '<td>' + r.curr + '</td>' +
+                    '<td>' + r.apprCC + '</td>' +
+                    '<td class="text-center">' + r.exc + '</td>' +
+                    '<td class="text-center">' + r.temp + '</td>' +
+                    '<td class="text-center">' + r.br + '</td>' +
+                    '<td class="text-center">' + r.bc + '</td>' +
+                    '<td>' + r.sys + '</td>' +
+                    '<td>' + r.acct + '</td>';
+                tbody.appendChild(tr);
+            });
+        }
+
+        // Table 1: Exception = Y, 50 rows
+        renderSignerTable('exceptionBody', genSignerRows(50, { exc: 'Y' }));
+
+        // Table 2: Temporary = Y, top 30
+        renderSignerTable('tempBody', genSignerRows(30, { temp: 'Y' }));
+
+        // Table 3: Request Status, top 30
+        (function() {
+            var statuses = ['Open','Complete','Reject'];
+            var submitters = ['alice.smith@manulife.com','bob.chan@manulife.com','charlie.johnson@manulife.com',
+                              'diana.lee@manulife.com','eric.brown@manulife.com','fiona.wang@manulife.com',
+                              'george.taylor@manulife.com','hannah.ho@manulife.com','ivan.wilson@manulife.com',
+                              'julia.ng@manulife.com'];
+            var submittedFor = ['ken.ho@manulife.com','laura.chen@manulife.com','mike.thomas@manulife.com',
+                                'nancy.yang@manulife.com','oscar.jackson@manulife.com','patricia.wu@manulife.com',
+                                'quinn.white@manulife.com','rachel.liu@manulife.com','sam.harris@manulife.com',
+                                'tina.kim@manulife.com'];
+            var tbody = document.getElementById('requestBody');
+            var statusColors = { Open: '#2a5a8a', Complete: '#2e7d32', Reject: '#c62828' };
+
+            for (var i = 0; i < 30; i++) {
+                var reqId = 'DADREQ' + String(100001 + i);
+                var d = new Date(2026, 0, 1 + i);
+                var dateStr = d.toISOString().split('T')[0];
+                var status = statuses[i % 3];
+                var tr = document.createElement('tr');
+                tr.innerHTML =
+                    '<td>' + reqId + '</td>' +
+                    '<td>' + dateStr + '</td>' +
+                    '<td>' + submitters[i % submitters.length] + '</td>' +
+                    '<td>' + submittedFor[i % submittedFor.length] + '</td>' +
+                    '<td><span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:0.75rem;color:#fff;background:' + statusColors[status] + ';">' + status + '</span></td>';
+                tbody.appendChild(tr);
+            }
+        })();
+
+        // Export helper
+        function exportTable(tableId, filename) {
+            var table = document.getElementById(tableId);
+            var csv = [];
+            var headerRow = table.querySelectorAll('thead th');
+            var headers = [];
+            headerRow.forEach(function(th) { headers.push('"' + th.textContent.trim() + '"'); });
+            csv.push(headers.join(','));
+            table.querySelectorAll('tbody tr').forEach(function(tr) {
+                var rowData = [];
+                tr.querySelectorAll('td').forEach(function(td) {
+                    rowData.push('"' + td.textContent.trim().replace(/"/g, '""') + '"');
+                });
+                csv.push(rowData.join(','));
+            });
+            var blob = new Blob([csv.join('\n')], { type: 'text/csv;charset=utf-8;' });
+            var link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = filename + '.csv';
+            link.click();
+            URL.revokeObjectURL(link.href);
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DAD - Policies Categories</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="page-header">
+            <h1>Disbursement Authorization Database <span class="subtitle">– Policies Categories</span></h1>
+        </div>
+
+        <script src="js/navbar.js"></script>
+
+        <!-- Action Bar -->
+        <div class="action-bar action-bar--blue">
+            <span class="action-bar-label">Actions:</span>
+            <button onclick="doSearch()">Search</button>
+            <button onclick="location.reload()">Refresh</button>
+            <button onclick="doExport()">Export</button>
+            <button onclick="window.print()">Print</button>
+            <a href="audit_policy.html" class="action-bar-link">View Audit Log</a>
+        </div>
+
+        <!-- Section 1: Search Filters (hidden by default) -->
+        <div class="panel panel--blue" id="searchPanel" style="display:none;">
+            <div class="panel-title">Section 1: Search Policies</div>
+            <div class="filter-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
+                <div class="filter-field">
+                    <label for="fCountry">Countries</label>
+                    <input type="text" id="fCountry" list="dl_country" placeholder="e.g. NA">
+                    <datalist id="dl_country">
+                        <option value="NA"><option value="US"><option value="HK">
+                    </datalist>
+                </div>
+                <div class="filter-field">
+                    <label for="fPolicyCat">Policy Category</label>
+                    <input type="text" id="fPolicyCat" list="dl_policycat" placeholder="e.g. EXP">
+                    <datalist id="dl_policycat">
+                        <option value="EXT"><option value="PAC"><option value="EXP">
+                    </datalist>
+                </div>
+                <div class="filter-field">
+                    <label for="fDescription">Description</label>
+                    <input type="text" id="fDescription" placeholder="Search description">
+                </div>
+                <div class="filter-field">
+                    <label for="fSystemType">System Type</label>
+                    <input type="text" id="fSystemType" list="dl_system" placeholder="e.g. AP">
+                    <datalist id="dl_system">
+                        <option value="AP"><option value="SNOW"><option value="Concur">
+                    </datalist>
+                </div>
+                <div class="filter-field">
+                    <label for="fNumApprovals">Number of Approvals</label>
+                    <input type="number" id="fNumApprovals" placeholder="e.g. 2" min="0">
+                </div>
+                <div class="filter-field">
+                    <label for="fThreshold">Threshold Amount</label>
+                    <input type="number" id="fThreshold" placeholder="e.g. 10000" min="0">
+                </div>
+                <div class="filter-field">
+                    <label for="fManualApproval">Manual Approval Required</label>
+                    <select id="fManualApproval">
+                        <option value="">-- All --</option>
+                        <option value="Y">Y</option>
+                        <option value="N">N</option>
+                    </select>
+                </div>
+            </div>
+            <div class="filter-actions">
+                <button class="btn btn-primary" onclick="filterTable()">Apply Filter</button>
+                <button class="btn btn-secondary" onclick="clearFilters()">Clear</button>
+            </div>
+        </div>
+
+        <!-- Section 2: Results Table -->
+        <div class="panel panel--blue">
+            <div class="panel-title">Policies Categories</div>
+            <div class="data-table-wrapper">
+                <table class="data-table" id="resultsTable">
+                    <thead>
+                        <tr>
+                            <th>Countries</th>
+                            <th>Policy Category</th>
+                            <th>Description</th>
+                            <th>System Type</th>
+                            <th>No. of Approvals</th>
+                            <th>Threshold Amount</th>
+                            <th>Manual Approval Required</th>
+                        </tr>
+                    </thead>
+                    <tbody id="resultsBody">
+                        <tr>
+                            <td>NA</td><td>EXP</td><td>Expense reimbursements up to threshold</td><td>AP</td><td>1</td><td>5,000</td><td class="text-center">N</td>
+                        </tr>
+                        <tr>
+                            <td>NA</td><td>PAC</td><td>Procurement and contract payments</td><td>SNOW</td><td>2</td><td>25,000</td><td class="text-center">Y</td>
+                        </tr>
+                        <tr>
+                            <td>NA</td><td>EXT</td><td>External vendor disbursements</td><td>Concur</td><td>2</td><td>50,000</td><td class="text-center">Y</td>
+                        </tr>
+                        <tr>
+                            <td>US</td><td>EXP</td><td>US expense policy standard</td><td>AP</td><td>1</td><td>8,000</td><td class="text-center">N</td>
+                        </tr>
+                        <tr>
+                            <td>US</td><td>PAC</td><td>US procurement approvals</td><td>SNOW</td><td>3</td><td>30,000</td><td class="text-center">Y</td>
+                        </tr>
+                        <tr>
+                            <td>US</td><td>EXT</td><td>US external contractor payments</td><td>Concur</td><td>2</td><td>75,000</td><td class="text-center">Y</td>
+                        </tr>
+                        <tr>
+                            <td>HK</td><td>EXP</td><td>HK expense reimbursement policy</td><td>AP</td><td>1</td><td>10,000</td><td class="text-center">N</td>
+                        </tr>
+                        <tr>
+                            <td>HK</td><td>PAC</td><td>HK procurement disbursement</td><td>SNOW</td><td>2</td><td>20,000</td><td class="text-center">Y</td>
+                        </tr>
+                        <tr>
+                            <td>HK</td><td>EXT</td><td>HK external payment authorization</td><td>Concur</td><td>3</td><td>100,000</td><td class="text-center">Y</td>
+                        </tr>
+                        <tr>
+                            <td>NA</td><td>EXP</td><td>Executive expense override policy</td><td>AP</td><td>2</td><td>15,000</td><td class="text-center">Y</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function doSearch() {
+            var panel = document.getElementById('searchPanel');
+            panel.style.display = (panel.style.display === 'none') ? 'block' : 'none';
+        }
+
+        function filterTable() {
+            var country     = document.getElementById('fCountry').value.trim().toLowerCase();
+            var policyCat   = document.getElementById('fPolicyCat').value.trim().toLowerCase();
+            var desc        = document.getElementById('fDescription').value.trim().toLowerCase();
+            var systemType  = document.getElementById('fSystemType').value.trim().toLowerCase();
+            var numApproval = document.getElementById('fNumApprovals').value.trim();
+            var threshold   = document.getElementById('fThreshold').value.trim();
+            var manualAppr  = document.getElementById('fManualApproval').value.toLowerCase();
+
+            document.querySelectorAll('#resultsBody tr').forEach(function(row) {
+                var cells = row.querySelectorAll('td');
+                var rCountry    = cells[0].textContent.trim().toLowerCase();
+                var rPolicyCat  = cells[1].textContent.trim().toLowerCase();
+                var rDesc       = cells[2].textContent.trim().toLowerCase();
+                var rSystemType = cells[3].textContent.trim().toLowerCase();
+                var rNumAppr    = cells[4].textContent.trim();
+                var rThreshold  = cells[5].textContent.replace(/,/g, '').trim();
+                var rManual     = cells[6].textContent.trim().toLowerCase();
+
+                var match = (!country    || rCountry.includes(country))
+                         && (!policyCat  || rPolicyCat.includes(policyCat))
+                         && (!desc       || rDesc.includes(desc))
+                         && (!systemType || rSystemType.includes(systemType))
+                         && (!numApproval || rNumAppr === numApproval)
+                         && (!threshold  || Number(rThreshold) <= Number(threshold))
+                         && (!manualAppr || rManual === manualAppr);
+
+                row.style.display = match ? '' : 'none';
+            });
+        }
+
+        function clearFilters() {
+            ['fCountry','fPolicyCat','fDescription','fSystemType','fNumApprovals','fThreshold'].forEach(function(id) {
+                document.getElementById(id).value = '';
+            });
+            document.getElementById('fManualApproval').value = '';
+            document.querySelectorAll('#resultsBody tr').forEach(function(row) {
+                row.style.display = '';
+            });
+        }
+
+        function doExport() {
+            alert('Export triggered – connect to backend API.');
+        }
+    </script>
+</body>
+</html>

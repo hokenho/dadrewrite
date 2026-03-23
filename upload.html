@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DAD - Upload Tool</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .upload-items { display: flex; flex-direction: column; gap: 16px; }
+        .upload-item { border: 1px solid #c5d4e8; border-radius: 6px; background: #fff; }
+        .upload-item-header { background: #e8edf3; padding: 10px 16px; font-weight: 700; font-size: 0.9rem; color: #2a5a8a; border-bottom: 1px solid #c5d4e8; border-radius: 6px 6px 0 0; }
+        .upload-item-body { padding: 12px 16px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+        .upload-item-body .btn { font-size: 0.8rem; padding: 6px 14px; cursor: pointer; border: 1px solid #999; border-radius: 4px; background: #f5f5f5; }
+        .upload-item-body .btn:hover { background: #e0e0e0; }
+        .upload-item-body .btn-primary { background: #2a5a8a; color: #fff; border-color: #2a5a8a; }
+        .upload-item-body .btn-primary:hover { background: #1e4570; }
+        .upload-item-body input[type="file"] { font-size: 0.8rem; }
+        .upload-status { font-size: 0.8rem; color: #666; margin-left: 8px; }
+        .upload-group { display: inline-flex; align-items: center; gap: 8px; border: 1px solid #c5d4e8; border-radius: 4px; padding: 4px 10px; background: #f9fbfd; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="page-header">
+            <h1>Disbursement Authorization Database <span class="subtitle">– Upload Tool</span></h1>
+        </div>
+
+        <script src="js/navbar.js"></script>
+
+        <!-- Action Bar -->
+        <div class="action-bar action-bar--blue">
+            <span class="action-bar-label">Actions:</span>
+            <button onclick="location.reload()">Refresh</button>
+        </div>
+
+        <div class="panel panel--blue">
+            <div class="panel-title">Upload Tool</div>
+            <div class="upload-items">
+
+                <!-- Item 1: Download all Signer Data -->
+                <div class="upload-item">
+                    <div class="upload-item-header">1. Download All Signer Data</div>
+                    <div class="upload-item-body">
+                        <button class="btn btn-primary" onclick="downloadCSV('all_signer_data', allSignerCols)">Download All Signer Data</button>
+                    </div>
+                </div>
+
+                <!-- Item 2: Disable/Enable Signers -->
+                <div class="upload-item">
+                    <div class="upload-item-header">2. Disable / Enable Signers</div>
+                    <div class="upload-item-body">
+                        <button class="btn" onclick="downloadCSV('disable_enable_signers', disableEnableCols)">Download Template File</button>
+                        <span class="upload-group"><button class="btn btn-primary" onclick="handleUpload('upload2')">Upload Changes</button><input type="file" id="upload2" accept=".csv,.xlsx"></span>
+                        <span class="upload-status" id="status2"></span>
+                    </div>
+                </div>
+
+                <!-- Item 3: Update Signer Approval Data -->
+                <div class="upload-item">
+                    <div class="upload-item-header">3. Update Signer Approval Data</div>
+                    <div class="upload-item-body">
+                        <button class="btn" onclick="downloadCSV('update_signer_approval', updateApprovalCols)">Download Template File</button>
+                        <span class="upload-group"><button class="btn btn-primary" onclick="handleUpload('upload3')">Upload Changes</button><input type="file" id="upload3" accept=".csv,.xlsx"></span>
+                        <span class="upload-status" id="status3"></span>
+                    </div>
+                </div>
+
+                <!-- Item 4: Add Signer Approval Data -->
+                <div class="upload-item">
+                    <div class="upload-item-header">4. Add Signer Approval Data</div>
+                    <div class="upload-item-body">
+                        <button class="btn" onclick="downloadCSV('add_signer_approval', addApprovalCols)">Download Template File</button>
+                        <span class="upload-group"><button class="btn btn-primary" onclick="handleUpload('upload4')">Upload Changes</button><input type="file" id="upload4" accept=".csv,.xlsx"></span>
+                        <span class="upload-status" id="status4"></span>
+                    </div>
+                </div>
+
+                <!-- Item 5: Delete Signer Approval Data -->
+                <div class="upload-item">
+                    <div class="upload-item-header">5. Delete Signer Approval Data</div>
+                    <div class="upload-item-body">
+                        <button class="btn" onclick="downloadCSV('delete_signer_approval', deleteApprovalCols)">Download Template File</button>
+                        <span class="upload-group"><button class="btn btn-primary" onclick="handleUpload('upload5')">Upload Changes</button><input type="file" id="upload5" accept=".csv,.xlsx"></span>
+                        <span class="upload-status" id="status5"></span>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <script>
+        var allSignerCols = ['GAD ID','Approval ID','Countries (Territories)','Policy Category','Limit Amounts','Currency','Approval Cost Center','Exception','Temporary','Business Rationale','Business Controls','System','Accounts Restriction'];
+        var disableEnableCols = ['Action (Enable/Disable)','GAD ID'];
+        var updateApprovalCols = ['Approval ID','Countries (Territories)','Policy Category','Limit Amounts','Currency','Approval Cost Center','Exception','Temporary','Business Rationale','Business Controls','System','Accounts Restriction'];
+        var addApprovalCols = ['GAD ID','Countries (Territories)','Policy Category','Limit Amounts','Currency','Approval Cost Center','Exception','Temporary','Business Rationale','Business Controls','System','Accounts Restriction'];
+        var deleteApprovalCols = ['GAD ID','Approval ID'];
+
+        function downloadCSV(filename, columns) {
+            var csv = columns.map(function(c) { return '"' + c + '"'; }).join(',');
+            var blob = new Blob([csv + '\n'], { type: 'text/csv;charset=utf-8;' });
+            var link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = filename + '.csv';
+            link.click();
+            URL.revokeObjectURL(link.href);
+        }
+
+        function handleUpload(inputId) {
+            var input = document.getElementById(inputId);
+            var statusId = 'status' + inputId.replace('upload', '');
+            var statusEl = document.getElementById(statusId);
+            if (!input.files || !input.files.length) {
+                statusEl.textContent = 'Please select a file first.';
+                statusEl.style.color = '#d32f2f';
+                return;
+            }
+            statusEl.textContent = 'File "' + input.files[0].name + '" uploaded successfully. (Demo only)';
+            statusEl.style.color = '#2e7d32';
+        }
+    </script>
+</body>
+</html>
