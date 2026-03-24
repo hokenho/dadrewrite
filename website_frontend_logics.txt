@@ -82,13 +82,15 @@ Policy Category = Distinct policy.category
 System = Distinct policy.system_id
 Cheque Pick Up = Dropdown (Y/N)
 Exception = Dropdown (Y/N)
-Temporary Delegation = Date picker
+Temporary = Dropdown (Y/N)
 
 Result table:
 GAD ID = signer.gad_id
 Status = signer.status
 Cheque Pick Up = signer.pickup_cheque
-Temporary Delegation= signer.expire_date
+Temporary = signer.temp
+Temporary Start Date = signer.temp_start_date
+Temporary End Date = signer.temp_end_date
 Employee No. = signer.gad_id -> user_profile.employee_id
 First Name = signer.gad_id -> user_profile.first_name
 Last Name = signer.gad_id -> user_profile.last_name
@@ -211,17 +213,21 @@ Job Level / Job Grade = signer.gad_id -> user_profile.job_level_id -> job.job_gr
 Job Title = signer.gad_id -> user_profile.job_level_id -> job.job_title
 Employee No. = signer.gad_id -> user_profile.employee_id
 Pickup Cheques = signer.pickup_cheque
-Temporary Delegation = signer.expire_date
+Temporary = signer.temp
+Temporary Start Date = signer.temp_start_date
+Temporary End Date = signer.temp_end_date
 Status = signer.status
 
-Second table (1:M using gad_id as key)
+Second table (1:M joining signer.limit_id=signer_limit_req.id)
 Countries (Territories) = signer.limit_id -> signer_limit.territory_id -> policy.country_code
 Policy Category = signer.limit_id -> signer_limit.policy_id -> policy.category
 Limit Amounts = signer.limit_id -> signer_limit.limit_amount
 Currency = signer.limit_id -> signer_limit.currency
 Approval Cost Center = signer.limit_id -> signer_limit.approval_cc_id -> cost_center.cc
 Exception = signer.limit_id -> signer_limit.exception
-Temporary = signer.limit_id -> signer_limit.temporary
+Temporary = signer.limit_id -> signer_limit.temp
+Temporary Start Date = signer.limit_id -> signer_limit.temp_start_date
+Temporary End Date = signer.limit_id -> signer_limit.temp_end_date
 Business Rationale = signer.limit_id -> signer_limit.business_rationale
 Business Controls = signer.limit_id -> signer_limit.business_control
 System = signer.limit_id -> signer_limit.policy_id -> policy.system_id
@@ -235,7 +241,16 @@ Requester = signer_req.submitter
 Request Status = signer_req.status
 
 Second table - Signer Profile
-GAD ID = signer_req.gad_id
+- Editable fields (pickup_cheque, temp, temp_start_date, temp_end_date, status)
+Old data = signer_req.source_data (in JSON format)
+New data:
+  GAD ID = signer_req.gad_id
+  Pickup Cheques = signer_req.pickup_cheque
+  Temporary = signer_req.temp
+  Temporary Start Date = signer_req.temp_start_date
+  Temporary End Date = signer_req.temp_end_date
+  Status = signer_req.status
+- Uneditable fields (lookup by gad_id):
 Last Name = signer_req.gad_id -> user_profile.last_name
 First Name = signer_req.gad_id -> user_profile.first_name
 Business Unit = signer_req.bu_id -> business_unit.name
@@ -243,9 +258,6 @@ Signers Cost Center = signer_req.gad_id -> user_profile.signer_cc_id -> cost_cen
 Job Level / Job Grade = signer_req.gad_id -> user_profile.job_level_id -> job.job_grade
 Job Title = signer_req.gad_id -> user_profile.job_level_id -> job.job_title
 Employee No. = signer_req.gad_id -> user_profile.employee_id
-Pickup Cheques = signer_req.pickup_cheque
-Temporary Delegation = signer_req.expire_date
-Status = signer_req.status
 
 Third table (1:M joining signer_req.limit_id=signer_limit_req.id)
 Change Type = signer_req.limit_id -> signer_limit_req.action
@@ -257,7 +269,9 @@ Limit Amounts = signer_req.limit_id -> signer_limit_req.limit_amount
 Currency = signer_req.limit_id -> signer_limit_req.currency
 Approval Cost Center = signer_req.limit_id -> signer_limit_req.approval_cc_id -> cost_center.cc
 Exception = signer_req.limit_id -> signer_limit_req.exception
-Temporary = signer_req.limit_id -> signer_limit_req.temporary
+Temporary = signer_req.limit_id -> signer_limit_req.temp
+Temporary Start Date = signer_req.limit_id -> signer_limit_req.temp_start_date
+Temporary End Date = signer_req.limit_id -> signer_limit_req.temp_end_date
 Business Rationale = signer_req.limit_id -> signer_limit_req.business_rationale
 Business Controls = signer_req.limit_id -> signer_limit_req.business_control
 System = signer_req.limit_id -> signer_limit_req.policy_id -> policy.system_id
@@ -293,10 +307,17 @@ Logic:
     signer request or modify an existing one.
 
 Data Mapping:
+Section 1 – Search Signer:
+GAD ID = free text input
+First Name = free text input
+Last name = free text input
+Existing Signer = Dropdown (All/Y/N)
+
+Section 2 – Results:
 GAD ID = user_profile.gad_id
 First Name = user_profile.first_name
 Last Name = user_profile.last_name
-Existing Signer = EXIST (or COUNT>1) on signer.gad_id
+Existing Signer = IF [SELECT COUNT(*) WHERE user_profile.gad_id=signer.gad_id] >1
 
 ===============================
 request_status.html
@@ -347,7 +368,7 @@ Submitted For = signer_req.gad_id
 Request Status = signer_req.status
 
 ===============================
-policy.html
+table_policy.html
 Title: DAD – Policies Categories
 Purpose: View, search, and export policy category records with multi-field filtering.
 
@@ -384,8 +405,17 @@ Logic:
   - clearFilters(): Clears all inputs/selects, shows all rows.
   - doExport(): Placeholder alert.
 
+Data Mapping:
+Countries                 = policy.country
+Policy Category           = policy.category
+Description               = policy.description
+System Type               = policy.system
+No. of Approvals          = policy.approval_no
+Threshold Amount          = policy.threshold_amount
+Manual Approval Required  = policy.manual_approval
+
 ===============================
-country.html
+table_country.html
 Title: DAD – Countries/Territories
 Purpose: View, search, and export country/territory records.
 
@@ -407,8 +437,10 @@ Logic:
   - clearFilters(): Clears inputs, shows all rows.
   - doExport(): Placeholder alert.
 
+Data Mapping:
+
 ===============================
-bu.html
+table_bu.html
 Title: DAD – Business Units
 Purpose: View, search, and export a list of business units.
 
@@ -431,8 +463,10 @@ Logic:
   - clearFilters(): Clears inputs, shows all rows.
   - doExport(): Placeholder alert — "connect to backend API."
 
+Data Mapping:
+
 ===============================
-cc.html
+table_cc.html
 Title: DAD – Cost Centres
 Purpose: View, search, and export cost centre records.
 
@@ -457,9 +491,10 @@ Logic:
   - clearFilters(): Clears all inputs/selects, shows all rows.
   - doExport(): Placeholder alert.
 
+Data Mapping:
 
 ===============================
-currency.html
+table_currency.html
 Title: DAD – Currencies
 Purpose: View, search, and export currency records.
 
@@ -481,8 +516,10 @@ Logic:
   - clearFilters(): Clears inputs, shows all rows.
   - doExport(): Placeholder alert.
 
+Data Mapping:
+
 ===============================
-exrate.html
+table_exrate.html
 Title: DAD – Exchange Rates
 Purpose: View, search, and export exchange rate records.
 
@@ -507,8 +544,10 @@ Logic:
   - clearFilters(): Clears all inputs, shows all rows.
   - doExport(): Placeholder alert.
 
+Data Mapping:
+
 ===============================
-joblevel.html
+table_joblevel.html
 Title: DAD – Job Levels
 Purpose: View, search, and export job level records.
 
@@ -529,6 +568,8 @@ Logic:
   - filterTable(): Case-insensitive substring match on Job Grade and Job Title.
   - clearFilters(): Clears inputs, shows all rows.
   - doExport(): Placeholder alert.
+
+Data Mapping:
 
 ===============================
 report.html
@@ -605,7 +646,9 @@ Limit Amounts = signer.limit_id -> signer_limit.limit_amount
 Currency = signer.limit_id -> signer_limit.currency
 Approval Cost Center = signer.limit_id -> signer_limit.approval_cc_id -> cost_center.cc
 Exception = signer.limit_id -> signer_limit.exception
-Temporary = signer.limit_id -> signer_limit.temporary
+Temporary = signer.limit_id -> signer_limit.temp
+Temporary Start Date = signer.limit_id -> signer_limit.temp_start_date
+Temporary End Date = signer.limit_id -> signer_limit.temp_end_date
 Business Rationale = signer.limit_id -> signer_limit.business_rationale
 Business Controls = signer.limit_id -> signer_limit.business_control
 System = signer.limit_id -> signer_limit.policy_id -> policy.system_id
@@ -718,7 +761,9 @@ Limit Amounts = signer.limit_id -> signer_limit.limit_amount
 Currency = signer.limit_id -> signer_limit.currency
 Approval Cost Center = signer.limit_id -> signer_limit.approval_cc_id -> cost_center.cc
 Exception = signer.limit_id -> signer_limit.exception
-Temporary = signer.limit_id -> signer_limit.temporary
+Temporary = signer.limit_id -> signer_limit.temp
+Temporary Start Date = signer.limit_id -> signer_limit.temp_start_date
+Temporary End Date = signer.limit_id -> signer_limit.temp_end_date
 Business Rationale = signer.limit_id -> signer_limit.business_rationale
 Business Controls = signer.limit_id -> signer_limit.business_control
 System = signer.limit_id -> signer_limit.policy_id -> policy.system_id

@@ -16,7 +16,7 @@
             var openResults = db.exec(
                 "SELECT o.id, o.req_date, o.submitter, o.gad_id, " +
                 "l.id as lid, l.action, l.source_id, l.territory_id, l.policy_id, l.limit_amount, " +
-                "l.approval_cc_id, l.exception, l.temporary, l.business_rationale, l.business_control, " +
+                "l.approval_cc_id, l.exception, l.temp, l.temp_start_date, l.temp_end_date, l.business_rationale, l.business_control, " +
                 "l.account_restriction, l.currency " +
                 "FROM signer_req o LEFT JOIN signer_limit_req l ON l.signer_req_id = o.id ORDER BY o.id"
             );
@@ -55,9 +55,10 @@
                             var amt = r[9] ? Number(r[9]).toLocaleString() : '0';
                             var pol = policyMap[r[8]] || {};
                             limEntry.newData = [
-                                terrMap[r[7]] || '', pol.cat || '', amt, r[16] || '',
+                                terrMap[r[7]] || '', pol.cat || '', amt, r[18] || '',
                                 ccMap[r[10]] || '', r[11] ? 'Y' : 'N', r[12] ? 'Y' : 'N',
-                                r[13] ? 'Y' : 'N', r[14] ? 'Y' : 'N', pol.sys || '', r[15] || ''
+                                r[13] || '\u2014', r[14] || '\u2014',
+                                r[15] ? 'Y' : 'N', r[16] ? 'Y' : 'N', pol.sys || '', r[17] || ''
                             ];
                         }
                         openMap[reqNum].limits.push(limEntry);

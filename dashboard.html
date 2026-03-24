@@ -42,9 +42,12 @@
         </div>
 
         <!-- KPI Cards -->
+        <div style="position:relative;">
+            <button onclick="document.getElementById('devNoteKpiModal').style.display='flex'" style="position:absolute;right:0;top:0;padding:2px 10px;font-size:0.72rem;font-weight:600;color:#fff;background:#6a1b9a;border:none;border-radius:4px;cursor:pointer;">DEV Note</button>
+        </div>
         <div class="kpi-grid">
             <div class="kpi-card">
-                <div class="kpi-value">600</div>
+                <div class="kpi-value" id="kpiReqSubmitted">—</div>
                 <div class="kpi-label">Requests Submitted</div>
             </div>
             <div class="kpi-card">
@@ -56,7 +59,7 @@
                 <div class="kpi-label">Signers with Updated Job Level</div>
             </div>
             <div class="kpi-card">
-                <div class="kpi-value">500</div>
+                <div class="kpi-value" id="kpiInactiveSigners">—</div>
                 <div class="kpi-label">Inactive Signers</div>
             </div>
             <div class="kpi-card">
@@ -67,7 +70,7 @@
 
         <!-- Table 1: Request Status -->
         <div class="panel panel--blue">
-            <div class="panel-title">Request Status (Past 90 days)
+            <div class="panel-title" style="position:relative;">Request Status (Past 90 days)
                 <select id="fReqStatus" style="margin-left:10px; font-size:0.75rem; padding:2px 6px;" onchange="filterRequestStatus()">
                     <option value="">-- All --</option>
                     <option value="Open">Open</option>
@@ -76,13 +79,14 @@
                     <option value="Cancel">Cancel</option>
                 </select>
                 <button style="margin-left:10px; font-size:0.75rem; padding:2px 10px;" onclick="exportTable('requestTable','request_status')">Export all data</button>
+                <button onclick="document.getElementById('devNoteReqModal').style.display='flex'" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);padding:2px 10px;font-size:0.72rem;font-weight:600;color:#fff;background:#6a1b9a;border:none;border-radius:4px;cursor:pointer;">DEV Note</button>
             </div>
-            <div class="data-table-wrapper">
+            <div class="data-table-wrapper" style="max-height:660px;overflow-y:auto;">
                 <table class="data-table dash-table" id="requestTable">
                     <thead>
                         <tr>
                             <th>Request ID</th>
-                            <th>Date Submitted</th>
+                            <th style="background:#c8e6c9;">Date Submitted</th>
                             <th>Submitted By</th>
                             <th>Submitted For</th>
                             <th>Request Status</th>
@@ -95,18 +99,19 @@
 
         <!-- Table 2: Temporary Delegated Signers -->
         <div class="panel panel--blue">
-            <div class="panel-title">Temporary Delegated Signers Set to Expire (Top 30) <button style="margin-left:10px; font-size:0.75rem; padding:2px 10px;" onclick="exportTable('tempTable','temp_delegated_signers')">Export all data</button></div>
-            <div class="data-table-wrapper">
+            <div class="panel-title" style="position:relative;">Temporary Delegated Signers Set to Expire (Top 30) <button style="margin-left:10px; font-size:0.75rem; padding:2px 10px;" onclick="exportTable('tempTable','temp_delegated_signers')">Export all data</button>
+                <button onclick="document.getElementById('devNoteTempModal').style.display='flex'" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);padding:2px 10px;font-size:0.72rem;font-weight:600;color:#fff;background:#6a1b9a;border:none;border-radius:4px;cursor:pointer;">DEV Note</button>
+            </div>
+            <div class="data-table-wrapper" style="max-height:660px;overflow-y:auto;">
                 <table class="data-table dash-table" id="tempTable">
                     <thead>
                         <tr>
-                            <th>GAD ID</th><th>Last Name</th><th>First Name</th><th>Business Unit</th>
-                            <th>Signers Cost Center</th><th>Job Level / Job Grade</th><th>Job Title</th>
-                            <th>Employee No.</th><th>Pickup Cheques</th><th>Countries</th>
-                            <th>Policy Category</th><th>Limit Amounts</th><th>Currency</th>
-                            <th>Approval Cost Center</th><th>Exception</th><th>Temporary</th>
-                            <th>Business Rationale</th><th>Business Controls</th><th>System</th>
-                            <th>Accounts Restriction</th>
+                            <th>GAD ID</th><th>Status</th><th>Employee No.</th><th>First Name</th>
+                            <th>Last Name</th><th>Business Unit</th><th>Currency</th>
+                            <th>Limit Amounts</th><th>Approval Cost Centre</th><th>Policy Category</th>
+                            <th>System</th><th>Cheque Pick Up</th><th>Exception</th>
+                            <th style="background:#c8e6c9;">Temporary</th>
+                            <th>Temporary Start Date</th><th>Temporary End Date</th>
                         </tr>
                     </thead>
                     <tbody id="tempBody"></tbody>
@@ -116,18 +121,19 @@
 
         <!-- Table 3: Signers with Exception -->
         <div class="panel panel--blue">
-            <div class="panel-title">Signers with Exception (Top 30) <button style="margin-left:10px; font-size:0.75rem; padding:2px 10px;" onclick="exportTable('exceptionTable','signers_with_exception')">Export all data</button></div>
-            <div class="data-table-wrapper">
+            <div class="panel-title" style="position:relative;">Signers with Exception (Top 30) <button style="margin-left:10px; font-size:0.75rem; padding:2px 10px;" onclick="exportTable('exceptionTable','signers_with_exception')">Export all data</button>
+                <button onclick="document.getElementById('devNoteExcModal').style.display='flex'" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);padding:2px 10px;font-size:0.72rem;font-weight:600;color:#fff;background:#6a1b9a;border:none;border-radius:4px;cursor:pointer;">DEV Note</button>
+            </div>
+            <div class="data-table-wrapper" style="max-height:660px;overflow-y:auto;">
                 <table class="data-table dash-table" id="exceptionTable">
                     <thead>
                         <tr>
-                            <th>GAD ID</th><th>Last Name</th><th>First Name</th><th>Business Unit</th>
-                            <th>Signers Cost Center</th><th>Job Level / Job Grade</th><th>Job Title</th>
-                            <th>Employee No.</th><th>Pickup Cheques</th><th>Countries</th>
-                            <th>Policy Category</th><th>Limit Amounts</th><th>Currency</th>
-                            <th>Approval Cost Center</th><th>Exception</th><th>Temporary</th>
-                            <th>Business Rationale</th><th>Business Controls</th><th>System</th>
-                            <th>Accounts Restriction</th>
+                            <th>GAD ID</th><th>Status</th><th>Employee No.</th><th>First Name</th>
+                            <th>Last Name</th><th>Business Unit</th><th>Currency</th>
+                            <th>Limit Amounts</th><th>Approval Cost Centre</th><th>Policy Category</th>
+                            <th>System</th><th>Cheque Pick Up</th><th style="background:#c8e6c9;">Exception</th>
+                            <th>Temporary</th>
+                            <th>Temporary Start Date</th><th>Temporary End Date</th>
                         </tr>
                     </thead>
                     <tbody id="exceptionBody"></tbody>
@@ -137,90 +143,20 @@
     </div>
 
     <script>
-        // Shared dummy data arrays (same as report.html)
-        var bus = ['Cdn Group Benefits','CDN HR','Cdn IGP','Cdn IIC','Cdn Ind Annuities',
-                   'CDN INFORCE MGMT','CDN INST ADVISORY','CDN INSURANCE MANAGEMENT',
-                   'CDN INSURANCE SALES','CDN INSURANCE UW'];
-        var fnames = ['Alice','Bob','Charlie','Diana','Eric','Fiona','George','Hannah','Ivan','Julia',
-                      'Ken','Laura','Mike','Nancy','Oscar','Patricia','Quinn','Rachel','Sam','Tina'];
-        var lnames = ['Smith','Chan','Johnson','Lee','Brown','Wang','Taylor','Ho','Wilson','Ng',
-                      'Anderson','Chen','Thomas','Yang','Jackson','Wu','White','Liu','Harris','Kim'];
-        var ccs    = ['1010','2020','3030','4040','8352','T08'];
-        var jlevels= ['Level 4','Level 5','Level 6','Level 7','Level 8','Level 9','Level 10'];
-        var jtitles= ['Associate Analyst','Analyst','Senior Analyst','Software Engineer','Senior Engineer',
-                      'Lead Engineer','Principal Engineer','Manager','Senior Manager','Director'];
-        var cheques= ['Y','N'];
-        var countries = ['NA','US','HK'];
-        var pcats  = ['EXP','PAC','EXT'];
-        var limits = [5000,10000,15000,20000,25000,30000,50000,75000,100000];
-        var currs  = ['CAD','USD','HKD'];
-        var apprCCs= ['1010','2020','3030','8352','T08'];
-        var yesno  = ['Y','N'];
-        var systems= ['AP','SNOW','Concur'];
-        var accts  = ['000000-123456','000000-234567','000000-345678','000000-456789','000000-567890',
-                      '000000-678901','000000-789012','000000-890123','000000-901234','000000-999999'];
+        // KPI: Requests Submitted + Inactive Signers (from db)
+        (async function() {
+            var SQL = await initSqlJs({ locateFile: function(f) { return 'js/sql-js/' + f; } });
+            var buf = await fetch('db/data.db').then(function(r) { return r.arrayBuffer(); });
+            var db = new SQL.Database(new Uint8Array(buf));
 
-        function pick(arr, i) { return arr[i % arr.length]; }
+            var reqRes = db.exec("SELECT COUNT(*) FROM signer_req");
+            if (reqRes.length) document.getElementById('kpiReqSubmitted').textContent = reqRes[0].values[0][0].toLocaleString();
 
-        function genSignerRows(count, overrides) {
-            var rows = [];
-            for (var i = 0; i < count; i++) {
-                var fn = pick(fnames, i);
-                var ln = pick(lnames, i);
-                rows.push({
-                    gadId: fn.toLowerCase() + '.' + ln.toLowerCase() + '@manulife.com',
-                    ln: ln, fn: fn,
-                    bu: pick(bus, i),
-                    cc: pick(ccs, i),
-                    jl: pick(jlevels, i),
-                    jt: pick(jtitles, i),
-                    emp: String(10000001 + i),
-                    chq: pick(cheques, i),
-                    country: pick(countries, i),
-                    pcat: pick(pcats, i),
-                    limit: pick(limits, i),
-                    curr: pick(currs, i),
-                    apprCC: pick(apprCCs, i),
-                    exc: overrides.exc || pick(yesno, i + 1),
-                    temp: overrides.temp || pick(yesno, i + 2),
-                    br: pick(yesno, i + 3),
-                    bc: pick(yesno, i),
-                    sys: pick(systems, i),
-                    acct: pick(accts, i)
-                });
-            }
-            return rows;
-        }
+            var inactRes = db.exec("SELECT COUNT(*) FROM signer WHERE status = 0");
+            if (inactRes.length) document.getElementById('kpiInactiveSigners').textContent = inactRes[0].values[0][0].toLocaleString();
 
-        function renderSignerTable(bodyId, data) {
-            var tbody = document.getElementById(bodyId);
-            tbody.innerHTML = '';
-            data.forEach(function(r) {
-                var tr = document.createElement('tr');
-                tr.innerHTML =
-                    '<td>' + r.gadId + '</td>' +
-                    '<td>' + r.ln + '</td>' +
-                    '<td>' + r.fn + '</td>' +
-                    '<td>' + r.bu + '</td>' +
-                    '<td>' + r.cc + '</td>' +
-                    '<td>' + r.jl + '</td>' +
-                    '<td>' + r.jt + '</td>' +
-                    '<td>' + r.emp + '</td>' +
-                    '<td class="text-center">' + r.chq + '</td>' +
-                    '<td>' + r.country + '</td>' +
-                    '<td>' + r.pcat + '</td>' +
-                    '<td>' + Number(r.limit).toLocaleString() + '</td>' +
-                    '<td>' + r.curr + '</td>' +
-                    '<td>' + r.apprCC + '</td>' +
-                    '<td class="text-center">' + r.exc + '</td>' +
-                    '<td class="text-center">' + r.temp + '</td>' +
-                    '<td class="text-center">' + r.br + '</td>' +
-                    '<td class="text-center">' + r.bc + '</td>' +
-                    '<td>' + r.sys + '</td>' +
-                    '<td>' + r.acct + '</td>';
-                tbody.appendChild(tr);
-            });
-        }
+            db.close();
+        })();
 
         // Table 1: Request Status, past 90 days (data from db/dadreq.db via sql.js)
         window.DADREQ_READY.then(function() {
@@ -234,7 +170,7 @@
                 tr.setAttribute('onclick', "window.location='signer_details.html?reqid=" + item.reqId + "&approval=true'");
                 tr.innerHTML =
                     '<td>' + item.reqId + '</td>' +
-                    '<td>' + item.date + '</td>' +
+                    '<td style="background:#e8f5e9;">' + item.date + '</td>' +
                     '<td>' + item.submitter + '</td>' +
                     '<td>' + item.submittedFor + '</td>' +
                     '<td><span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:0.75rem;color:#fff;background:' + statusColors[item.status] + ';">' + item.status + '</span></td>';
@@ -242,8 +178,61 @@
             });
         });
 
-        // Table 2: Temporary = Y, top 30
-        renderSignerTable('tempBody', genSignerRows(30, { temp: 'Y' }));
+        // Table 2: Temporary = Y, top 30 (from db)
+        (async function() {
+            var SQL = await initSqlJs({ locateFile: function(f) { return 'js/sql-js/' + f; } });
+            var buf = await fetch('db/data.db').then(function(r) { return r.arrayBuffer(); });
+            var db = new SQL.Database(new Uint8Array(buf));
+
+            var res = db.exec(
+                "SELECT s.gad_id, s.status, s.pickup_cheque, s.temp, s.temp_start_date, s.temp_end_date, " +
+                "u.employee_id, u.first_name, u.last_name, " +
+                "b.name, " +
+                "sl.limit_amount, sl.currency, sl.exception, sl.approval_cc_id, sl.policy_id, " +
+                "p.category, p.system, " +
+                "cc.cc " +
+                "FROM signer s " +
+                "LEFT JOIN user_profile u ON s.gad_id = u.gad_id " +
+                "LEFT JOIN business_unit b ON s.bu_id = b.id " +
+                "LEFT JOIN signer_limit sl ON s.limit_id = sl.id " +
+                "LEFT JOIN policy p ON sl.policy_id = p.id " +
+                "LEFT JOIN cost_center cc ON sl.approval_cc_id = cc.id " +
+                "WHERE s.temp = 1 " +
+                "ORDER BY u.last_name, u.first_name " +
+                "LIMIT 30"
+            );
+
+            var statusColors = { 1: '#2e7d32', 0: '#c62828' };
+            var statusLabels = { 1: 'Active', 0: 'Inactive' };
+            if (res.length) {
+                var tbody = document.getElementById('tempBody');
+                res[0].values.forEach(function(r) {
+                    var tr = document.createElement('tr');
+                    tr.style.cursor = 'pointer';
+                    tr.onclick = function() { window.location = 'signer_details.html?upn=' + encodeURIComponent(r[0]); };
+                    var amt = r[10] != null ? Number(r[10]).toLocaleString() : '';
+                    tr.innerHTML =
+                        '<td>' + (r[0] || '') + '</td>' +
+                        '<td><span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:0.75rem;color:#fff;background:' + (statusColors[r[1]] || '#757575') + ';">' + (statusLabels[r[1]] || '') + '</span></td>' +
+                        '<td>' + (r[6] || '') + '</td>' +
+                        '<td>' + (r[7] || '') + '</td>' +
+                        '<td>' + (r[8] || '') + '</td>' +
+                        '<td>' + (r[9] || '') + '</td>' +
+                        '<td>' + (r[11] || '') + '</td>' +
+                        '<td>' + amt + '</td>' +
+                        '<td>' + (r[17] || '') + '</td>' +
+                        '<td>' + (r[15] || '') + '</td>' +
+                        '<td>' + (r[16] || '') + '</td>' +
+                        '<td class="text-center">' + (r[2] ? 'Y' : 'N') + '</td>' +
+                        '<td class="text-center">' + (r[12] ? 'Y' : 'N') + '</td>' +
+                        '<td class="text-center" style="background:#e8f5e9;">' + (r[3] ? 'Y' : 'N') + '</td>' +
+                        '<td>' + (r[4] || '\u2014') + '</td>' +
+                        '<td>' + (r[5] || '\u2014') + '</td>';
+                    tbody.appendChild(tr);
+                });
+            }
+            db.close();
+        })();
 
         // Table 3: Exception = Y, top 30 (from db)
         (async function() {
@@ -252,39 +241,53 @@
             var db = new SQL.Database(new Uint8Array(buf));
 
             var res = db.exec(
-                "SELECT s.gad_id, u.last_name, u.first_name, b.name, " +
-                "cc_s.cc, j.job_grade, j.job_title, u.employee_id, s.pickup_cheque, " +
-                "t.country_code, p.category, sl.limit_amount, sl.currency, " +
-                "cc_a.cc, sl.exception, sl.temporary, sl.business_rationale, sl.business_control, " +
-                "p.system, sl.account_restriction " +
+                "SELECT s.gad_id, s.status, s.pickup_cheque, s.temp, s.temp_start_date, s.temp_end_date, " +
+                "u.employee_id, u.first_name, u.last_name, " +
+                "b.name, " +
+                "sl.limit_amount, sl.currency, sl.exception, sl.approval_cc_id, sl.policy_id, " +
+                "p.category, p.system, " +
+                "cc.cc " +
                 "FROM signer s " +
-                "JOIN signer_limit sl ON sl.gad_id = s.gad_id " +
                 "LEFT JOIN user_profile u ON s.gad_id = u.gad_id " +
                 "LEFT JOIN business_unit b ON s.bu_id = b.id " +
-                "LEFT JOIN cost_center cc_s ON u.signer_cc_id = cc_s.id " +
-                "LEFT JOIN job j ON u.job_level_id = j.id " +
-                "LEFT JOIN territory t ON sl.territory_id = t.id " +
+                "LEFT JOIN signer_limit sl ON s.limit_id = sl.id " +
                 "LEFT JOIN policy p ON sl.policy_id = p.id " +
-                "LEFT JOIN cost_center cc_a ON sl.approval_cc_id = cc_a.id " +
+                "LEFT JOIN cost_center cc ON sl.approval_cc_id = cc.id " +
                 "WHERE sl.exception = 1 " +
-                "ORDER BY s.gad_id " +
+                "ORDER BY u.last_name, u.first_name " +
                 "LIMIT 30"
             );
 
+            var statusColors = { 1: '#2e7d32', 0: '#c62828' };
+            var statusLabels = { 1: 'Active', 0: 'Inactive' };
             if (res.length) {
-                var rows = res[0].values.map(function(r) {
-                    return {
-                        gadId: r[0] || '', ln: r[1] || '', fn: r[2] || '', bu: r[3] || '',
-                        cc: r[4] || '', jl: r[5] || '', jt: r[6] || '', emp: r[7] || '',
-                        chq: r[8] ? 'Y' : 'N', country: r[9] || '', pcat: r[10] || '',
-                        limit: r[11] || 0, curr: r[12] || '', apprCC: r[13] || '',
-                        exc: r[14] ? 'Y' : 'N', temp: r[15] ? 'Y' : 'N',
-                        br: r[16] ? 'Y' : 'N', bc: r[17] ? 'Y' : 'N',
-                        sys: r[18] || '', acct: r[19] || ''
-                    };
+                var tbody = document.getElementById('exceptionBody');
+                res[0].values.forEach(function(r) {
+                    var tr = document.createElement('tr');
+                    tr.style.cursor = 'pointer';
+                    tr.onclick = function() { window.location = 'signer_details.html?upn=' + encodeURIComponent(r[0]); };
+                    var amt = r[10] != null ? Number(r[10]).toLocaleString() : '';
+                    tr.innerHTML =
+                        '<td>' + (r[0] || '') + '</td>' +
+                        '<td><span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:0.75rem;color:#fff;background:' + (statusColors[r[1]] || '#757575') + ';">' + (statusLabels[r[1]] || '') + '</span></td>' +
+                        '<td>' + (r[6] || '') + '</td>' +
+                        '<td>' + (r[7] || '') + '</td>' +
+                        '<td>' + (r[8] || '') + '</td>' +
+                        '<td>' + (r[9] || '') + '</td>' +
+                        '<td>' + (r[11] || '') + '</td>' +
+                        '<td>' + amt + '</td>' +
+                        '<td>' + (r[17] || '') + '</td>' +
+                        '<td>' + (r[15] || '') + '</td>' +
+                        '<td>' + (r[16] || '') + '</td>' +
+                        '<td class="text-center">' + (r[2] ? 'Y' : 'N') + '</td>' +
+                        '<td class="text-center" style="background:#e8f5e9;">' + (r[12] ? 'Y' : 'N') + '</td>' +
+                        '<td class="text-center">' + (r[3] ? 'Y' : 'N') + '</td>' +
+                        '<td>' + (r[4] || '\u2014') + '</td>' +
+                        '<td>' + (r[5] || '\u2014') + '</td>';
+                    tbody.appendChild(tr);
                 });
-                renderSignerTable('exceptionBody', rows);
             }
+            db.close();
         })();
 
         function filterRequestStatus() {
@@ -320,5 +323,136 @@
             URL.revokeObjectURL(link.href);
         }
     </script>
+
+    <!-- DEV Note Modal: Request Status -->
+    <div id="devNoteReqModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:2000;align-items:center;justify-content:center;" onclick="if(event.target===this)this.style.display='none'">
+        <div style="background:#fff;width:700px;max-height:85%;border-radius:8px;padding:24px;box-shadow:0 4px 12px rgba(0,0,0,0.15);overflow-y:auto;">
+            <h3 style="margin:0 0 12px 0;color:#6a1b9a;">DEV Note – Request Status (Past 90 days) (key=signer_req.id)</h3>
+            <h4 style="margin:0 0 6px 0;color:#6a1b9a;">Fields Mapping:</h4>
+            <pre style="background:#f3e5f5;padding:12px;border-radius:6px;font-size:0.82rem;white-space:pre;overflow-x:auto;">Request ID     = signer_req.id
+Date Submitted = signer_req.req_date
+Submitted By   = signer_req.submitter
+Submitted For  = signer_req.gad_id
+Request Status = signer_req.status</pre>
+            <h4 style="margin:12px 0 6px 0;color:#6a1b9a;">Inbound:</h4>
+            <pre style="background:#f3e5f5;padding:12px;border-radius:6px;font-size:0.82rem;white-space:pre;overflow-x:auto;">Workday + AD (gad_id)
+- user_profile
+- territory
+- job
+
+GDAS
+- policy
+
+Infor
+- business_unit
+- cost_center
+- currency
+- exchange_rate
+
+DAD Request
+- signer
+- signer_limit</pre>
+            <div style="text-align:right;margin-top:12px;"><button onclick="document.getElementById('devNoteReqModal').style.display='none'" style="padding:4px 14px;cursor:pointer;">Close</button></div>
+        </div>
+    </div>
+
+    <!-- DEV Note Modal: Temporary Delegated Signers -->
+    <div id="devNoteTempModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:2000;align-items:center;justify-content:center;" onclick="if(event.target===this)this.style.display='none'">
+        <div style="background:#fff;width:95%;max-height:85%;border-radius:8px;padding:24px;box-shadow:0 4px 12px rgba(0,0,0,0.15);overflow-y:auto;">
+            <h3 style="margin:0 0 12px 0;color:#6a1b9a;">DEV Note – Temporary Delegated Signers Set to Expire (Top 30)</h3>
+            <h4 style="margin:0 0 6px 0;color:#6a1b9a;">Fields Mapping (key=signer.gad_id, WHERE signer.temp=1):</h4>
+            <pre style="background:#f3e5f5;padding:12px;border-radius:6px;font-size:0.82rem;white-space:pre;overflow-x:auto;">GAD ID              = signer.gad_id
+Status              = signer.status
+Employee No.        = signer.gad_id -> user_profile.employee_id
+First Name          = signer.gad_id -> user_profile.first_name
+Last Name           = signer.gad_id -> user_profile.last_name
+Business Unit       = signer.bu_id -> business_unit.name
+Currency            = signer.limit_id -> signer_limit.currency
+Limit Amounts       = signer.limit_id -> signer_limit.limit_amount
+Approval Cost Centre= signer.limit_id -> signer_limit.approval_cc_id -> cost_center.cc
+Policy Category     = signer.limit_id -> signer_limit.policy_id -> policy.category
+System              = signer.limit_id -> signer_limit.policy_id -> policy.system
+Cheque Pick Up      = signer.pickup_cheque
+Exception           = signer.limit_id -> signer_limit.exception
+Temporary           = signer.temp
+Temporary Start Date= signer.temp_start_date
+Temporary End Date  = signer.temp_end_date</pre>
+            <h4 style="margin:12px 0 6px 0;color:#6a1b9a;">Inbound:</h4>
+            <pre style="background:#f3e5f5;padding:12px;border-radius:6px;font-size:0.82rem;white-space:pre;overflow-x:auto;">Workday + AD (gad_id)
+- user_profile
+- territory
+- job
+
+GDAS
+- policy
+
+Infor
+- business_unit
+- cost_center
+- currency
+- exchange_rate
+
+DAD Request
+- signer
+- signer_limit</pre>
+            <div style="text-align:right;margin-top:12px;"><button onclick="document.getElementById('devNoteTempModal').style.display='none'" style="padding:4px 14px;cursor:pointer;">Close</button></div>
+        </div>
+    </div>
+
+    <!-- DEV Note Modal: Signers with Exception -->
+    <div id="devNoteExcModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:2000;align-items:center;justify-content:center;" onclick="if(event.target===this)this.style.display='none'">
+        <div style="background:#fff;width:95%;max-height:85%;border-radius:8px;padding:24px;box-shadow:0 4px 12px rgba(0,0,0,0.15);overflow-y:auto;">
+            <h3 style="margin:0 0 12px 0;color:#6a1b9a;">DEV Note – Signers with Exception (Top 30)</h3>
+            <h4 style="margin:0 0 6px 0;color:#6a1b9a;">Fields Mapping (key=signer.gad_id, WHERE signer_limit.exception=1):</h4>
+            <pre style="background:#f3e5f5;padding:12px;border-radius:6px;font-size:0.82rem;white-space:pre;overflow-x:auto;">GAD ID              = signer.gad_id
+Status              = signer.status
+Employee No.        = signer.gad_id -> user_profile.employee_id
+First Name          = signer.gad_id -> user_profile.first_name
+Last Name           = signer.gad_id -> user_profile.last_name
+Business Unit       = signer.bu_id -> business_unit.name
+Currency            = signer.limit_id -> signer_limit.currency
+Limit Amounts       = signer.limit_id -> signer_limit.limit_amount
+Approval Cost Centre= signer.limit_id -> signer_limit.approval_cc_id -> cost_center.cc
+Policy Category     = signer.limit_id -> signer_limit.policy_id -> policy.category
+System              = signer.limit_id -> signer_limit.policy_id -> policy.system
+Cheque Pick Up      = signer.pickup_cheque
+Exception           = signer.limit_id -> signer_limit.exception
+Temporary           = signer.temp
+Temporary Start Date= signer.temp_start_date
+Temporary End Date  = signer.temp_end_date</pre>
+            <h4 style="margin:12px 0 6px 0;color:#6a1b9a;">Inbound:</h4>
+            <pre style="background:#f3e5f5;padding:12px;border-radius:6px;font-size:0.82rem;white-space:pre;overflow-x:auto;">Workday + AD (gad_id)
+- user_profile
+- territory
+- job
+
+GDAS
+- policy
+
+Infor
+- business_unit
+- cost_center
+- currency
+- exchange_rate
+
+DAD Request
+- signer
+- signer_limit</pre>
+            <div style="text-align:right;margin-top:12px;"><button onclick="document.getElementById('devNoteExcModal').style.display='none'" style="padding:4px 14px;cursor:pointer;">Close</button></div>
+        </div>
+    </div>
+
+    <!-- DEV Note Modal: KPI Cards -->
+    <div id="devNoteKpiModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:2000;align-items:center;justify-content:center;" onclick="if(event.target===this)this.style.display='none'">
+        <div style="background:#fff;width:700px;max-height:85%;border-radius:8px;padding:24px;box-shadow:0 4px 12px rgba(0,0,0,0.15);overflow-y:auto;">
+            <h3 style="margin:0 0 12px 0;color:#6a1b9a;">DEV Note – KPI Cards</h3>
+            <pre style="background:#f3e5f5;padding:12px;border-radius:6px;font-size:0.82rem;white-space:pre;overflow-x:auto;">Requests Submitted             = SELECT COUNT(*) FROM signer_req
+Requests Approved              = (placeholder – hardcoded 900)
+Signers with Updated Job Level = (placeholder – hardcoded 300)
+Inactive Signers               = SELECT COUNT(*) FROM signer WHERE status = 0
+Cost Centres Inactivated       = (placeholder – hardcoded 200)</pre>
+            <div style="text-align:right;margin-top:12px;"><button onclick="document.getElementById('devNoteKpiModal').style.display='none'" style="padding:4px 14px;cursor:pointer;">Close</button></div>
+        </div>
+    </div>
 </body>
 </html>

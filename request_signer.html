@@ -17,7 +17,9 @@
 
         <!-- Section 1: Search Form -->
         <div class="panel panel--blue">
-            <div class="panel-title">Section 1: Search Signer</div>
+            <div class="panel-title" style="position:relative;">Section 1: Search Signer
+                <button onclick="document.getElementById('devNoteS1Modal').style.display='flex'" style="position:absolute;right:0;top:50%;transform:translateY(-50%);background:#6a1b9a;color:#fff;border:none;padding:4px 14px;border-radius:4px;font-size:0.78rem;cursor:pointer;">DEV Note</button>
+            </div>
             <div class="filter-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
                 <div class="filter-field">
                     <label for="gadId">GAD ID</label>
@@ -48,7 +50,9 @@
 
         <!-- Section 2: Results Table -->
         <div class="panel panel--blue">
-            <div class="panel-title">Section 2: Results</div>
+            <div class="panel-title" style="position:relative;">Section 2: Results
+                <button onclick="document.getElementById('devNoteS2Modal').style.display='flex'" style="position:absolute;right:0;top:50%;transform:translateY(-50%);background:#6a1b9a;color:#fff;border:none;padding:4px 14px;border-radius:4px;font-size:0.78rem;cursor:pointer;">DEV Note</button>
+            </div>
             <p style="margin: 0 0 15px 0; font-style: italic; color: #555;">Click the row to request change</p>
             <div class="data-table-wrapper">
                 <table class="data-table" id="resultsTable">
@@ -165,6 +169,50 @@
             el.addEventListener('keydown', function(e) { if (e.key === 'Enter') { e.preventDefault(); doSearch(); } });
         });
     </script>
+
+    <!-- DEV Note Modal (Section 1) -->
+    <div id="devNoteS1Modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.4);z-index:9999;align-items:center;justify-content:center;" onclick="if(event.target===this)this.style.display='none'">
+        <div style="background:#fff;border-radius:8px;padding:28px 32px;max-width:620px;width:90%;max-height:80vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,0.25);position:relative;">
+            <button onclick="document.getElementById('devNoteS1Modal').style.display='none'" style="position:absolute;top:10px;right:14px;background:none;border:none;font-size:1.3rem;cursor:pointer;color:#888;">&times;</button>
+            <h3 style="margin:0 0 14px;color:#6a1b9a;">DEV Note – Search Signer</h3>
+            <h4 style="margin:0 0 8px;color:#6a1b9a;font-size:0.85rem;">Fields mapping (key=signer.gad_id):</h4>
+            <pre style="background:#f3e5f5;color:#4a148c;padding:14px;border-radius:6px;font-size:0.75rem;line-height:1.6;margin:0;white-space:pre-wrap;">GAD ID = free text input
+First Name = free text input
+Last name = free text input
+Existing Signer = Dropdown (Y/N)</pre>
+        </div>
+    </div>
+
+    <!-- DEV Note Modal (Section 2) -->
+    <div id="devNoteS2Modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.4);z-index:9999;align-items:center;justify-content:center;" onclick="if(event.target===this)this.style.display='none'">
+        <div style="background:#fff;border-radius:8px;padding:28px 32px;max-width:620px;width:90%;max-height:80vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,0.25);position:relative;">
+            <button onclick="document.getElementById('devNoteS2Modal').style.display='none'" style="position:absolute;top:10px;right:14px;background:none;border:none;font-size:1.3rem;cursor:pointer;color:#888;">&times;</button>
+            <h3 style="margin:0 0 14px;color:#6a1b9a;">DEV Note – Results</h3>
+            <h4 style="margin:0 0 8px;color:#6a1b9a;font-size:0.85rem;">Fields mapping (key=signer.gad_id):</h4>
+            <pre style="background:#f3e5f5;color:#4a148c;padding:14px;border-radius:6px;font-size:0.75rem;line-height:1.6;margin:0 0 16px;white-space:pre-wrap;">GAD ID = user_profile.gad_id
+First Name = user_profile.first_name
+Last Name = user_profile.last_name
+Existing Signer = IF [SELECT COUNT(*) WHERE user_profile.gad_id=signer.gad_id] &gt;1</pre>
+            <h4 style="margin:0 0 8px;color:#6a1b9a;font-size:0.85rem;">Inbound:</h4>
+            <pre style="background:#f3e5f5;color:#4a148c;padding:14px;border-radius:6px;font-size:0.75rem;line-height:1.6;margin:0;white-space:pre-wrap;">Workday + AD (gad_id)
+- user_profile
+- territory
+- job
+
+GDAS
+- policy
+
+Infor
+- business_unit
+- cost_center
+- currency
+- exchange_rate
+
+DAD Request
+- signer
+- signer_limit</pre>
+        </div>
+    </div>
 </body>
 </html>
 

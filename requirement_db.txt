@@ -80,7 +80,9 @@ CREATE TABLE signer (
     bu_id NUMBER FK (->business_unit.id)
     pickup_cheque BIT,
     limit_id NUMBER FK, (-> signer_limit.id)
-    expire_date DATE,
+    temp BIT,
+    temp_start_date DATE,
+    temp_end_date DATE,
     status      BIT
 )
 CREATE TABLE signer_limit (
@@ -90,7 +92,9 @@ CREATE TABLE signer_limit (
     limit_amount  NUMBER,
     approval_cc_id   NUMBER FK, (-> cost_center.id)
     exception     BIT,
-    temporary     BIT,
+    temp          BIT,
+    temp_start_date DATE,
+    temp_end_date   DATE,
     business_rationale     BIT,
     business_control       BIT,
     account_restriction    NVARCHAR(100),
@@ -105,14 +109,18 @@ CREATE TABLE signer_req (
     id          NUMBER PRIMARY KEY,
     req_date    DATE,
     submitter   NVARCHAR(255) FK, (-> user_profile.gad_id),
-    gad_id NUMBER PRIMARY KEY, (->user_profile.gad_id)
+    gad_id NUMBER, (->user_profile.gad_id)
     bu_id NUMBER FK (->business_unit.id)
     limit_id NUMBER FK, (-> signer_limit.id)
-    source_data     NVARCHAR(255),       # storing pickup_cheque, expire_date, status signer data in json format when submit the request
+
+    # storing pickup_cheque, temp, temp_start_date, temp_end_date, status signer data in json format when submit the request
+    source_data     NVARCHAR(255),       
 
     # below fields format is the same as signer, but only save the new values
     pickup_cheque BIT,
-    expire_date DATE,
+    temp BIT,
+    temp_start_date DATE,
+    temp_end_date DATE,
     status      BIT     # temporary, signer_req is for Open req only. other status should be frm audit_dadreq
 )
 
@@ -120,7 +128,9 @@ CREATE TABLE signer_limit_req (
     id            NUMBER PRIMARY KEY,
     action        NVARCHAR(255), # 3 values only (Change/Add/Remove) -> store directly
     source_id     NUMBER FK, (-> signer_limit.id, NULL for action=Add)
-    source_data   NVARCHAR(MAX)  # storing the source_id row data in json format when submit the request
+
+    # storing the source_id row data in json format when submit the request
+    source_data   NVARCHAR(MAX)  
 
     # below fields format is the same as signer_limit, but only save the new values for the source_id row. For Add/Remove action they should be NULL
     territory_id  NUMBER FK, (-> territory.id)
@@ -128,7 +138,9 @@ CREATE TABLE signer_limit_req (
     limit_amount  NUMBER,
     approval_cc_id   NUMBER FK, (-> cost_center.id)
     exception     BIT,
-    temporary     BIT,
+    temp          BIT,
+    temp_start_date DATE,
+    temp_end_date   DATE,
     business_rationale     BIT,
     business_control       BIT,
     account_restriction    NVARCHAR(100),
@@ -140,7 +152,7 @@ CREATE TABLE signer_limit_req (
 
 # Table for DAD User Access
 CREATE TABLE user_access (
-    id          NVARCHAR(255) PRIMARY KEY, (-> user_profile.gad_id)
+    gad_id      NVARCHAR(255) PRIMARY KEY, (-> user_profile.gad_id)
     access      NVARCHAR(255)
 )
 
@@ -175,9 +187,3 @@ CREATE TABLE audit_change (
 )
 CREATE INDEX idx_audit_change_table ON audit_change(audit_table);
 CREATE INDEX idx_audit_change_date ON audit_change(audit_date);
-
-
-
-please help to create these tables in data.db file
-lets keep the existing dadreq and user_access_temp table first
-we will migrate and delete them later 

@@ -56,8 +56,18 @@ signer_gad_ids = gad_ids[:50]
 for gad_id in signer_gad_ids:
     bu_id = random.choice(bu_ids)
     pickup = random.choice([0, 1])
-    c.execute('INSERT INTO signer (gad_id, bu_id, pickup_cheque) VALUES (?,?,?)',
-              (gad_id, bu_id, pickup))
+    temp = random.choice([0, 0, 0, 1])
+    if temp:
+        from datetime import datetime, timedelta
+        start = datetime(2026, 1, 1) + timedelta(days=random.randint(0, 180))
+        end = start + timedelta(days=random.randint(30, 180))
+        temp_start = start.strftime('%Y-%m-%d')
+        temp_end = end.strftime('%Y-%m-%d')
+    else:
+        temp_start = None
+        temp_end = None
+    c.execute('INSERT INTO signer (gad_id, bu_id, pickup_cheque, temp, temp_start_date, temp_end_date) VALUES (?,?,?,?,?,?)',
+              (gad_id, bu_id, pickup, temp, temp_start, temp_end))
 
 # Insert signer_limit (1-4 limits per signer)
 limit_id = 1
@@ -70,17 +80,27 @@ for gad_id in signer_gad_ids:
         amount = random.choice(amounts)
         cc_id = random.choice(cc_ids)
         exc = random.choice([0, 0, 0, 1])
-        temp = random.choice([0, 0, 0, 1])
+        tmp = random.choice([0, 0, 0, 1])
+        if tmp:
+            from datetime import datetime, timedelta
+            start = datetime(2026, 1, 1) + timedelta(days=random.randint(0, 180))
+            end = start + timedelta(days=random.randint(30, 180))
+            tmp_start = start.strftime('%Y-%m-%d')
+            tmp_end = end.strftime('%Y-%m-%d')
+        else:
+            tmp_start = None
+            tmp_end = None
         br = random.choice([0, 0, 1])
         bc = random.choice([0, 0, 1])
 
         c.execute('''INSERT INTO signer_limit
             (id, territory_id, policy_id, limit_amount, approval_cc_id,
-             exception, temporary, business_rationale, business_control,
+             exception, temp, temp_start_date, temp_end_date,
+             business_rationale, business_control,
              system_id, account_restriction, gad_id)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?,?)''',
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
             (limit_id, terr_id, pol_id, amount, cc_id,
-             exc, temp, br, bc, None, None, gad_id))
+             exc, tmp, tmp_start, tmp_end, br, bc, None, None, gad_id))
         limit_id += 1
 
 conn.commit()

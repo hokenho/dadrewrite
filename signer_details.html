@@ -36,6 +36,7 @@
         <!-- DAD Change Request Panel (hidden by default, shown in DADREQ mode) -->
         <div class="panel panel--blue" id="dadreqPanel" style="display:none;">
             <div class="panel-title" style="position:relative;">DAD Change Request
+                <button onclick="document.getElementById('devNoteDadreqModal').style.display='flex'" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);padding:2px 10px;font-size:0.72rem;font-weight:600;color:#fff;background:#6a1b9a;border:none;border-radius:4px;cursor:pointer;">DEV Note</button>
                 <button id="btnApproveSigner" style="display:none; margin-left:10px; padding:3px 14px; font-size:0.82rem; font-weight:600; color:#fff; background:#2e7d32; border:none; border-radius:4px; cursor:pointer;" onclick="approveSigner()">Approve</button>
                 <button id="btnRejectSigner" style="display:none; margin-left:6px; padding:3px 14px; font-size:0.82rem; font-weight:600; color:#fff; background:#c62828; border:none; border-radius:4px; cursor:pointer;" onclick="openRejectModal()">Reject</button>
                 <button id="btnCancelRequest" style="display:none; margin-left:6px; padding:3px 14px; font-size:0.82rem; font-weight:600; color:#fff; background:#757575; border:none; border-radius:4px; cursor:pointer;" onclick="openCancelModal()">Cancel Request</button>
@@ -52,7 +53,9 @@
 
         <!-- Signer Profile -->
         <div class="panel panel--blue">
-            <div class="panel-title">Signer Profile <button id="btnDeleteSigner" class="btn-delete-signer" style="display:none;" onclick="deleteSigner()">Delete</button></div>
+            <div class="panel-title" style="position:relative;">Signer Profile <button id="btnDeleteSigner" class="btn-delete-signer" style="display:none;" onclick="deleteSigner()">Delete</button>
+                <button onclick="document.getElementById('devNoteProfileModal').style.display='flex'" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);padding:2px 10px;font-size:0.72rem;font-weight:600;color:#fff;background:#6a1b9a;border:none;border-radius:4px;cursor:pointer;">DEV Note</button>
+            </div>
             <table class="detail-table">
                 <tr><th>GAD ID</th><td id="gadId"></td></tr>
                 <tr><th>Last Name</th><td id="profLastName"></td></tr>
@@ -63,14 +66,18 @@
                 <tr><th>Job Title</th><td id="profJobTitle"></td></tr>
                 <tr><th>Employee No.</th><td id="profEmpNo"></td></tr>
                 <tr><th>Pickup Cheques</th><td id="profPickup"></td></tr>
-                <tr><th>Temporary Delegation</th><td id="profExpireDate"></td></tr>
+                <tr><th>Temporary</th><td id="profTemp"></td></tr>
+                <tr id="rowTempStart"><th>Temporary Start Date</th><td id="profTempStart"></td></tr>
+                <tr id="rowTempEnd"><th>Temporary End Date</th><td id="profTempEnd"></td></tr>
                 <tr><th>Status</th><td id="profStatus"></td></tr>
             </table>
         </div>
 
         <!-- Signing Limit Authorizations -->
         <div class="panel panel--blue">
-            <div class="panel-title">Signing Limit Authorizations <button id="btnNewRow" style="display:none; margin-left:10px; font-size: 0.75rem; padding: 2px 8px;" onclick="addNewRow()">New Row</button></div>
+            <div class="panel-title" style="position:relative;">Signing Limit Authorizations <button id="btnNewRow" style="display:none; margin-left:10px; font-size: 0.75rem; padding: 2px 8px;" onclick="addNewRow()">New Row</button>
+                <button onclick="document.getElementById('devNoteLimitsModal').style.display='flex'" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);padding:2px 10px;font-size:0.72rem;font-weight:600;color:#fff;background:#6a1b9a;border:none;border-radius:4px;cursor:pointer;">DEV Note</button>
+            </div>
             <div class="data-table-wrapper">
                 <table class="data-table" id="limitsTable">
                     <thead>
@@ -83,6 +90,8 @@
                             <th style="width:9%">Approval Cost Center</th>
                             <th style="width:5%">Exception</th>
                             <th style="width:5%">Temporary</th>
+                            <th style="width:8%">Temporary Start Date</th>
+                            <th style="width:8%">Temporary End Date</th>
                             <th style="width:5%">Business Rationale</th>
                             <th style="width:5%">Business Controls</th>
                             <th style="width:6%">System</th>
@@ -162,7 +171,7 @@
                 if (isDADREQMode) {
                     var reqNum = parseInt(reqid.replace(/\D/g, ''));
                     var reqRes = db.exec(
-                        "SELECT id, req_date, submitter, gad_id, bu_id, pickup_cheque, limit_id, expire_date, status, source_data " +
+                        "SELECT id, req_date, submitter, gad_id, bu_id, pickup_cheque, limit_id, temp, temp_start_date, temp_end_date, status, source_data " +
                         "FROM signer_req WHERE id = ?", [reqNum]
                     );
                     if (reqRes.length && reqRes[0].values.length) {
@@ -202,13 +211,15 @@
                             document.getElementById('profJobTitle').textContent = p[6] || '';
                             document.getElementById('profEmpNo').textContent = p[2] || '';
                             document.getElementById('profPickup').textContent = req[5] ? 'Y' : 'N';
-                            document.getElementById('profExpireDate').textContent = req[7] || '\u2014';
+                            document.getElementById('profTemp').textContent = req[7] ? 'Y' : 'N';
+                            document.getElementById('profTempStart').textContent = req[8] || '\u2014';
+                            document.getElementById('profTempEnd').textContent = req[9] || '\u2014';
                             document.getElementById('profStatus').innerHTML =
                                 '<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:0.75rem;color:#fff;background:' +
-                                (statusColors2[req[8]] || '#757575') + ';">' + (statusLabels[req[8]] || '') + '</span>';
+                                (statusColors2[req[10]] || '#757575') + ';">' + (statusLabels[req[10]] || '') + '</span>';
 
-                            // Compare new values with source_data (old values) for 3 editable fields
-                            var srcProfile = req[9] ? JSON.parse(req[9]) : null;
+                            // Compare new values with source_data (old values) for editable fields
+                            var srcProfile = req[11] ? JSON.parse(req[11]) : null;
                             if (srcProfile) {
                                 var oldPickup = srcProfile.pickup_cheque ? 'Y' : 'N';
                                 var newPickup = req[5] ? 'Y' : 'N';
@@ -220,21 +231,41 @@
                                         '<span style="font-weight:bold;">' + newPickup + '</span>';
                                 }
 
-                                var oldExpire = srcProfile.expire_date || '\u2014';
-                                var newExpire = req[7] || '\u2014';
-                                if (oldExpire !== newExpire) {
-                                    var td = document.getElementById('profExpireDate');
+                                var oldExpireTemp = srcProfile.temp ? 'Y' : 'N';
+                                var newExpireTemp = req[7] ? 'Y' : 'N';
+                                if (oldExpireTemp !== newExpireTemp) {
+                                    var td = document.getElementById('profTemp');
                                     td.style.backgroundColor = '#ffff00';
-                                    td.innerHTML = oldExpire +
+                                    td.innerHTML = oldExpireTemp +
                                         ' <span style="color:#999;margin:0 4px;">&#8594;</span>' +
-                                        '<span style="font-weight:bold;">' + newExpire + '</span>';
+                                        '<span style="font-weight:bold;">' + newExpireTemp + '</span>';
+                                }
+
+                                var oldTempStart = srcProfile.temp_start_date || '\u2014';
+                                var newTempStart = req[8] || '\u2014';
+                                if (oldTempStart !== newTempStart) {
+                                    var td = document.getElementById('profTempStart');
+                                    td.style.backgroundColor = '#ffff00';
+                                    td.innerHTML = oldTempStart +
+                                        ' <span style="color:#999;margin:0 4px;">&#8594;</span>' +
+                                        '<span style="font-weight:bold;">' + newTempStart + '</span>';
+                                }
+
+                                var oldTempEnd = srcProfile.temp_end_date || '\u2014';
+                                var newTempEnd = req[9] || '\u2014';
+                                if (oldTempEnd !== newTempEnd) {
+                                    var td = document.getElementById('profTempEnd');
+                                    td.style.backgroundColor = '#ffff00';
+                                    td.innerHTML = oldTempEnd +
+                                        ' <span style="color:#999;margin:0 4px;">&#8594;</span>' +
+                                        '<span style="font-weight:bold;">' + newTempEnd + '</span>';
                                 }
 
                                 var oldStatus = statusLabels[srcProfile.status] || '';
-                                var newStatus = statusLabels[req[8]] || '';
+                                var newStatus = statusLabels[req[10]] || '';
                                 if (oldStatus !== newStatus) {
                                     var oldColor = statusColors2[srcProfile.status] || '#757575';
-                                    var newColor = statusColors2[req[8]] || '#757575';
+                                    var newColor = statusColors2[req[10]] || '#757575';
                                     var td = document.getElementById('profStatus');
                                     td.style.backgroundColor = '#ffff00';
                                     td.innerHTML =
@@ -261,7 +292,8 @@
                                 terrMap[sd.territory_id] || '', sp.cat || '',
                                 sd.limit_amount != null ? Number(sd.limit_amount).toLocaleString() : '',
                                 sd.currency || '', ccMap[sd.approval_cc_id] || '',
-                                sd.exception ? 'Y' : 'N', sd.temporary ? 'Y' : 'N',
+                                sd.exception ? 'Y' : 'N', sd.temp ? 'Y' : 'N',
+                                sd.temp_start_date || '\u2014', sd.temp_end_date || '\u2014',
                                 sd.business_rationale ? 'Y' : 'N', sd.business_control ? 'Y' : 'N',
                                 sp.sys || '', sd.account_restriction || ''
                             ];
@@ -287,7 +319,7 @@
                             vals.forEach(function(v, i) {
                                 var td = document.createElement('td');
                                 td.textContent = v;
-                                if (i >= 5 && i <= 8) td.className = 'text-center';
+                                if ((i >= 5 && i <= 6) || (i >= 9 && i <= 10)) td.className = 'text-center';
                                 if (fn) fn(td, i);
                                 tr.appendChild(td);
                             });
@@ -296,7 +328,7 @@
 
                         var lrRes = db.exec(
                             "SELECT lr.action, lr.source_data, lr.territory_id, lr.policy_id, lr.limit_amount, " +
-                            "lr.currency, lr.approval_cc_id, lr.exception, lr.temporary, lr.business_rationale, " +
+                            "lr.currency, lr.approval_cc_id, lr.exception, lr.temp, lr.temp_start_date, lr.temp_end_date, lr.business_rationale, " +
                             "lr.business_control, lr.account_restriction " +
                             "FROM signer_limit_req lr WHERE lr.signer_req_id = ? ORDER BY lr.id", [reqNum]
                         );
@@ -311,8 +343,9 @@
                                     lr[4] != null ? Number(lr[4]).toLocaleString() : '',
                                     lr[5] || '', ccMap[lr[6]] || '',
                                     lr[7] ? 'Y' : 'N', lr[8] ? 'Y' : 'N',
-                                    lr[9] ? 'Y' : 'N', lr[10] ? 'Y' : 'N',
-                                    np.sys || '', lr[11] || ''
+                                    lr[9] || '\u2014', lr[10] || '\u2014',
+                                    lr[11] ? 'Y' : 'N', lr[12] ? 'Y' : 'N',
+                                    np.sys || '', lr[13] || ''
                                 ];
                                 if (act === 'Change' && srcData) {
                                     var sv = resolveSource(srcData);
@@ -346,7 +379,7 @@
 
                 // Table 1: Signer Profile
                 var profRes = db.exec(
-                    "SELECT s.gad_id, s.status, s.pickup_cheque, s.expire_date, " +
+                    "SELECT s.gad_id, s.status, s.pickup_cheque, s.temp, s.temp_start_date, s.temp_end_date, " +
                     "u.last_name, u.first_name, u.employee_id, " +
                     "b.name AS bu_name, " +
                     "cc_s.cc AS signer_cc, " +
@@ -364,15 +397,17 @@
                     var statusColors = { 1: '#2e7d32', 0: '#c62828' };
                     var statusLabels = { 1: 'Active', 0: 'Inactive' };
                     document.getElementById('gadId').textContent = r[0] || '';
-                    document.getElementById('profLastName').textContent = r[4] || '';
-                    document.getElementById('profFirstName').textContent = r[5] || '';
-                    document.getElementById('profBU').textContent = r[7] || '';
-                    document.getElementById('profCC').textContent = r[8] || '';
-                    document.getElementById('profJobGrade').textContent = r[9] || '';
-                    document.getElementById('profJobTitle').textContent = r[10] || '';
-                    document.getElementById('profEmpNo').textContent = r[6] || '';
+                    document.getElementById('profLastName').textContent = r[6] || '';
+                    document.getElementById('profFirstName').textContent = r[7] || '';
+                    document.getElementById('profBU').textContent = r[9] || '';
+                    document.getElementById('profCC').textContent = r[10] || '';
+                    document.getElementById('profJobGrade').textContent = r[11] || '';
+                    document.getElementById('profJobTitle').textContent = r[12] || '';
+                    document.getElementById('profEmpNo').textContent = r[8] || '';
                     document.getElementById('profPickup').textContent = r[2] ? 'Y' : 'N';
-                    document.getElementById('profExpireDate').textContent = r[3] || '—';
+                    document.getElementById('profTemp').textContent = r[3] ? 'Y' : 'N';
+                    document.getElementById('profTempStart').textContent = r[4] || '—';
+                    document.getElementById('profTempEnd').textContent = r[5] || '—';
                     document.getElementById('profStatus').innerHTML =
                         '<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:0.75rem;color:#fff;background:' +
                         (statusColors[r[1]] || '#757575') + ';">' + (statusLabels[r[1]] || '') + '</span>';
@@ -381,7 +416,7 @@
                 // Table 2: Signing Limit Authorizations (1:M via gad_id)
                 var limRes = db.exec(
                     "SELECT t.country_code, p.category, sl.limit_amount, sl.currency, " +
-                    "cc.cc, sl.exception, sl.temporary, sl.business_rationale, sl.business_control, " +
+                    "cc.cc, sl.exception, sl.temp, sl.temp_start_date, sl.temp_end_date, sl.business_rationale, sl.business_control, " +
                     "p.system, sl.account_restriction " +
                     "FROM signer_limit sl " +
                     "LEFT JOIN territory t ON sl.territory_id = t.id " +
@@ -406,13 +441,14 @@
                         var amt = r[2] != null ? Number(r[2]).toLocaleString() : '';
                         var vals = [
                             r[0] || '', r[1] || '', amt, r[3] || '', r[4] || '',
-                            r[5] ? 'Y' : 'N', r[6] ? 'Y' : 'N', r[7] ? 'Y' : 'N', r[8] ? 'Y' : 'N',
-                            r[9] || '', r[10] || ''
+                            r[5] ? 'Y' : 'N', r[6] ? 'Y' : 'N', r[7] || '\u2014', r[8] || '\u2014',
+                            r[9] ? 'Y' : 'N', r[10] ? 'Y' : 'N',
+                            r[11] || '', r[12] || ''
                         ];
                         vals.forEach(function(v, idx) {
                             var td = document.createElement('td');
                             td.textContent = v;
-                            if (idx >= 5 && idx <= 8) td.className = 'text-center';
+                            if (idx >= 5 && idx <= 6 || idx >= 9 && idx <= 10) td.className = 'text-center';
                             tr.appendChild(td);
                         });
                         tbody.appendChild(tr);
@@ -454,10 +490,12 @@
             4: ['1010','8352','T08'],
             5: ['Y','N'],
             6: ['Y','N'],
-            7: ['Y','N'],
-            8: ['Y','N'],
-            9: ['AP','SNOW','Concur'],
-            10: ['000000-123456','000000-789012','000000-345678']
+            7: 'date', // Temporary Start Date
+            8: 'date', // Temporary End Date
+            9: ['Y','N'],
+            10: ['Y','N'],
+            11: ['AP','SNOW','Concur'],
+            12: ['000000-123456','000000-789012','000000-345678']
         };
 
         // Wire up action links with UPN
@@ -475,6 +513,31 @@
 
         var originalProfileData = {};
 
+        function toggleTempDates(val) {
+            var startRow = document.getElementById('rowTempStart');
+            var endRow = document.getElementById('rowTempEnd');
+            if (val === 'Y') {
+                startRow.style.display = '';
+                endRow.style.display = '';
+            } else {
+                startRow.style.display = 'none';
+                endRow.style.display = 'none';
+                // Clear date inputs if in edit mode
+                var startInput = document.getElementById('profTempStart').querySelector('input[type="date"]');
+                var endInput = document.getElementById('profTempEnd').querySelector('input[type="date"]');
+                if (startInput) {
+                    startInput.value = '';
+                    if (startInput.value !== startInput.getAttribute('data-orig')) startInput.style.backgroundColor = '#ffff00';
+                    else startInput.style.backgroundColor = '';
+                }
+                if (endInput) {
+                    endInput.value = '';
+                    if (endInput.value !== endInput.getAttribute('data-orig')) endInput.style.backgroundColor = '#ffff00';
+                    else endInput.style.backgroundColor = '';
+                }
+            }
+        }
+
         function enterEditMode() {
             isEditMode = true;
             // Show delete button on profile
@@ -485,13 +548,17 @@
             document.getElementById('editActions').style.display = 'contents';
             document.getElementById('viewActions').style.display = 'none';
 
-            // Make profile fields editable: Pickup Cheques, Temporary Delegation, Status
+            // Make profile fields editable: Pickup Cheques, Temporary, Temp Start/End, Status
             var pickupTd = document.getElementById('profPickup');
-            var expireTd = document.getElementById('profExpireDate');
+            var tempTd = document.getElementById('profTemp');
+            var tempStartTd = document.getElementById('profTempStart');
+            var tempEndTd = document.getElementById('profTempEnd');
             var statusTd = document.getElementById('profStatus');
 
             originalProfileData.pickup = pickupTd.textContent.trim();
-            originalProfileData.expire = expireTd.textContent.trim();
+            originalProfileData.temp = tempTd.textContent.trim();
+            originalProfileData.tempStart = tempStartTd.textContent.trim();
+            originalProfileData.tempEnd = tempEndTd.textContent.trim();
             originalProfileData.statusText = statusTd.textContent.trim();
             originalProfileData.statusHTML = statusTd.innerHTML;
 
@@ -499,17 +566,29 @@
             var pickupVal = originalProfileData.pickup;
             pickupTd.innerHTML = '<select class="edit-input" data-orig="' + pickupVal + '" style="padding:4px; width:auto;"><option value="Y"' + (pickupVal === 'Y' ? ' selected' : '') + '>Y</option><option value="N"' + (pickupVal === 'N' ? ' selected' : '') + '>N</option></select>';
 
-            // Temporary Delegation → date input
-            var expireVal = originalProfileData.expire === '—' ? '' : originalProfileData.expire;
-            expireTd.innerHTML = '<input type="date" class="edit-input" data-orig="' + expireVal + '" value="' + expireVal + '" style="padding:4px; width:auto;">' +
+            // Temporary → Y/N select
+            var tempVal = originalProfileData.temp;
+            tempTd.innerHTML = '<select class="edit-input" data-orig="' + tempVal + '" style="padding:4px; width:auto;" onchange="toggleTempDates(this.value)"><option value="Y"' + (tempVal === 'Y' ? ' selected' : '') + '>Y</option><option value="N"' + (tempVal === 'N' ? ' selected' : '') + '>N</option></select>';
+
+            // Temporary Start Date → date input
+            var tempStartVal = originalProfileData.tempStart === '—' ? '' : originalProfileData.tempStart;
+            tempStartTd.innerHTML = '<input type="date" class="edit-input" data-orig="' + tempStartVal + '" value="' + tempStartVal + '" style="padding:4px; width:auto;">' +
+                '<button type="button" onclick="var inp=this.previousElementSibling;inp.value=\'\';if(inp.value===inp.getAttribute(\'data-orig\')){inp.style.backgroundColor=\'\';}else{inp.style.backgroundColor=\'#ffff00\';}" style="margin-left:4px; padding:2px 8px; font-size:0.75rem; cursor:pointer;">Clear</button>';
+
+            // Temporary End Date → date input
+            var tempEndVal = originalProfileData.tempEnd === '—' ? '' : originalProfileData.tempEnd;
+            tempEndTd.innerHTML = '<input type="date" class="edit-input" data-orig="' + tempEndVal + '" value="' + tempEndVal + '" style="padding:4px; width:auto;">' +
                 '<button type="button" onclick="var inp=this.previousElementSibling;inp.value=\'\';if(inp.value===inp.getAttribute(\'data-orig\')){inp.style.backgroundColor=\'\';}else{inp.style.backgroundColor=\'#ffff00\';}" style="margin-left:4px; padding:2px 8px; font-size:0.75rem; cursor:pointer;">Clear</button>';
 
             // Status → Active/Inactive select
             var isActive = originalProfileData.statusText === 'Active';
             statusTd.innerHTML = '<select class="edit-input" data-orig="' + (isActive ? 'Active' : 'Inactive') + '" style="padding:4px; width:auto;"><option value="Active"' + (isActive ? ' selected' : '') + '>Active</option><option value="Inactive"' + (!isActive ? ' selected' : '') + '>Inactive</option></select>';
 
+            // Show/hide temp date rows based on current Temporary value
+            toggleTempDates(tempVal);
+
             // Attach highlight listeners to profile edits
-            [pickupTd, expireTd, statusTd].forEach(function(td) {
+            [pickupTd, tempTd, tempStartTd, tempEndTd, statusTd].forEach(function(td) {
                 var input = td.querySelector('.edit-input');
                 if (input) {
                     input.addEventListener('input', function() {
@@ -549,6 +628,10 @@
                         // Number input
                         var origNum = val.replace(/,/g, '');
                         cell.innerHTML = '<input type="number" class="edit-input" data-orig="' + origNum + '" value="' + origNum + '">';
+                    } else if (limitOptions[idx] === 'date') {
+                        // Date input
+                        var origDate = val === '\u2014' ? '' : val;
+                        cell.innerHTML = '<input type="date" class="edit-input" data-orig="' + origDate + '" value="' + origDate + '" style="padding:4px; width:auto;">';
                     } else {
                         // Text input with datalist dropdown
                         var opts = limitOptions[idx];
@@ -588,8 +671,14 @@
 
             // Restore profile fields
             document.getElementById('profPickup').textContent = originalProfileData.pickup;
-            document.getElementById('profExpireDate').textContent = originalProfileData.expire;
+            document.getElementById('profTemp').textContent = originalProfileData.temp;
+            document.getElementById('profTempStart').textContent = originalProfileData.tempStart;
+            document.getElementById('profTempEnd').textContent = originalProfileData.tempEnd;
             document.getElementById('profStatus').innerHTML = originalProfileData.statusHTML;
+
+            // Restore temp date row visibility
+            document.getElementById('rowTempStart').style.display = '';
+            document.getElementById('rowTempEnd').style.display = '';
 
             document.querySelectorAll('.action-col').forEach(el => el.style.display = 'none');
 
@@ -640,11 +729,13 @@
             actionTd.innerHTML = '<button onclick="deleteRow(this)" style="color:red; cursor:pointer;" title="Delete">X</button>';
             tr.appendChild(actionTd);
 
-            for (var i = 0; i < 11; i++) {
+            for (var i = 0; i < 13; i++) {
                 var td = document.createElement('td');
                 var val = '';
                 if (limitOptions[i] === null) {
                     td.innerHTML = '<input type="number" class="edit-input" data-orig="" value="">';
+                } else if (limitOptions[i] === 'date') {
+                    td.innerHTML = '<input type="date" class="edit-input" data-orig="" value="" style="padding:4px; width:auto;">';
                 } else {
                     var opts = limitOptions[i];
                     var listId = 'new_dl_' + newRowCounter + '_' + i;
@@ -1035,6 +1126,165 @@
         }
     </script>
     <script src="js/navbar.js"></script>
+
+    <!-- DEV Note Modal: DAD Change Request -->
+    <div id="devNoteDadreqModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:2000;align-items:center;justify-content:center;" onclick="if(event.target===this)this.style.display='none'">
+        <div style="background:#fff;width:600px;max-height:80%;border-radius:8px;padding:24px;box-shadow:0 4px 12px rgba(0,0,0,0.15);overflow-y:auto;">
+            <h3 style="margin:0 0 12px 0;color:#6a1b9a;">DEV Note – DAD Change Request (key=signer_req.id)</h3>
+            <h4 style="margin:0 0 6px 0;color:#6a1b9a;">Fields Mapping:</h4>
+            <pre style="background:#f3e5f5;padding:12px;border-radius:6px;font-size:0.82rem;white-space:pre-wrap;">Request ID        = from url parameter (reqid=DADREQ100005)
+Request Date      = signer_req.req_date
+Requester         = signer_req.submitter
+Request Status    = signer_req.status</pre>
+            <h4 style="margin:12px 0 6px 0;color:#6a1b9a;">Inbound:</h4>
+            <pre style="background:#f3e5f5;padding:12px;border-radius:6px;font-size:0.82rem;white-space:pre-wrap;">Workday + AD (gad_id)
+- user_profile
+- territory
+- job
+
+GDAS
+- policy
+
+Infor
+- business_unit
+- cost_center
+- currency
+- exchange_rate
+
+DAD Request
+- signer
+- signer_limit</pre>
+            <div style="text-align:right;margin-top:12px;"><button onclick="document.getElementById('devNoteDadreqModal').style.display='none'" style="padding:4px 14px;cursor:pointer;">Close</button></div>
+        </div>
+    </div>
+
+    <!-- DEV Note Modal: Signer Profile -->
+    <div id="devNoteProfileModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:2000;align-items:center;justify-content:center;" onclick="if(event.target===this)this.style.display='none'">
+        <div style="background:#fff;width:95%;max-height:85%;border-radius:8px;padding:24px;box-shadow:0 4px 12px rgba(0,0,0,0.15);overflow-y:auto;">
+            <h3 style="margin:0 0 12px 0;color:#6a1b9a;">DEV Note – Signer Profile</h3>
+            <div style="display:flex;gap:24px;">
+                <div style="flex:1;">
+                    <h4 style="margin:0 0 6px 0;color:#6a1b9a;">Signer mode (key=signer.gad_id):</h4>
+                    <pre style="background:#f3e5f5;padding:12px;border-radius:6px;font-size:0.82rem;white-space:pre;overflow-x:auto;">GAD ID              = from URL parameter
+Last Name           = signer.gad_id -> user_profile.last_name
+First Name          = signer.gad_id -> user_profile.first_name
+Business Unit       = signer.bu_id -> business_unit.name
+Signers Cost Center = signer.gad_id -> user_profile.signer_cc_id -> cost_center.cc
+Job Level/Job Grade = signer.gad_id -> user_profile.job_level_id -> job.job_grade
+Job Title           = signer.gad_id -> user_profile.job_level_id -> job.job_title
+Employee No.        = signer.gad_id -> user_profile.employee_id
+Pickup Cheques      = signer.pickup_cheque
+Temporary           = signer.temp
+Temporary Start Date     = signer.temp_start_date
+Temporary End Date       = signer.temp_end_date
+Status              = signer.status</pre>
+                </div>
+                <div style="flex:1;">
+                    <h4 style="margin:0 0 6px 0;color:#6a1b9a;">DADREQ mode (key=signer_req.gad_id):</h4>
+                    <pre style="background:#f3e5f5;padding:12px;border-radius:6px;font-size:0.82rem;white-space:pre;overflow-x:auto;">- Editable fields (pickup_cheque, temp, temp_start_date, temp_end_date, status)
+Old data = signer_req.source_data (in JSON format)
+New data:
+  GAD ID              = signer_req.gad_id
+  Pickup Cheques      = signer_req.pickup_cheque
+  Temporary           = signer_req.temp
+  Temporary Start Date     = signer_req.temp_start_date
+  Temporary End Date       = signer_req.temp_end_date
+  Status              = signer_req.status
+
+- Uneditable fields (lookup by gad_id):
+Last Name           = signer_req.gad_id -> user_profile.last_name
+First Name          = signer_req.gad_id -> user_profile.first_name
+Business Unit       = signer_req.bu_id -> business_unit.name
+Signers Cost Center = signer_req.gad_id -> user_profile.signer_cc_id -> cost_center.cc
+Job Level/Job Grade = signer_req.gad_id -> user_profile.job_level_id -> job.job_grade
+Job Title           = signer_req.gad_id -> user_profile.job_level_id -> job.job_title
+Employee No.        = signer_req.gad_id -> user_profile.employee_id</pre>
+                </div>
+            </div>
+            <h4 style="margin:12px 0 6px 0;color:#6a1b9a;">Inbound:</h4>
+            <pre style="background:#f3e5f5;padding:12px;border-radius:6px;font-size:0.82rem;white-space:pre;overflow-x:auto;">Workday + AD (gad_id)
+- user_profile
+- territory
+- job
+
+GDAS
+- policy
+
+Infor
+- business_unit
+- cost_center
+- currency
+- exchange_rate
+
+DAD Request
+- signer
+- signer_limit</pre>
+            <div style="text-align:right;margin-top:12px;"><button onclick="document.getElementById('devNoteProfileModal').style.display='none'" style="padding:4px 14px;cursor:pointer;">Close</button></div>
+        </div>
+    </div>
+
+    <!-- DEV Note Modal: Signing Limit Authorizations -->
+    <div id="devNoteLimitsModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:2000;align-items:center;justify-content:center;" onclick="if(event.target===this)this.style.display='none'">
+        <div style="background:#fff;width:95%;max-height:85%;border-radius:8px;padding:24px;box-shadow:0 4px 12px rgba(0,0,0,0.15);overflow-y:auto;">
+            <h3 style="margin:0 0 12px 0;color:#6a1b9a;">DEV Note – Signing Limit Authorizations</h3>
+            <div style="display:flex;gap:24px;">
+                <div style="flex:1;">
+                    <h4 style="margin:0 0 6px 0;color:#6a1b9a;">Signer mode (1:M joining signer.limit_id=signer_limit.id):</h4>
+                    <pre style="background:#f3e5f5;padding:12px;border-radius:6px;font-size:0.82rem;white-space:pre;overflow-x:auto;">Countries (Territories) = signer.limit_id -> signer_limit.territory_id -> policy.country_code
+Policy Category         = signer.limit_id -> signer_limit.policy_id -> policy.category
+Limit Amounts           = signer.limit_id -> signer_limit.limit_amount
+Currency                = signer.limit_id -> signer_limit.currency
+Approval Cost Center    = signer.limit_id -> signer_limit.approval_cc_id -> cost_center.cc
+Exception               = signer.limit_id -> signer_limit.exception
+Temporary               = signer.limit_id -> signer_limit.temp
+Temporary Start Date    = signer.limit_id -> signer_limit.temp_start_date
+Temporary End Date      = signer.limit_id -> signer_limit.temp_end_date
+Business Rationale      = signer.limit_id -> signer_limit.business_rationale
+Business Controls       = signer.limit_id -> signer_limit.business_control
+System                  = signer.limit_id -> signer_limit.policy_id -> policy.system_id
+Accounts Restriction    = signer.limit_id -> signer_limit.account_restriction</pre>
+                </div>
+                <div style="flex:1;">
+                    <h4 style="margin:0 0 6px 0;color:#6a1b9a;">DADREQ mode (1:M joining signer_req.limit_id=signer_limit_req.id):</h4>
+                    <pre style="background:#f3e5f5;padding:12px;border-radius:6px;font-size:0.82rem;white-space:pre;overflow-x:auto;">Change Type             = signer_req.limit_id -> signer_limit_req.action
+Old data                = signer_req.limit_id -> signer_limit_req.source_data (in JSON format)
+New data:
+Countries (Territories) = signer_req.limit_id -> signer_limit_req.territory_id -> policy.country_code
+Policy Category         = signer_req.limit_id -> signer_limit_req.policy_id -> policy.category
+Limit Amounts           = signer_req.limit_id -> signer_limit_req.limit_amount
+Currency                = signer_req.limit_id -> signer_limit_req.currency
+Approval Cost Center    = signer_req.limit_id -> signer_limit_req.approval_cc_id -> cost_center.cc
+Exception               = signer_req.limit_id -> signer_limit_req.exception
+Temporary               = signer_req.limit_id -> signer_limit_req.temp
+Temporary Start Date    = signer_req.limit_id -> signer_limit_req.temp_start_date
+Temporary End Date      = signer_req.limit_id -> signer_limit_req.temp_end_date
+Business Rationale      = signer_req.limit_id -> signer_limit_req.business_rationale
+Business Controls       = signer_req.limit_id -> signer_limit_req.business_control
+System                  = signer_req.limit_id -> signer_limit_req.policy_id -> policy.system_id
+Accounts Restriction    = signer_req.limit_id -> signer_limit_req.account_restriction</pre>
+                </div>
+            </div>
+            <h4 style="margin:12px 0 6px 0;color:#6a1b9a;">Inbound:</h4>
+            <pre style="background:#f3e5f5;padding:12px;border-radius:6px;font-size:0.82rem;white-space:pre;overflow-x:auto;">Workday + AD (gad_id)
+- user_profile
+- territory
+- job
+
+GDAS
+- policy
+
+Infor
+- business_unit
+- cost_center
+- currency
+- exchange_rate
+
+DAD Request
+- signer
+- signer_limit</pre>
+            <div style="text-align:right;margin-top:12px;"><button onclick="document.getElementById('devNoteLimitsModal').style.display='none'" style="padding:4px 14px;cursor:pointer;">Close</button></div>
+        </div>
+    </div>
 </body>
 </html>
 

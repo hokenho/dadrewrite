@@ -131,6 +131,8 @@
                             <th>Approval Cost Center</th>
                             <th>Exception</th>
                             <th>Temporary</th>
+                            <th>Temporary Start Date</th>
+                            <th>Temporary End Date</th>
                             <th>Business Rationale</th>
                             <th>Business Controls</th>
                             <th>System</th>
@@ -179,6 +181,8 @@
             tbody.innerHTML = '';
             data.forEach(function(r) {
                 var tr = document.createElement('tr');
+                tr.style.cursor = 'pointer';
+                tr.onclick = function() { window.location = 'signer_details.html?upn=' + encodeURIComponent(r.gadId); };
                 tr.innerHTML =
                     '<td>' + r.gadId + '</td>' +
                     '<td>' + r.ln + '</td>' +
@@ -196,6 +200,8 @@
                     '<td>' + r.apprCC + '</td>' +
                     '<td class="text-center">' + r.exc + '</td>' +
                     '<td class="text-center">' + r.temp + '</td>' +
+                    '<td>' + (r.tempStart || '\u2014') + '</td>' +
+                    '<td>' + (r.tempEnd || '\u2014') + '</td>' +
                     '<td class="text-center">' + r.br + '</td>' +
                     '<td class="text-center">' + r.bc + '</td>' +
                     '<td>' + r.sys + '</td>' +
@@ -207,7 +213,7 @@
         var baseSql = "SELECT s.gad_id, u.last_name, u.first_name, b.name, " +
             "cc_s.cc, j.job_grade, j.job_title, u.employee_id, s.pickup_cheque, " +
             "t.country_code, p.category, sl.limit_amount, sl.currency, " +
-            "cc_a.cc, sl.exception, sl.temporary, sl.business_rationale, sl.business_control, " +
+            "cc_a.cc, sl.exception, sl.temp, sl.temp_start_date, sl.temp_end_date, sl.business_rationale, sl.business_control, " +
             "p.system, sl.account_restriction " +
             "FROM signer s " +
             "JOIN signer_limit sl ON sl.gad_id = s.gad_id " +
@@ -252,8 +258,9 @@
                 chq: r[8] ? 'Y' : 'N', country: r[9] || '', pcat: r[10] || '',
                 limit: r[11] || 0, curr: r[12] || '', apprCC: r[13] || '',
                 exc: r[14] ? 'Y' : 'N', temp: r[15] ? 'Y' : 'N',
-                br: r[16] ? 'Y' : 'N', bc: r[17] ? 'Y' : 'N',
-                sys: r[18] || '', acct: r[19] || ''
+                tempStart: r[16] || '', tempEnd: r[17] || '',
+                br: r[18] ? 'Y' : 'N', bc: r[19] ? 'Y' : 'N',
+                sys: r[20] || '', acct: r[21] || ''
             };
         }
 
@@ -324,13 +331,13 @@
             var headers = ['"GAD ID"','"Last Name"','"First Name"','"Business Unit"','"Signers Cost Center"',
                 '"Job Level / Job Grade"','"Job Title"','"Employee No."','"Pickup Cheques"','"Countries"',
                 '"Policy Category"','"Limit Amounts"','"Currency"','"Approval Cost Center"','"Exception"',
-                '"Temporary"','"Business Rationale"','"Business Controls"','"System"','"Accounts Restriction"'];
+                '"Temporary"','"Temporary Start Date"','"Temporary End Date"','"Business Rationale"','"Business Controls"','"System"','"Accounts Restriction"'];
             var csv = [headers.join(',')];
             allRows.forEach(function(r) {
                 csv.push(['"'+r.gadId+'"','"'+r.ln+'"','"'+r.fn+'"','"'+r.bu+'"','"'+r.cc+'"',
                     '"'+r.jl+'"','"'+r.jt.replace(/"/g,'""')+'"','"'+r.emp+'"','"'+r.chq+'"','"'+r.country+'"',
                     '"'+r.pcat+'"','"'+Number(r.limit).toLocaleString()+'"','"'+r.curr+'"','"'+r.apprCC+'"',
-                    '"'+r.exc+'"','"'+r.temp+'"','"'+r.br+'"','"'+r.bc+'"','"'+r.sys+'"','"'+r.acct+'"'].join(','));
+                    '"'+r.exc+'"','"'+r.temp+'"','"'+(r.tempStart||'')+'"','"'+(r.tempEnd||'')+'"','"'+r.br+'"','"'+r.bc+'"','"'+r.sys+'"','"'+r.acct+'"'].join(','));
             });
 
             var blob = new Blob([csv.join('\n')], { type: 'text/csv;charset=utf-8;' });

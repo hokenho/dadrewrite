@@ -17,7 +17,9 @@
 
         <!-- Section 1: Search User -->
         <div class="panel panel--blue">
-            <div class="panel-title">Search User</div>
+            <div class="panel-title" style="position:relative;">Search User
+                <button onclick="document.getElementById('devNoteSearchModal').style.display='flex'" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);padding:2px 10px;font-size:0.72rem;font-weight:600;color:#fff;background:#6a1b9a;border:none;border-radius:4px;cursor:pointer;">DEV Note</button>
+            </div>
             <div class="filter-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
                 <div class="filter-field">
                     <label for="gadId">GAD ID</label>
@@ -47,7 +49,9 @@
         <!-- Section 2: Results -->
         <div class="panel panel--blue" style="position:relative;">
             <div id="toast" style="display:none; position:absolute; top:10px; right:14px; padding:8px 18px; border-radius:6px; font-size:0.82rem; font-weight:600; color:#fff; background:#2e7d32; z-index:100;"></div>
-            <div class="panel-title">Results</div>
+            <div class="panel-title" style="position:relative;">Results
+                <button onclick="document.getElementById('devNoteResultsModal').style.display='flex'" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);padding:2px 10px;font-size:0.72rem;font-weight:600;color:#fff;background:#6a1b9a;border:none;border-radius:4px;cursor:pointer;">DEV Note</button>
+            </div>
             <p style="margin: 0 0 15px 0; font-style: italic; color: #555;">Click the row to request change</p>
             <div class="data-table-wrapper">
                 <table class="data-table" id="resultsTable">
@@ -56,12 +60,78 @@
                             <th>GAD ID</th>
                             <th>First Name</th>
                             <th>Last Name</th>
+                            <th>Workday User</th>
+                            <th>DAD User</th>
                             <th>Access</th>
                         </tr>
                     </thead>
                     <tbody id="resultsBody"></tbody>
                 </table>
             </div>
+        </div>
+    </div>
+
+    <!-- DEV Note Modal: Search User -->
+    <div id="devNoteSearchModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:2000;align-items:center;justify-content:center;" onclick="if(event.target===this)this.style.display='none'">
+        <div style="background:#fff;width:700px;max-height:85%;border-radius:8px;padding:24px;box-shadow:0 4px 12px rgba(0,0,0,0.15);overflow-y:auto;">
+            <h3 style="margin:0 0 12px 0;color:#6a1b9a;">DEV Note – Search User</h3>
+            <h4 style="margin:0 0 6px 0;color:#6a1b9a;">Filter Fields:</h4>
+            <pre style="background:#f3e5f5;padding:12px;border-radius:6px;font-size:0.82rem;white-space:pre;overflow-x:auto;">GAD ID     = free text input
+First Name = free text input
+Last Name  = free text input
+Access     = Distinct user_access.access + 'No Access'</pre>
+            <h4 style="margin:12px 0 6px 0;color:#6a1b9a;">Inbound:</h4>
+            <pre style="background:#f3e5f5;padding:12px;border-radius:6px;font-size:0.82rem;white-space:pre;overflow-x:auto;">Workday + AD (gad_id)
+- user_profile
+- territory
+- job
+
+GDAS
+- policy
+
+Infor
+- business_unit
+- cost_center
+- currency
+- exchange_rate
+
+DAD Request
+- signer
+- signer_limit</pre>
+            <div style="text-align:right;margin-top:12px;"><button onclick="document.getElementById('devNoteSearchModal').style.display='none'" style="padding:4px 14px;cursor:pointer;">Close</button></div>
+        </div>
+    </div>
+
+    <!-- DEV Note Modal: Results -->
+    <div id="devNoteResultsModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:2000;align-items:center;justify-content:center;" onclick="if(event.target===this)this.style.display='none'">
+        <div style="background:#fff;width:700px;max-height:85%;border-radius:8px;padding:24px;box-shadow:0 4px 12px rgba(0,0,0,0.15);overflow-y:auto;">
+            <h3 style="margin:0 0 12px 0;color:#6a1b9a;">DEV Note – Results</h3>
+            <h4 style="margin:0 0 6px 0;color:#6a1b9a;">Fields Mapping (key=user_profile.gad_id):</h4>
+            <pre style="background:#f3e5f5;padding:12px;border-radius:6px;font-size:0.82rem;white-space:pre;overflow-x:auto;">GAD ID       = COALESCE(user_profile.gad_id, user_access.gad_id)
+First Name   = user_profile.first_name (empty if not in user_profile)
+Last Name    = user_profile.last_name (empty if not in user_profile)
+Workday User = Y if gad_id exists in user_profile, else N
+DAD User     = Y if gad_id exists in user_access, else N
+Access       = user_access.access ('No Access' if not in user_access)</pre>
+            <h4 style="margin:12px 0 6px 0;color:#6a1b9a;">Inbound:</h4>
+            <pre style="background:#f3e5f5;padding:12px;border-radius:6px;font-size:0.82rem;white-space:pre;overflow-x:auto;">Workday + AD (gad_id)
+- user_profile
+- territory
+- job
+
+GDAS
+- policy
+
+Infor
+- business_unit
+- cost_center
+- currency
+- exchange_rate
+
+DAD Request
+- signer
+- signer_limit</pre>
+            <div style="text-align:right;margin-top:12px;"><button onclick="document.getElementById('devNoteResultsModal').style.display='none'" style="padding:4px 14px;cursor:pointer;">Close</button></div>
         </div>
     </div>
 
@@ -79,7 +149,7 @@
                         <select id="modalAccess" style="padding:4px 8px; border:1px solid #ccc; border-radius:4px; font-size:0.85rem;">
                             <option value="DAD User">DAD User</option>
                             <option value="TSA">TSA</option>
-                            <option value="Delete">Delete</option>
+                            <option value="No Access">No Access</option>
                         </select>
                     </td>
                 </tr>
@@ -101,28 +171,31 @@
         }).then(function(SQL) {
             return fetch('db/data.db').then(function(r) { return r.arrayBuffer(); }).then(function(buf) {
                 var db = new SQL.Database(new Uint8Array(buf));
-                var results = db.exec('SELECT ua.id, up.first_name, up.last_name, ua.access FROM user_access ua JOIN user_profile up ON ua.id = up.gad_id ORDER BY ua.access, up.last_name, up.first_name');
+                var results = db.exec('SELECT COALESCE(up.gad_id, ua.gad_id) AS gad_id, COALESCE(up.first_name, \'\') AS first_name, COALESCE(up.last_name, \'\') AS last_name, CASE WHEN up.gad_id IS NOT NULL THEN \'Y\' ELSE \'N\' END AS workday_user, CASE WHEN ua.gad_id IS NOT NULL THEN \'Y\' ELSE \'N\' END AS dad_user, COALESCE(ua.access, \'No Access\') AS access FROM user_profile up LEFT JOIN user_access ua ON up.gad_id = ua.gad_id UNION SELECT ua.gad_id, \'\', \'\', \'N\', \'Y\', ua.access FROM user_access ua WHERE ua.gad_id NOT IN (SELECT gad_id FROM user_profile) ORDER BY access, last_name, first_name');
                 // Populate Access filter dropdown
                 var accessRes = db.exec('SELECT DISTINCT access FROM user_access ORDER BY access');
+                var sel = document.getElementById('accessFilter');
                 if (accessRes.length) {
-                    var sel = document.getElementById('accessFilter');
                     accessRes[0].values.forEach(function(v) {
                         var o = document.createElement('option');
                         o.textContent = o.value = v[0];
                         sel.appendChild(o);
                     });
                 }
+                var noAccessOpt = document.createElement('option');
+                noAccessOpt.textContent = noAccessOpt.value = 'No Access';
+                sel.appendChild(noAccessOpt);
                 db.close();
                 if (results.length) {
                     results[0].values.forEach(function(r) {
-                        users.push({ gadId: r[0], fn: r[1], ln: r[2], access: r[3] });
+                        users.push({ gadId: r[0], fn: r[1], ln: r[2], workday: r[3], dadUser: r[4], access: r[5] });
                     });
                 }
                 renderTable();
             });
         });
 
-        var accessColors = { 'DAD User': '#2e7d32', 'TSA': '#b8860b' };
+        var accessColors = { 'DAD User': '#2e7d32', 'TSA': '#b8860b', 'No Access': '#c62828' };
 
         function renderTable(list) {
             var rows = list || users;
@@ -138,6 +211,8 @@
                     '<td>' + u.gadId + '</td>' +
                     '<td>' + u.fn + '</td>' +
                     '<td>' + u.ln + '</td>' +
+                    '<td' + (u.workday === 'N' ? ' style="background:#ffcdd2;"' : '') + '>' + u.workday + '</td>' +
+                    '<td' + (u.dadUser === 'N' ? ' style="background:#ffcdd2;"' : '') + '>' + u.dadUser + '</td>' +
                     '<td><span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:0.75rem;color:#fff;background:' + color + ';">' + u.access + '</span></td>';
                 tbody.appendChild(tr);
             });
@@ -170,7 +245,7 @@
             setTimeout(function() { toast.style.display = 'none'; }, 60000);
         }
 
-        var FILTER_COL_MAP = { gadId: 0, firstName: 1, lastName: 2, accessFilter: 3 };
+        var FILTER_COL_MAP = { gadId: 0, firstName: 1, lastName: 2, accessFilter: 5 };
 
         function highlightColumns() {
             document.querySelectorAll('#resultsTable th, #resultsTable td').forEach(function(cell) {
