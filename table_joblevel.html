@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DAD - Job Levels</title>
     <link rel="stylesheet" href="css/style.css">
+    <script src="js/sql-js/sql-wasm.js"></script>
 </head>
 <body>
     <div class="container">
@@ -52,16 +53,6 @@
                         </tr>
                     </thead>
                     <tbody id="resultsBody">
-                        <tr><td>Level 4</td><td>Associate Analyst</td></tr>
-                        <tr><td>Level 5</td><td>Analyst</td></tr>
-                        <tr><td>Level 6</td><td>Senior Analyst</td></tr>
-                        <tr><td>Level 7</td><td>Software Engineer</td></tr>
-                        <tr><td>Level 8</td><td>Senior Full-stack Software Engineer</td></tr>
-                        <tr><td>Level 9</td><td>Lead Engineer</td></tr>
-                        <tr><td>Level 10</td><td>Principal Engineer</td></tr>
-                        <tr><td>Level 11</td><td>Manager</td></tr>
-                        <tr><td>Level 12</td><td>Senior Manager</td></tr>
-                        <tr><td>Level 13</td><td>Director</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -69,6 +60,23 @@
     </div>
 
     <script>
+        // Load job level data from db/data.db
+        (async function() {
+            var SQL = await initSqlJs({ locateFile: function() { return 'js/sql-js/sql-wasm.wasm'; } });
+            var buf = await fetch('db/data.db').then(function(r) { return r.arrayBuffer(); });
+            var db = new SQL.Database(new Uint8Array(buf));
+            var results = db.exec('SELECT job_grade, job_title FROM job ORDER BY id');
+            var tbody = document.getElementById('resultsBody');
+            if (results.length > 0) {
+                results[0].values.forEach(function(row) {
+                    var tr = document.createElement('tr');
+                    tr.innerHTML = '<td>' + row[0] + '</td><td>' + row[1] + '</td>';
+                    tbody.appendChild(tr);
+                });
+            }
+            db.close();
+        })();
+
         function doSearch() {
             var panel = document.getElementById('searchPanel');
             panel.style.display = (panel.style.display === 'none') ? 'block' : 'none';

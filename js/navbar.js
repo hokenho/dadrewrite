@@ -89,7 +89,7 @@
     alertsBtn.innerHTML =
         '<svg class="alerts-btn-icon--active" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>' +
         ' <strong>My Alerts</strong> ' +
-        '<span class="alerts-badge">5</span>';
+        '<span class="alerts-badge">4</span>';
     nav.appendChild(alertsBtn);
 
     // Logout button
@@ -126,11 +126,10 @@
                 '<button class="alerts-panel-close" onclick="toggleAlertPanel()" title="Close">&#x2715;</button>' +
             '</div>' +
             '<ul class="alerts-list">' +
-                '<li class="alerts-list-item"><a href="request_status.html?highlight=user_upn@manulife.com" class="alerts-link"><svg class="alerts-item-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#27ae60" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg><span>Signer Change Approved</span></a></li>' +
-                '<li class="alerts-list-item"><a href="dashboard.html" class="alerts-link"><svg class="alerts-item-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 5v4c0 1.66-4.03 3-9 3S3 10.66 3 9V5"/><path d="M21 13v4c0 1.66-4.03 3-9 3S3 18.66 3 17v-4"/></svg><span>Source Data Change &ndash; GDAS</span></a></li>' +
-                '<li class="alerts-list-item"><a href="dashboard.html" class="alerts-link"><svg class="alerts-item-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 5v4c0 1.66-4.03 3-9 3S3 10.66 3 9V5"/><path d="M21 13v4c0 1.66-4.03 3-9 3S3 18.66 3 17v-4"/></svg><span>Source Data Change &ndash; Infor</span></a></li>' +
-                '<li class="alerts-list-item"><a href="dashboard.html" class="alerts-link"><svg class="alerts-item-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 5v4c0 1.66-4.03 3-9 3S3 10.66 3 9V5"/><path d="M21 13v4c0 1.66-4.03 3-9 3S3 18.66 3 17v-4"/></svg><span>Source Data Change &ndash; Workday</span></a></li>' +
-                '<li class="alerts-list-item"><a href="dashboard.html?highlight=user_upn@manulife.com" class="alerts-link"><svg class="alerts-item-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><span>Pending Signer Change</span></a></li>' +
+                '<li class="alerts-list-item"><a href="dashboard.html" class="alerts-link"><svg class="alerts-item-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 5v4c0 1.66-4.03 3-9 3S3 10.66 3 9V5"/><path d="M21 13v4c0 1.66-4.03 3-9 3S3 18.66 3 17v-4"/></svg><span>Source Data Change &ndash; Policies Categories</span></a></li>' +
+                '<li class="alerts-list-item"><a href="dashboard.html" class="alerts-link"><svg class="alerts-item-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 5v4c0 1.66-4.03 3-9 3S3 10.66 3 9V5"/><path d="M21 13v4c0 1.66-4.03 3-9 3S3 18.66 3 17v-4"/></svg><span>Source Data Change &ndash; Cost Centres</span></a></li>' +
+                '<li class="alerts-list-item"><a href="dashboard.html" class="alerts-link"><svg class="alerts-item-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 5v4c0 1.66-4.03 3-9 3S3 10.66 3 9V5"/><path d="M21 13v4c0 1.66-4.03 3-9 3S3 18.66 3 17v-4"/></svg><span>Source Data Change &ndash; Workday User</span></a></li>' +
+                '<li class="alerts-list-item"><a href="signer_details.html?reqid=DADREQ100001" class="alerts-link"><svg class="alerts-item-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><span>Pending Change: DADREQ100001</span></a></li>' +
             '</ul>';
         document.body.appendChild(panel);
 

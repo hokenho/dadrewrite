@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DAD - Policies Categories</title>
     <link rel="stylesheet" href="css/style.css">
+    <script src="js/sql-js/sql-wasm.js"></script>
 </head>
 <body>
     <div class="container">
@@ -93,36 +94,6 @@
                         </tr>
                     </thead>
                     <tbody id="resultsBody">
-                        <tr>
-                            <td>NA</td><td>EXP</td><td>Expense reimbursements up to threshold</td><td>AP</td><td>1</td><td>5,000</td><td class="text-center">N</td>
-                        </tr>
-                        <tr>
-                            <td>NA</td><td>PAC</td><td>Procurement and contract payments</td><td>SNOW</td><td>2</td><td>25,000</td><td class="text-center">Y</td>
-                        </tr>
-                        <tr>
-                            <td>NA</td><td>EXT</td><td>External vendor disbursements</td><td>Concur</td><td>2</td><td>50,000</td><td class="text-center">Y</td>
-                        </tr>
-                        <tr>
-                            <td>US</td><td>EXP</td><td>US expense policy standard</td><td>AP</td><td>1</td><td>8,000</td><td class="text-center">N</td>
-                        </tr>
-                        <tr>
-                            <td>US</td><td>PAC</td><td>US procurement approvals</td><td>SNOW</td><td>3</td><td>30,000</td><td class="text-center">Y</td>
-                        </tr>
-                        <tr>
-                            <td>US</td><td>EXT</td><td>US external contractor payments</td><td>Concur</td><td>2</td><td>75,000</td><td class="text-center">Y</td>
-                        </tr>
-                        <tr>
-                            <td>HK</td><td>EXP</td><td>HK expense reimbursement policy</td><td>AP</td><td>1</td><td>10,000</td><td class="text-center">N</td>
-                        </tr>
-                        <tr>
-                            <td>HK</td><td>PAC</td><td>HK procurement disbursement</td><td>SNOW</td><td>2</td><td>20,000</td><td class="text-center">Y</td>
-                        </tr>
-                        <tr>
-                            <td>HK</td><td>EXT</td><td>HK external payment authorization</td><td>Concur</td><td>3</td><td>100,000</td><td class="text-center">Y</td>
-                        </tr>
-                        <tr>
-                            <td>NA</td><td>EXP</td><td>Executive expense override policy</td><td>AP</td><td>2</td><td>15,000</td><td class="text-center">Y</td>
-                        </tr>
                     </tbody>
                 </table>
             </div>
@@ -130,6 +101,30 @@
     </div>
 
     <script>
+        // Load policy data from db/data.db
+        (async function() {
+            var SQL = await initSqlJs({ locateFile: function() { return 'js/sql-js/sql-wasm.wasm'; } });
+            var buf = await fetch('db/data.db').then(function(r) { return r.arrayBuffer(); });
+            var db = new SQL.Database(new Uint8Array(buf));
+            var results = db.exec('SELECT country, category, description, system, approval_no, threshold_amount, manual_approval FROM policy ORDER BY id');
+            var tbody = document.getElementById('resultsBody');
+            if (results.length > 0) {
+                results[0].values.forEach(function(row) {
+                    var tr = document.createElement('tr');
+                    tr.innerHTML =
+                        '<td>' + row[0] + '</td>' +
+                        '<td>' + row[1] + '</td>' +
+                        '<td>' + row[2] + '</td>' +
+                        '<td>' + row[3] + '</td>' +
+                        '<td>' + row[4] + '</td>' +
+                        '<td>' + Number(row[5]).toLocaleString() + '</td>' +
+                        '<td class="text-center">' + (row[6] ? 'Y' : 'N') + '</td>';
+                    tbody.appendChild(tr);
+                });
+            }
+            db.close();
+        })();
+
         function doSearch() {
             var panel = document.getElementById('searchPanel');
             panel.style.display = (panel.style.display === 'none') ? 'block' : 'none';

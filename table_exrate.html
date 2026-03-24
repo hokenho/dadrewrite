@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DAD - Exchange Rates</title>
     <link rel="stylesheet" href="css/style.css">
+    <script src="js/sql-js/sql-wasm.js"></script>
 </head>
 <body>
     <div class="container">
@@ -57,16 +58,6 @@
                         </tr>
                     </thead>
                     <tbody id="resultsBody">
-                        <tr><td>USD</td><td>CAD</td><td>1.3600</td></tr>
-                        <tr><td>USD</td><td>HKD</td><td>7.8200</td></tr>
-                        <tr><td>USD</td><td>SGD</td><td>1.3400</td></tr>
-                        <tr><td>USD</td><td>AUD</td><td>1.5500</td></tr>
-                        <tr><td>USD</td><td>JPY</td><td>149.5000</td></tr>
-                        <tr><td>USD</td><td>GBP</td><td>0.7900</td></tr>
-                        <tr><td>USD</td><td>EUR</td><td>0.9200</td></tr>
-                        <tr><td>CAD</td><td>USD</td><td>0.7350</td></tr>
-                        <tr><td>HKD</td><td>USD</td><td>0.1279</td></tr>
-                        <tr><td>GBP</td><td>USD</td><td>1.2658</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -74,6 +65,23 @@
     </div>
 
     <script>
+        // Load exchange rate data from db/data.db
+        (async function() {
+            var SQL = await initSqlJs({ locateFile: function() { return 'js/sql-js/sql-wasm.wasm'; } });
+            var buf = await fetch('db/data.db').then(function(r) { return r.arrayBuffer(); });
+            var db = new SQL.Database(new Uint8Array(buf));
+            var results = db.exec('SELECT source_currency, target_currency, rate FROM exchange_rate ORDER BY source_currency, target_currency');
+            var tbody = document.getElementById('resultsBody');
+            if (results.length > 0) {
+                results[0].values.forEach(function(row) {
+                    var tr = document.createElement('tr');
+                    tr.innerHTML = '<td>' + row[0] + '</td><td>' + row[1] + '</td><td>' + Number(row[2]).toFixed(4) + '</td>';
+                    tbody.appendChild(tr);
+                });
+            }
+            db.close();
+        })();
+
         function doSearch() {
             var panel = document.getElementById('searchPanel');
             panel.style.display = (panel.style.display === 'none') ? 'block' : 'none';

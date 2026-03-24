@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DAD - Countries/Territories</title>
     <link rel="stylesheet" href="css/style.css">
+    <script src="js/sql-js/sql-wasm.js"></script>
 </head>
 <body>
     <div class="container">
@@ -52,16 +53,6 @@
                         </tr>
                     </thead>
                     <tbody id="resultsBody">
-                        <tr><td>NA</td><td>North America</td></tr>
-                        <tr><td>US</td><td>United States</td></tr>
-                        <tr><td>HK</td><td>Hong Kong</td></tr>
-                        <tr><td>CA</td><td>Canada</td></tr>
-                        <tr><td>SG</td><td>Singapore</td></tr>
-                        <tr><td>AU</td><td>Australia</td></tr>
-                        <tr><td>JP</td><td>Japan</td></tr>
-                        <tr><td>GB</td><td>United Kingdom</td></tr>
-                        <tr><td>IN</td><td>India</td></tr>
-                        <tr><td>PH</td><td>Philippines</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -69,6 +60,23 @@
     </div>
 
     <script>
+        // Load territory data from db/data.db
+        (async function() {
+            var SQL = await initSqlJs({ locateFile: function() { return 'js/sql-js/sql-wasm.wasm'; } });
+            var buf = await fetch('db/data.db').then(function(r) { return r.arrayBuffer(); });
+            var db = new SQL.Database(new Uint8Array(buf));
+            var results = db.exec('SELECT country_code, territory FROM territory ORDER BY id');
+            var tbody = document.getElementById('resultsBody');
+            if (results.length > 0) {
+                results[0].values.forEach(function(row) {
+                    var tr = document.createElement('tr');
+                    tr.innerHTML = '<td>' + row[0] + '</td><td>' + row[1] + '</td>';
+                    tbody.appendChild(tr);
+                });
+            }
+            db.close();
+        })();
+
         function doSearch() {
             var panel = document.getElementById('searchPanel');
             panel.style.display = (panel.style.display === 'none') ? 'block' : 'none';

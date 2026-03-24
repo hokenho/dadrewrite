@@ -68,6 +68,39 @@ Logic:
   - doExport(): Placeholder alert.
   - clearFilters(): Clears all inputs and selects in the filter section.
 
+Data mapping (key = gad_id): 
+Filter table:
+GAD ID = free text input
+Employee No. = Distinct user_profile.employee_id
+First Name = free text input
+Last name = free text input
+Business Unit = Distinct business_unit.name
+Currency = Distinct currency.currency
+Limit Amounts = free number input
+Approval Cost Centre = Distinct cost_center.cc
+Policy Category = Distinct policy.category
+System = Distinct policy.system_id
+Cheque Pick Up = Dropdown (Y/N)
+Exception = Dropdown (Y/N)
+Temporary Delegation = Date picker
+
+Result table:
+GAD ID = signer.gad_id
+Status = signer.status
+Cheque Pick Up = signer.pickup_cheque
+Temporary Delegation= signer.expire_date
+Employee No. = signer.gad_id -> user_profile.employee_id
+First Name = signer.gad_id -> user_profile.first_name
+Last Name = signer.gad_id -> user_profile.last_name
+Business Unit = signer.bu_id -> business_unit.name
+Limit Amounts = signer.limit_id -> signer_limit.limit_amount
+Exception =  signer.limit_id -> signer_limit.exception
+Currency = signer.limit_id -> signer_limit.currency
+Approval Cost Centre = signer.limit_id -> signer_limit.approval_cc_id -> cost_center.cc
+Policy Category	= signer.limit_id -> signer_limit.policy_id -> policy.category
+System = signer.limit_id -> signer_limit.policy_id -> policy.system_id
+
+
 ===============================
 signer_details.html
 Title: DAD – Signer Details
@@ -165,6 +198,72 @@ Logic – DADREQ Mode (read-only change review):
           - "new": Appends new row with purple label "Additional", all cells yellow.
           - Untouched rows: Green background, labeled "No Change".
 
+Data mapping (key = gad_id): 
+
+Signer mode:
+First table
+GAD ID = from URL parameter
+Last Name = signer.gad_id -> user_profile.last_name
+First Name = signer.gad_id -> user_profile.first_name
+Business Unit = signer.bu_id -> business_unit.name
+Signers Cost Center = signer.gad_id -> user_profile.signer_cc_id -> cost_center.cc
+Job Level / Job Grade = signer.gad_id -> user_profile.job_level_id -> job.job_grade
+Job Title = signer.gad_id -> user_profile.job_level_id -> job.job_title
+Employee No. = signer.gad_id -> user_profile.employee_id
+Pickup Cheques = signer.pickup_cheque
+Temporary Delegation = signer.expire_date
+Status = signer.status
+
+Second table (1:M using gad_id as key)
+Countries (Territories) = signer.limit_id -> signer_limit.territory_id -> policy.country_code
+Policy Category = signer.limit_id -> signer_limit.policy_id -> policy.category
+Limit Amounts = signer.limit_id -> signer_limit.limit_amount
+Currency = signer.limit_id -> signer_limit.currency
+Approval Cost Center = signer.limit_id -> signer_limit.approval_cc_id -> cost_center.cc
+Exception = signer.limit_id -> signer_limit.exception
+Temporary = signer.limit_id -> signer_limit.temporary
+Business Rationale = signer.limit_id -> signer_limit.business_rationale
+Business Controls = signer.limit_id -> signer_limit.business_control
+System = signer.limit_id -> signer_limit.policy_id -> policy.system_id
+Accounts Restriction = signer.limit_id -> signer_limit.account_restriction
+
+DADREQ mode:
+First table - DAD Change Request
+Request ID = from url parameter (reqid=DADREQ100005)
+Request Date = signer_req.req_date
+Requester = signer_req.submitter
+Request Status = signer_req.status
+
+Second table - Signer Profile
+GAD ID = signer_req.gad_id
+Last Name = signer_req.gad_id -> user_profile.last_name
+First Name = signer_req.gad_id -> user_profile.first_name
+Business Unit = signer_req.bu_id -> business_unit.name
+Signers Cost Center = signer_req.gad_id -> user_profile.signer_cc_id -> cost_center.cc
+Job Level / Job Grade = signer_req.gad_id -> user_profile.job_level_id -> job.job_grade
+Job Title = signer_req.gad_id -> user_profile.job_level_id -> job.job_title
+Employee No. = signer_req.gad_id -> user_profile.employee_id
+Pickup Cheques = signer_req.pickup_cheque
+Temporary Delegation = signer_req.expire_date
+Status = signer_req.status
+
+Third table (1:M joining signer_req.limit_id=signer_limit_req.id)
+Change Type = signer_req.limit_id -> signer_limit_req.action
+Before row = decode signer_req.limit_id -> signer_limit_req.source_data json data
+After row:
+Countries (Territories) = signer_req.limit_id -> signer_limit_req.territory_id -> policy.country_code
+Policy Category = signer_req.limit_id -> signer_limit_req.policy_id -> policy.category
+Limit Amounts = signer_req.limit_id -> signer_limit_req.limit_amount
+Currency = signer_req.limit_id -> signer_limit_req.currency
+Approval Cost Center = signer_req.limit_id -> signer_limit_req.approval_cc_id -> cost_center.cc
+Exception = signer_req.limit_id -> signer_limit_req.exception
+Temporary = signer_req.limit_id -> signer_limit_req.temporary
+Business Rationale = signer_req.limit_id -> signer_limit_req.business_rationale
+Business Controls = signer_req.limit_id -> signer_limit_req.business_control
+System = signer_req.limit_id -> signer_limit_req.policy_id -> policy.system_id
+Accounts Restriction = signer_req.limit_id -> signer_limit_req.account_restriction
+
+
 ===============================
 request_signer.html
 Title: DAD – Request New Signer Form (Signer Onboarding)
@@ -192,6 +291,12 @@ Logic:
   - handleRowClick(isExisting, gadId): Navigates to signer_details.html?reqid=DADREQ123456.
     In production, would pass the actual GAD ID and determine whether to create a new
     signer request or modify an existing one.
+
+Data Mapping:
+GAD ID = user_profile.gad_id
+First Name = user_profile.first_name
+Last Name = user_profile.last_name
+Existing Signer = EXIST (or COUNT>1) on signer.gad_id
 
 ===============================
 request_status.html
@@ -233,6 +338,13 @@ Logic:
   - clearFilters(): Clears all inputs/selects, shows all rows.
   - handleRowClick(dadReqId): Navigates to signer_details.html?reqid=<dadReqId>.
   - doExport(): Placeholder alert.
+
+Mapping:
+Request ID = signer_req.id
+Date Submitted = signer_req.req_date
+Submitted By = signer_req.submitter
+Submitted For = signer_req.gad_id
+Request Status = signer_req.status
 
 ===============================
 policy.html
@@ -463,6 +575,42 @@ Logic:
     "signer_report_extract.csv".
   - Print style: landscape, hides nav/action bar/search panel.
 
+Data Mapping:
+
+Filter table (datalist source):
+Business Unit = Distinct business_unit.name
+Signer Cost Center = Distinct cost_center.cc
+Job Level / Job Grade = Distinct job.job_grade
+Pickup Cheques = Y/N
+Countries = Distinct policy.country_code
+Policy Category = Distinct policy.category
+Limit Amounts (max) = free number input
+Currency = Distinct currency.currency
+Approval Cost Center = Distinct cost_center.cc
+System = Distinct policy.system_id
+
+Result table:
+GAD ID = signer.gad_id
+Last Name = signer.gad_id -> user_profile.last_name
+First Name = signer.gad_id -> user_profile.first_name
+Business Unit = signer.bu_id -> business_unit.name
+Signers Cost Center = signer.gad_id -> user_profile.signer_cc_id -> cost_center.cc
+Job Level / Job Grade = signer.gad_id -> user_profile.job_level_id -> job.job_grade
+Job Title = signer.gad_id -> user_profile.job_level_id -> job.job_title
+Employee No. = signer.gad_id -> user_profile.employee_id
+Pickup Cheques = signer.pickup_cheque
+Countries = signer.limit_id -> signer_limit.territory_id -> policy.country_code
+Policy Category = signer.limit_id -> signer_limit.policy_id -> policy.category
+Limit Amounts = signer.limit_id -> signer_limit.limit_amount
+Currency = signer.limit_id -> signer_limit.currency
+Approval Cost Center = signer.limit_id -> signer_limit.approval_cc_id -> cost_center.cc
+Exception = signer.limit_id -> signer_limit.exception
+Temporary = signer.limit_id -> signer_limit.temporary
+Business Rationale = signer.limit_id -> signer_limit.business_rationale
+Business Controls = signer.limit_id -> signer_limit.business_control
+System = signer.limit_id -> signer_limit.policy_id -> policy.system_id
+Accounts Restriction = signer.limit_id -> signer_limit.account_restriction
+
 ===============================
 upload.html
 Title: DAD – Upload Tool
@@ -549,5 +697,31 @@ Logic:
   - exportTable(tableId, filename): Extracts all visible rows from a table as CSV,
     creates a Blob download link, and triggers download.
   - Print style: landscape layout, hides nav/action bar.
+
+Data mapping:
+
+Table: Signers with Exception (Top 30) 
+(select TOP(30) * from signer WHERE signer_limit.exception = 1 ORDER BY gad_id asec)
+(join to signer table with gad_id key to get the user information)
+GAD ID = signer.gad_id
+Last Name = signer.gad_id -> user_profile.last_name
+First Name = signer.gad_id -> user_profile.first_name
+Business Unit = signer.bu_id -> business_unit.name
+Signers Cost Center = signer.gad_id -> user_profile.signer_cc_id -> cost_center.cc
+Job Level / Job Grade = signer.gad_id -> user_profile.job_level_id -> job.job_grade
+Job Title = signer.gad_id -> user_profile.job_level_id -> job.job_title
+Employee No. = signer.gad_id -> user_profile.employee_id
+Pickup Cheques = signer.pickup_cheque
+Countries = signer.limit_id -> signer_limit.territory_id -> policy.country_code
+Policy Category = signer.limit_id -> signer_limit.policy_id -> policy.category
+Limit Amounts = signer.limit_id -> signer_limit.limit_amount
+Currency = signer.limit_id -> signer_limit.currency
+Approval Cost Center = signer.limit_id -> signer_limit.approval_cc_id -> cost_center.cc
+Exception = signer.limit_id -> signer_limit.exception
+Temporary = signer.limit_id -> signer_limit.temporary
+Business Rationale = signer.limit_id -> signer_limit.business_rationale
+Business Controls = signer.limit_id -> signer_limit.business_control
+System = signer.limit_id -> signer_limit.policy_id -> policy.system_id
+Accounts Restriction = signer.limit_id -> signer_limit.account_restriction
 
 ===============================

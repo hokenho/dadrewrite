@@ -31,6 +31,12 @@
                     <label for="lastName">Last Name</label>
                     <input type="text" id="lastName" placeholder="Last name">
                 </div>
+                <div class="filter-field">
+                    <label for="accessFilter">Access</label>
+                    <select id="accessFilter">
+                        <option value="">All</option>
+                    </select>
+                </div>
             </div>
             <div class="filter-actions">
                 <button class="btn btn-primary" onclick="doSearch()">Search</button>
@@ -71,9 +77,9 @@
                     <td style="padding:6px 12px 6px 0; font-weight:600; color:#555;">Access</td>
                     <td style="padding:6px 0;">
                         <select id="modalAccess" style="padding:4px 8px; border:1px solid #ccc; border-radius:4px; font-size:0.85rem;">
-                            <option value="No Access">No Access</option>
                             <option value="DAD User">DAD User</option>
                             <option value="TSA">TSA</option>
+                            <option value="Delete">Delete</option>
                         </select>
                     </td>
                 </tr>
@@ -86,7 +92,7 @@
     </div>
 
     <script>
-        // Load user data from db/data.db -> user_access table
+        // Load user data from db/data.db -> user_access + user_profile tables
         var users = [];
         var selectedIndex = -1;
 
@@ -95,7 +101,17 @@
         }).then(function(SQL) {
             return fetch('db/data.db').then(function(r) { return r.arrayBuffer(); }).then(function(buf) {
                 var db = new SQL.Database(new Uint8Array(buf));
-                var results = db.exec('SELECT gad_id, first_name, last_name, access FROM user_access ORDER BY gad_id');
+                var results = db.exec('SELECT ua.id, up.first_name, up.last_name, ua.access FROM user_access ua JOIN user_profile up ON ua.id = up.gad_id ORDER BY ua.access, up.last_name, up.first_name');
+                // Populate Access filter dropdown
+                var accessRes = db.exec('SELECT DISTINCT access FROM user_access ORDER BY access');
+                if (accessRes.length) {
+                    var sel = document.getElementById('accessFilter');
+                    accessRes[0].values.forEach(function(v) {
+                        var o = document.createElement('option');
+                        o.textContent = o.value = v[0];
+                        sel.appendChild(o);
+                    });
+                }
                 db.close();
                 if (results.length) {
                     results[0].values.forEach(function(r) {
@@ -106,15 +122,17 @@
             });
         });
 
-        var accessColors = { 'DAD User': '#2e7d32', 'TSA': '#b8860b', 'No Access': '#c62828' };
+        var accessColors = { 'DAD User': '#2e7d32', 'TSA': '#b8860b' };
 
-        function renderTable() {
+        function renderTable(list) {
+            var rows = list || users;
             var tbody = document.getElementById('resultsBody');
             tbody.innerHTML = '';
-            users.forEach(function(u, i) {
+            rows.forEach(function(u) {
+                var idx = users.indexOf(u);
                 var tr = document.createElement('tr');
                 tr.style.cursor = 'pointer';
-                tr.setAttribute('onclick', 'openModal(' + i + ')');
+                tr.setAttribute('onclick', 'openModal(' + idx + ')');
                 var color = accessColors[u.access] || '#555';
                 tr.innerHTML =
                     '<td>' + u.gadId + '</td>' +
@@ -152,15 +170,54 @@
             setTimeout(function() { toast.style.display = 'none'; }, 60000);
         }
 
+        var FILTER_COL_MAP = { gadId: 0, firstName: 1, lastName: 2, accessFilter: 3 };
+
+        function highlightColumns() {
+            document.querySelectorAll('#resultsTable th, #resultsTable td').forEach(function(cell) {
+                cell.style.backgroundColor = '';
+            });
+            Object.keys(FILTER_COL_MAP).forEach(function(id) {
+                var el = document.getElementById(id);
+                if (!el || !el.value) return;
+                var col = FILTER_COL_MAP[id];
+                document.querySelectorAll('#resultsTable thead th')[col].style.backgroundColor = '#c8e6c9';
+                document.querySelectorAll('#resultsTable tbody tr').forEach(function(tr) {
+                    var td = tr.children[col];
+                    if (td) td.style.backgroundColor = '#e8f5e9';
+                });
+            });
+        }
+
         function doSearch() {
-            alert('Search triggered – connect to backend API to fetch results.');
+            var gadIdVal = document.getElementById('gadId').value.trim().toLowerCase();
+            var firstName = document.getElementById('firstName').value.trim().toLowerCase();
+            var lastName = document.getElementById('lastName').value.trim().toLowerCase();
+            var accessVal = document.getElementById('accessFilter').value;
+
+            var filtered = users.filter(function(u) {
+                if (gadIdVal && u.gadId.toLowerCase().indexOf(gadIdVal) === -1) return false;
+                if (firstName && u.fn.toLowerCase().indexOf(firstName) === -1) return false;
+                if (lastName && u.ln.toLowerCase().indexOf(lastName) === -1) return false;
+                if (accessVal && u.access !== accessVal) return false;
+                return true;
+            });
+            renderTable(filtered);
+            highlightColumns();
         }
 
         function clearFilters() {
-            document.querySelectorAll('.filter-field input').forEach(function(el) {
+            document.querySelectorAll('.filter-field input, .filter-field select').forEach(function(el) {
                 el.value = '';
             });
+            document.querySelectorAll('#resultsTable th, #resultsTable td').forEach(function(cell) {
+                cell.style.backgroundColor = '';
+            });
+            renderTable();
         }
+
+        document.querySelectorAll('.filter-field input, .filter-field select').forEach(function(el) {
+            el.addEventListener('keydown', function(e) { if (e.key === 'Enter') { e.preventDefault(); doSearch(); } });
+        });
     </script>
 </body>
 </html>

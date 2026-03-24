@@ -1,0 +1,183 @@
+ok now lets setup the backend data.db tables dummy data first
+
+# User Information Table (sync from workday)
+CREATE TABLE user_profile (
+    gad_id        NUMBER PRIMARY KEY,
+    employee_id   NUMBER,
+    last_name     NVARCHAR(255),
+    first_name    NVARCHAR(255),
+    signer_cc_id  NUMBER FK, (-> cost_center.id)
+    job_level_id  NUMBER FK, (-> job_level.id)
+    territory_id  NUMBER FK (-> territory.id)
+)
+
+=========================================================
+=========================================================
+
+# Tables Administration
+# Policies Categories (source=GDAS)
+CREATE TABLE policy (
+    id                  NUMBER PRIMARY KEY,
+    country             NVARCHAR(255),
+    category            NVARCHAR(255),
+    description         NVARCHAR(255),
+    system              NVARCHAR(255), # 3 values only (AP/SNOW/Concur) -> store directly
+    approval_no         NUMBER(1), #3 values only (1,2,3) -> store directly
+    threshold_amount    NUMBER,
+    manual_approval     BIT
+)
+
+# Countries/Territories (source=Workday)
+CREATE TABLE territory (
+    id              NUMBER PRIMARY KEY,
+    country_code    NVARCHAR(255),
+    territory       NVARCHAR(255)
+)
+
+# Business Units (source=Infor)
+CREATE TABLE business_unit (
+    id              NUMBER PRIMARY KEY,
+    security_group  NVARCHAR(255),
+    name            NVARCHAR(255)
+)
+
+# Cost Centres (source=Infor)
+CREATE TABLE cost_center (
+    id           NUMBER PRIMARY KEY,
+    cc           NVARCHAR(255),
+    description  NVARCHAR(255),
+    status       BIT
+)
+
+# Currencies (source=Infor)
+CREATE TABLE currency (
+    currency     NVARCHAR(255) PRIMARY KEY,
+    name         NVARCHAR(255)
+)
+
+# Exchange Rates (source=Infor)
+CREATE TABLE exchange_rate (
+    source_currency       NVARCHAR(255),
+    target_currency       NVARCHAR(255),
+    rate                  FLOAT,
+    PRIMARY KEY (source, target)  # Composite PK - using both source and target currency
+)
+
+# Job Levels (source=Workday)
+CREATE TABLE job (
+    id           NUMBER PRIMARY KEY,
+    job_grade    NVARCHAR(255),
+    job_title    NVARCHAR(MAX),    # assume title could have japanese characters
+    limit_amount	INTEGER,
+)
+
+=========================================================
+=========================================================
+
+# Tables for Signer approval
+CREATE TABLE signer (
+    gad_id NUMBER PRIMARY KEY, (->user_profile.gad_id)
+    bu_id NUMBER FK (->business_unit.id)
+    pickup_cheque BIT,
+    limit_id NUMBER FK, (-> signer_limit.id)
+    expire_date DATE,
+    status      BIT
+)
+CREATE TABLE signer_limit (
+    id            NUMBER PRIMARY KEY,
+    territory_id  NUMBER FK, (-> territory.id)
+    policy_id     NUMBER FK, (-> policy.id)
+    limit_amount  NUMBER,
+    approval_cc_id   NUMBER FK, (-> cost_center.id)
+    exception     BIT,
+    temporary     BIT,
+    business_rationale     BIT,
+    business_control       BIT,
+    account_restriction    NVARCHAR(100),
+    currency    NVARCHAR(10)
+)
+
+=========================================================
+=========================================================
+
+# Tables for Active DAD Request
+CREATE TABLE signer_req (
+    id          NUMBER PRIMARY KEY,
+    req_date    DATE,
+    submitter   NVARCHAR(255) FK, (-> user_profile.gad_id),
+    gad_id NUMBER PRIMARY KEY, (->user_profile.gad_id)
+    bu_id NUMBER FK (->business_unit.id)
+    limit_id NUMBER FK, (-> signer_limit.id)
+    source_data     NVARCHAR(255),       # storing pickup_cheque, expire_date, status signer data in json format when submit the request
+
+    # below fields format is the same as signer, but only save the new values
+    pickup_cheque BIT,
+    expire_date DATE,
+    status      BIT     # temporary, signer_req is for Open req only. other status should be frm audit_dadreq
+)
+
+CREATE TABLE signer_limit_req (
+    id            NUMBER PRIMARY KEY,
+    action        NVARCHAR(255), # 3 values only (Change/Add/Remove) -> store directly
+    source_id     NUMBER FK, (-> signer_limit.id, NULL for action=Add)
+    source_data   NVARCHAR(MAX)  # storing the source_id row data in json format when submit the request
+
+    # below fields format is the same as signer_limit, but only save the new values for the source_id row. For Add/Remove action they should be NULL
+    territory_id  NUMBER FK, (-> territory.id)
+    policy_id     NUMBER FK, (-> policy.id)
+    limit_amount  NUMBER,
+    approval_cc_id   NUMBER FK, (-> cost_center.id)
+    exception     BIT,
+    temporary     BIT,
+    business_rationale     BIT,
+    business_control       BIT,
+    account_restriction    NVARCHAR(100),
+    currency    NVARCHAR(10)
+)
+
+=========================================================
+=========================================================
+
+# Table for DAD User Access
+CREATE TABLE user_access (
+    id          NVARCHAR(255) PRIMARY KEY, (-> user_profile.gad_id)
+    access      NVARCHAR(255)
+)
+
+=========================================================
+=========================================================
+
+# Table for Audit/History - dadreq
+CREATE TABLE audit_dadreq (
+    id          NUMBER PRIMARY KEY,
+    gad_id      NVARCHAR(255),
+    req_date    DATE,
+    submitter   NVARCHAR(255),
+    status      NVARCHAR(255), # 3 values only (Complete/Reject/Cancel) -> store directly
+    reason      NVARCHAR(MAX), 
+    profile_old NVARCHAR(MAX), # save the old data in json format
+    profile_new NVARCHAR(MAX), # save the new data in json format
+    limit_old   NVARCHAR(MAX), # save the old data in json format
+    limit_new   NVARCHAR(MAX)  # save the new data in json format
+    audit_date  DATE
+)
+CREATE INDEX idx_audit_dadreq_gad_id ON audit_dadreq(gad_id);
+CREATE INDEX idx_audit_dadreq_status ON audit_dadreq(status);
+CREATE INDEX idx_audit_dadreq_date ON audit_dadreq(audit_date);
+
+# Table for Audit/History - all other tables
+CREATE TABLE audit_change (
+    id          NUMBER PRIMARY KEY,
+    audit_table NVARCHAR(50),
+    data_old    NVARCHAR(MAX) # save the old data in json format
+    data_new    NVARCHAR(MAX) # save the new data in json format
+    audit_date  DATE
+)
+CREATE INDEX idx_audit_change_table ON audit_change(audit_table);
+CREATE INDEX idx_audit_change_date ON audit_change(audit_date);
+
+
+
+please help to create these tables in data.db file
+lets keep the existing dadreq and user_access_temp table first
+we will migrate and delete them later 

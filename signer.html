@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DAD - Signer Authorization</title>
     <link rel="stylesheet" href="css/style.css">
+    <script src="js/sql-js/sql-wasm.js"></script>
 </head>
 <body>
     <div class="container">
@@ -25,6 +26,10 @@
             <div class="panel-title">Search Filters</div>
             <div class="filter-grid">
                 <div class="filter-field">
+                    <label for="gadId">GAD ID</label>
+                    <input type="text" id="gadId" placeholder="e.g. user@domain.com">
+                </div>
+                <div class="filter-field">
                     <label for="empNo">Employee No.</label>
                     <input type="number" id="empNo" placeholder="e.g. 10001">
                 </div>
@@ -40,18 +45,12 @@
                     <label for="bu">Business Unit</label>
                     <select id="bu">
                         <option value="">All</option>
-                        <option>BU1</option>
-                        <option>BU2</option>
-                        <option>BU3</option>
                     </select>
                 </div>
                 <div class="filter-field">
                     <label for="currency">Currency</label>
                     <select id="currency">
                         <option value="">All</option>
-                        <option>CAD</option>
-                        <option>USD</option>
-                        <option>HKD</option>
                     </select>
                 </div>
                 <div class="filter-field">
@@ -62,27 +61,18 @@
                     <label for="costCentre">Approval Cost Centre</label>
                     <select id="costCentre">
                         <option value="">All</option>
-                        <option>1010</option>
-                        <option>8352</option>
-                        <option>T08</option>
                     </select>
                 </div>
                 <div class="filter-field">
                     <label for="policyCategory">Policy Category</label>
                     <select id="policyCategory">
                         <option value="">All</option>
-                        <option>EXT</option>
-                        <option>PAC</option>
-                        <option>EXP</option>
                     </select>
                 </div>
                 <div class="filter-field">
                     <label for="system">System</label>
                     <select id="system">
                         <option value="">All</option>
-                        <option>AP</option>
-                        <option>SNOW</option>
-                        <option>Concur</option>
                     </select>
                 </div>
                 <div class="filter-field">
@@ -119,6 +109,8 @@
                 <table class="data-table" id="resultsTable">
                     <thead>
                         <tr>
+                            <th>GAD ID</th>
+                            <th>Status</th>
                             <th>Employee No.</th>
                             <th>First Name</th>
                             <th>Last Name</th>
@@ -134,49 +126,6 @@
                         </tr>
                     </thead>
                     <tbody id="resultsBody">
-                        <!-- Sample data rows -->
-                        <tr onclick="window.location='signer_details.html?upn=john.smith@manulife.com'">
-                            <td>10001</td>
-                            <td>John</td>
-                            <td>Smith</td>
-                            <td>BU1</td>
-                            <td>CAD</td>
-                            <td>50,000</td>
-                            <td>1010</td>
-                            <td>EXT</td>
-                            <td>AP</td>
-                            <td class="text-center">Y</td>
-                            <td class="text-center">N</td>
-                            <td>—</td>
-                        </tr>
-                        <tr onclick="window.location='signer_details.html?upn=jane.doe@manulife.com'">
-                            <td>10002</td>
-                            <td>Jane</td>
-                            <td>Doe</td>
-                            <td>BU2</td>
-                            <td>USD</td>
-                            <td>75,000</td>
-                            <td>8352</td>
-                            <td>PAC</td>
-                            <td>SNOW</td>
-                            <td class="text-center">N</td>
-                            <td class="text-center">Y</td>
-                            <td>2026-04-15</td>
-                        </tr>
-                        <tr onclick="window.location='signer_details.html?upn=wei.chan@manulife.com'">
-                            <td>10003</td>
-                            <td>Wei</td>
-                            <td>Chan</td>
-                            <td>BU3</td>
-                            <td>HKD</td>
-                            <td>120,000</td>
-                            <td>T08</td>
-                            <td>EXP</td>
-                            <td>Concur</td>
-                            <td class="text-center">Y</td>
-                            <td class="text-center">N</td>
-                            <td>—</td>
-                        </tr>
                     </tbody>
                 </table>
             </div>
@@ -185,9 +134,147 @@
     </div>
 
     <script>
+        var DB;
+        var ALL_ROWS = [];
+
+        (async function() {
+            var SQL = await initSqlJs({ locateFile: function(f) { return 'js/sql-js/' + f; } });
+            var buf = await fetch('db/data.db').then(function(r) { return r.arrayBuffer(); });
+            DB = new SQL.Database(new Uint8Array(buf));
+
+            function populateSelect(id, sql) {
+                var sel = document.getElementById(id);
+                var r = DB.exec(sql);
+                if (r.length) r[0].values.forEach(function(v) {
+                    var o = document.createElement('option');
+                    o.textContent = o.value = v[0];
+                    sel.appendChild(o);
+                });
+            }
+            populateSelect('bu', 'SELECT DISTINCT name FROM business_unit ORDER BY name');
+            populateSelect('currency', 'SELECT DISTINCT currency FROM currency ORDER BY currency');
+            populateSelect('costCentre', 'SELECT DISTINCT cc FROM cost_center ORDER BY cc');
+            populateSelect('policyCategory', 'SELECT DISTINCT category FROM policy ORDER BY category');
+            populateSelect('system', 'SELECT DISTINCT system FROM policy ORDER BY system');
+
+            var res = DB.exec(
+                "SELECT s.gad_id, s.status, s.pickup_cheque, s.expire_date, " +
+                "u.employee_id, u.first_name, u.last_name, " +
+                "b.name AS bu_name, " +
+                "sl.limit_amount, sl.currency, sl.exception, sl.approval_cc_id, sl.policy_id, " +
+                "p.category, p.system, " +
+                "cc.cc " +
+                "FROM signer s " +
+                "LEFT JOIN user_profile u ON s.gad_id = u.gad_id " +
+                "LEFT JOIN business_unit b ON s.bu_id = b.id " +
+                "LEFT JOIN signer_limit sl ON s.limit_id = sl.id " +
+                "LEFT JOIN policy p ON sl.policy_id = p.id " +
+                "LEFT JOIN cost_center cc ON sl.approval_cc_id = cc.id " +
+                "ORDER BY u.last_name, u.first_name"
+            );
+
+            if (res.length) {
+                ALL_ROWS = res[0].values.map(function(r) {
+                    return {
+                        gadId: r[0] || '', status: r[1], pickupCheque: r[2],
+                        expireDate: r[3] || '', employeeId: r[4] || '',
+                        firstName: r[5] || '', lastName: r[6] || '',
+                        buName: r[7] || '', limitAmount: r[8],
+                        currency: r[9] || '', exception: r[10],
+                        cc: r[15] || '', category: r[13] || '', system: r[14] || ''
+                    };
+                });
+            }
+            renderRows(ALL_ROWS);
+        })();
+
+        function renderRows(rows) {
+            var tbody = document.getElementById('resultsBody');
+            tbody.innerHTML = '';
+            var statusColors = { 1: '#2e7d32', 0: '#c62828' };
+            var statusLabels = { 1: 'Active', 0: 'Inactive' };
+            rows.forEach(function(r) {
+                var tr = document.createElement('tr');
+                tr.style.cursor = 'pointer';
+                tr.onclick = function() { window.location = 'signer_details.html?upn=' + encodeURIComponent(r.gadId); };
+                var amt = r.limitAmount != null ? Number(r.limitAmount).toLocaleString() : '';
+                tr.innerHTML =
+                    '<td>' + r.gadId + '</td>' +
+                    '<td><span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:0.75rem;color:#fff;background:' + (statusColors[r.status] || '#757575') + ';">' + (statusLabels[r.status] || '') + '</span></td>' +
+                    '<td>' + r.employeeId + '</td>' +
+                    '<td>' + r.firstName + '</td>' +
+                    '<td>' + r.lastName + '</td>' +
+                    '<td>' + r.buName + '</td>' +
+                    '<td>' + r.currency + '</td>' +
+                    '<td>' + amt + '</td>' +
+                    '<td>' + r.cc + '</td>' +
+                    '<td>' + r.category + '</td>' +
+                    '<td>' + r.system + '</td>' +
+                    '<td class="text-center">' + (r.pickupCheque ? 'Y' : 'N') + '</td>' +
+                    '<td class="text-center">' + (r.exception ? 'Y' : 'N') + '</td>' +
+                    '<td>' + (r.expireDate || '—') + '</td>';
+                tbody.appendChild(tr);
+            });
+        }
+
+        // Map filter element IDs to result table column indices (0-based)
+        var FILTER_COL_MAP = {
+            gadId: 0, empNo: 2, firstName: 3, lastName: 4, bu: 5,
+            currency: 6, limitAmt: 7, costCentre: 8, policyCategory: 9,
+            system: 10, chequePickUp: 11, exception: 12, tempDelegation: 13
+        };
+
+        function highlightColumns() {
+            // Clear previous highlights
+            document.querySelectorAll('#resultsTable th, #resultsTable td').forEach(function(cell) {
+                cell.style.backgroundColor = '';
+            });
+            // Highlight columns for active filters
+            Object.keys(FILTER_COL_MAP).forEach(function(id) {
+                var el = document.getElementById(id);
+                if (!el || !el.value) return;
+                var col = FILTER_COL_MAP[id];
+                document.querySelectorAll('#resultsTable thead th')[col].style.backgroundColor = '#c8e6c9';
+                document.querySelectorAll('#resultsTable tbody tr').forEach(function(tr) {
+                    var td = tr.children[col];
+                    if (td) td.style.backgroundColor = '#e8f5e9';
+                });
+            });
+        }
+
         function doSearch() {
-            // Placeholder: in production, this would call an API
-            alert('Search triggered – connect to backend API to fetch results.');
+            var gadIdVal = document.getElementById('gadId').value.trim().toLowerCase();
+            var empNo = document.getElementById('empNo').value.trim();
+            var firstName = document.getElementById('firstName').value.trim().toLowerCase();
+            var lastName = document.getElementById('lastName').value.trim().toLowerCase();
+            var bu = document.getElementById('bu').value;
+            var cur = document.getElementById('currency').value;
+            var limitAmt = document.getElementById('limitAmt').value.trim();
+            var cc = document.getElementById('costCentre').value;
+            var cat = document.getElementById('policyCategory').value;
+            var sys = document.getElementById('system').value;
+            var chq = document.getElementById('chequePickUp').value;
+            var exc = document.getElementById('exception').value;
+            var temp = document.getElementById('tempDelegation').value;
+
+            var filtered = ALL_ROWS.filter(function(r) {
+                if (gadIdVal && r.gadId.toLowerCase().indexOf(gadIdVal) === -1) return false;
+                if (empNo && String(r.employeeId) !== empNo) return false;
+                if (firstName && r.firstName.toLowerCase().indexOf(firstName) === -1) return false;
+                if (lastName && r.lastName.toLowerCase().indexOf(lastName) === -1) return false;
+                if (bu && r.buName !== bu) return false;
+                if (cur && r.currency !== cur) return false;
+                if (limitAmt && r.limitAmount != Number(limitAmt)) return false;
+                if (cc && r.cc !== cc) return false;
+                if (cat && r.category !== cat) return false;
+                if (sys && r.system !== sys) return false;
+                if (chq && (r.pickupCheque ? 'Y' : 'N') !== chq) return false;
+                if (exc && (r.exception ? 'Y' : 'N') !== exc) return false;
+                if (temp && r.expireDate !== temp) return false;
+                return true;
+            });
+            renderRows(filtered);
+            highlightColumns();
         }
 
         function doExport() {
@@ -198,7 +285,15 @@
             document.querySelectorAll('.filter-field input, .filter-field select').forEach(function(el) {
                 el.value = '';
             });
+            document.querySelectorAll('#resultsTable th, #resultsTable td').forEach(function(cell) {
+                cell.style.backgroundColor = '';
+            });
+            renderRows(ALL_ROWS);
         }
+
+        document.querySelectorAll('.filter-field input, .filter-field select').forEach(function(el) {
+            el.addEventListener('keydown', function(e) { if (e.key === 'Enter') { e.preventDefault(); doSearch(); } });
+        });
     </script>
     <script src="js/navbar.js"></script>
 </body>

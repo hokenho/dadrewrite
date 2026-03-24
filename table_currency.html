@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DAD - Currencies</title>
     <link rel="stylesheet" href="css/style.css">
+    <script src="js/sql-js/sql-wasm.js"></script>
 </head>
 <body>
     <div class="container">
@@ -52,16 +53,6 @@
                         </tr>
                     </thead>
                     <tbody id="resultsBody">
-                        <tr><td>CAD</td><td>Canadian Dollar</td></tr>
-                        <tr><td>USD</td><td>United States Dollar</td></tr>
-                        <tr><td>HKD</td><td>Hong Kong Dollar</td></tr>
-                        <tr><td>SGD</td><td>Singapore Dollar</td></tr>
-                        <tr><td>AUD</td><td>Australian Dollar</td></tr>
-                        <tr><td>JPY</td><td>Japanese Yen</td></tr>
-                        <tr><td>GBP</td><td>British Pound Sterling</td></tr>
-                        <tr><td>EUR</td><td>Euro</td></tr>
-                        <tr><td>INR</td><td>Indian Rupee</td></tr>
-                        <tr><td>PHP</td><td>Philippine Peso</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -69,6 +60,23 @@
     </div>
 
     <script>
+        // Load currency data from db/data.db
+        (async function() {
+            var SQL = await initSqlJs({ locateFile: function() { return 'js/sql-js/sql-wasm.wasm'; } });
+            var buf = await fetch('db/data.db').then(function(r) { return r.arrayBuffer(); });
+            var db = new SQL.Database(new Uint8Array(buf));
+            var results = db.exec('SELECT currency, name FROM currency ORDER BY currency');
+            var tbody = document.getElementById('resultsBody');
+            if (results.length > 0) {
+                results[0].values.forEach(function(row) {
+                    var tr = document.createElement('tr');
+                    tr.innerHTML = '<td>' + row[0] + '</td><td>' + row[1] + '</td>';
+                    tbody.appendChild(tr);
+                });
+            }
+            db.close();
+        })();
+
         function doSearch() {
             var panel = document.getElementById('searchPanel');
             panel.style.display = (panel.style.display === 'none') ? 'block' : 'none';

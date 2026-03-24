@@ -43,6 +43,7 @@
             </div>
             <table class="detail-table">
                 <tr><th>Request ID</th><td id="dadreqId"></td></tr>
+                <tr><th>Request Date</th><td id="dadreqDate"></td></tr>
                 <tr><th>Requester</th><td id="dadreqRequester"></td></tr>
                 <tr><th>Request Status</th><td id="dadreqStatus"></td></tr>
                 <tr id="dadreqReasonRow" style="display:none;"><th>Reason</th><td id="dadreqReason"></td></tr>
@@ -53,15 +54,17 @@
         <div class="panel panel--blue">
             <div class="panel-title">Signer Profile <button id="btnDeleteSigner" class="btn-delete-signer" style="display:none;" onclick="deleteSigner()">Delete</button></div>
             <table class="detail-table">
-                <tr><th>GAD ID</th><td id="gadId">hokenho@mfcgd.com</td></tr>
-                <tr><th>Last Name</th><td>Ken</td></tr>
-                <tr><th>First Name</th><td>Ho</td></tr>
-                <tr><th>Business Unit</th><td>Canadian IS</td></tr>
-                <tr><th>Signers Cost Center</th><td>1010</td></tr>
-                <tr><th>Job Level / Job Grade</th><td>Level 8</td></tr>
-                <tr><th>Job Title</th><td>Senior Full-stack Software Engineer</td></tr>
-                <tr><th>Employee No.</th><td>12345678</td></tr>
-                <tr><th>Pickup Cheques</th><td>Y</td></tr>
+                <tr><th>GAD ID</th><td id="gadId"></td></tr>
+                <tr><th>Last Name</th><td id="profLastName"></td></tr>
+                <tr><th>First Name</th><td id="profFirstName"></td></tr>
+                <tr><th>Business Unit</th><td id="profBU"></td></tr>
+                <tr><th>Signers Cost Center</th><td id="profCC"></td></tr>
+                <tr><th>Job Level / Job Grade</th><td id="profJobGrade"></td></tr>
+                <tr><th>Job Title</th><td id="profJobTitle"></td></tr>
+                <tr><th>Employee No.</th><td id="profEmpNo"></td></tr>
+                <tr><th>Pickup Cheques</th><td id="profPickup"></td></tr>
+                <tr><th>Temporary Delegation</th><td id="profExpireDate"></td></tr>
+                <tr><th>Status</th><td id="profStatus"></td></tr>
             </table>
         </div>
 
@@ -87,48 +90,6 @@
                         </tr>
                     </thead>
                     <tbody id="limitsBody">
-                        <tr data-status="original">
-                            <td class="action-col" style="display:none; text-align:center;"><button onclick="deleteRow(this)" style="color:red; cursor:pointer;" title="Delete">X</button></td>
-                            <td>NA</td>
-                            <td>EXP</td>
-                            <td>10,000</td>
-                            <td>CAD</td>
-                            <td>1010</td>
-                            <td class="text-center">N</td>
-                            <td class="text-center">N</td>
-                            <td class="text-center">N</td>
-                            <td class="text-center">N</td>
-                            <td>AP</td>
-                            <td>000000-123456</td>
-                        </tr>
-                        <tr data-status="original">
-                            <td class="action-col" style="display:none; text-align:center;"><button onclick="deleteRow(this)" style="color:red; cursor:pointer;" title="Delete">X</button></td>
-                            <td>NA</td>
-                            <td>PAC</td>
-                            <td>25,000</td>
-                            <td>USD</td>
-                            <td>8352</td>
-                            <td class="text-center">Y</td>
-                            <td class="text-center">N</td>
-                            <td class="text-center">Y</td>
-                            <td class="text-center">N</td>
-                            <td>SNOW</td>
-                            <td>000000-789012</td>
-                        </tr>
-                        <tr data-status="original">
-                            <td class="action-col" style="display:none; text-align:center;"><button onclick="deleteRow(this)" style="color:red; cursor:pointer;" title="Delete">X</button></td>
-                            <td>HK</td>
-                            <td>EXT</td>
-                            <td>50,000</td>
-                            <td>HKD</td>
-                            <td>T08</td>
-                            <td class="text-center">N</td>
-                            <td class="text-center">Y</td>
-                            <td class="text-center">N</td>
-                            <td class="text-center">Y</td>
-                            <td>Concur</td>
-                            <td>000000-345678</td>
-                        </tr>
                     </tbody>
                 </table>
             </div>
@@ -191,6 +152,281 @@
         var isEditMode = false;
         var originalData = [];
 
+        // Load signer profile and limits from db
+        var SIGNER_DB_READY = initSqlJs({
+            locateFile: function(f) { return 'js/sql-js/' + f; }
+        }).then(function(SQL) {
+            return fetch('db/data.db').then(function(r) { return r.arrayBuffer(); }).then(function(buf) {
+                var db = new SQL.Database(new Uint8Array(buf));
+
+                if (isDADREQMode) {
+                    var reqNum = parseInt(reqid.replace(/\D/g, ''));
+                    var reqRes = db.exec(
+                        "SELECT id, req_date, submitter, gad_id, bu_id, pickup_cheque, limit_id, expire_date, status, source_data " +
+                        "FROM signer_req WHERE id = ?", [reqNum]
+                    );
+                    if (reqRes.length && reqRes[0].values.length) {
+                        var req = reqRes[0].values[0];
+                        var gadId = req[3];
+                        var statusLabels = { 1: 'Active', 0: 'Inactive' };
+                        var statusColors2 = { 1: '#2e7d32', 0: '#c62828' };
+                        var reqStatusColors = { Open: '#2a5a8a', Complete: '#2e7d32' };
+
+                        // DAD Change Request panel
+                        document.getElementById('dadreqId').textContent = reqid.toUpperCase();
+                        document.getElementById('dadreqDate').textContent = req[1] || '';
+                        document.getElementById('dadreqRequester').textContent = req[2] || '';
+                        document.getElementById('dadreqStatus').innerHTML =
+                            '<span style="display:inline-block;padding:2px 10px;border-radius:12px;font-size:0.78rem;font-weight:600;color:#fff;background:' +
+                            (reqStatusColors['Open'] || '#555') + ';">Open</span>';
+                        window._dadreqDbData = { requestStatus: 'Open', requester: req[2] };
+
+                        // Signer Profile
+                        var profRes = db.exec(
+                            "SELECT u.last_name, u.first_name, u.employee_id, " +
+                            "b.name AS bu_name, cc_s.cc AS signer_cc, j.job_grade, j.job_title " +
+                            "FROM user_profile u " +
+                            "LEFT JOIN business_unit b ON b.id = ? " +
+                            "LEFT JOIN cost_center cc_s ON u.signer_cc_id = cc_s.id " +
+                            "LEFT JOIN job j ON u.job_level_id = j.id " +
+                            "WHERE u.gad_id = ?", [req[4], gadId]
+                        );
+                        if (profRes.length && profRes[0].values.length) {
+                            var p = profRes[0].values[0];
+                            document.getElementById('gadId').textContent = gadId;
+                            document.getElementById('profLastName').textContent = p[0] || '';
+                            document.getElementById('profFirstName').textContent = p[1] || '';
+                            document.getElementById('profBU').textContent = p[3] || '';
+                            document.getElementById('profCC').textContent = p[4] || '';
+                            document.getElementById('profJobGrade').textContent = p[5] || '';
+                            document.getElementById('profJobTitle').textContent = p[6] || '';
+                            document.getElementById('profEmpNo').textContent = p[2] || '';
+                            document.getElementById('profPickup').textContent = req[5] ? 'Y' : 'N';
+                            document.getElementById('profExpireDate').textContent = req[7] || '\u2014';
+                            document.getElementById('profStatus').innerHTML =
+                                '<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:0.75rem;color:#fff;background:' +
+                                (statusColors2[req[8]] || '#757575') + ';">' + (statusLabels[req[8]] || '') + '</span>';
+
+                            // Compare new values with source_data (old values) for 3 editable fields
+                            var srcProfile = req[9] ? JSON.parse(req[9]) : null;
+                            if (srcProfile) {
+                                var oldPickup = srcProfile.pickup_cheque ? 'Y' : 'N';
+                                var newPickup = req[5] ? 'Y' : 'N';
+                                if (oldPickup !== newPickup) {
+                                    var td = document.getElementById('profPickup');
+                                    td.style.backgroundColor = '#ffff00';
+                                    td.innerHTML = oldPickup +
+                                        ' <span style="color:#999;margin:0 4px;">&#8594;</span>' +
+                                        '<span style="font-weight:bold;">' + newPickup + '</span>';
+                                }
+
+                                var oldExpire = srcProfile.expire_date || '\u2014';
+                                var newExpire = req[7] || '\u2014';
+                                if (oldExpire !== newExpire) {
+                                    var td = document.getElementById('profExpireDate');
+                                    td.style.backgroundColor = '#ffff00';
+                                    td.innerHTML = oldExpire +
+                                        ' <span style="color:#999;margin:0 4px;">&#8594;</span>' +
+                                        '<span style="font-weight:bold;">' + newExpire + '</span>';
+                                }
+
+                                var oldStatus = statusLabels[srcProfile.status] || '';
+                                var newStatus = statusLabels[req[8]] || '';
+                                if (oldStatus !== newStatus) {
+                                    var oldColor = statusColors2[srcProfile.status] || '#757575';
+                                    var newColor = statusColors2[req[8]] || '#757575';
+                                    var td = document.getElementById('profStatus');
+                                    td.style.backgroundColor = '#ffff00';
+                                    td.innerHTML =
+                                        '<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:0.75rem;color:#fff;background:' + oldColor + ';">' + oldStatus + '</span>' +
+                                        ' <span style="color:#999;margin:0 4px;">&#8594;</span>' +
+                                        '<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:0.75rem;color:#fff;background:' + newColor + ';">' + newStatus + '</span>';
+                                }
+                            }
+                        }
+                        upn = gadId;
+
+                        // Lookup maps
+                        var terrMap = {}, ccMap = {}, polMap = {};
+                        var tr2 = db.exec("SELECT id, country_code FROM territory");
+                        if (tr2.length) tr2[0].values.forEach(function(v) { terrMap[v[0]] = v[1]; });
+                        var cc2 = db.exec("SELECT id, cc FROM cost_center");
+                        if (cc2.length) cc2[0].values.forEach(function(v) { ccMap[v[0]] = v[1]; });
+                        var po2 = db.exec("SELECT id, category, system FROM policy");
+                        if (po2.length) po2[0].values.forEach(function(v) { polMap[v[0]] = { cat: v[1], sys: v[2] }; });
+
+                        function resolveSource(sd) {
+                            var sp = polMap[sd.policy_id] || {};
+                            return [
+                                terrMap[sd.territory_id] || '', sp.cat || '',
+                                sd.limit_amount != null ? Number(sd.limit_amount).toLocaleString() : '',
+                                sd.currency || '', ccMap[sd.approval_cc_id] || '',
+                                sd.exception ? 'Y' : 'N', sd.temporary ? 'Y' : 'N',
+                                sd.business_rationale ? 'Y' : 'N', sd.business_control ? 'Y' : 'N',
+                                sp.sys || '', sd.account_restriction || ''
+                            ];
+                        }
+
+                        // Add Change Type header
+                        var hdr = document.querySelector('#limitsTable thead tr');
+                        var ctTh = document.createElement('th');
+                        ctTh.textContent = 'Change Type'; ctTh.style.width = '8%';
+                        hdr.insertBefore(ctTh, hdr.firstChild);
+
+                        function makeCtTd(label, color) {
+                            var td = document.createElement('td');
+                            td.textContent = label;
+                            td.style.cssText = 'font-weight:bold;font-size:0.78rem;color:' + color + ';vertical-align:middle;text-align:center;white-space:nowrap;';
+                            return td;
+                        }
+                        function makeLimRow(vals, fn) {
+                            var tr = document.createElement('tr');
+                            var at = document.createElement('td');
+                            at.className = 'action-col'; at.style.display = 'none';
+                            tr.appendChild(at);
+                            vals.forEach(function(v, i) {
+                                var td = document.createElement('td');
+                                td.textContent = v;
+                                if (i >= 5 && i <= 8) td.className = 'text-center';
+                                if (fn) fn(td, i);
+                                tr.appendChild(td);
+                            });
+                            return tr;
+                        }
+
+                        var lrRes = db.exec(
+                            "SELECT lr.action, lr.source_data, lr.territory_id, lr.policy_id, lr.limit_amount, " +
+                            "lr.currency, lr.approval_cc_id, lr.exception, lr.temporary, lr.business_rationale, " +
+                            "lr.business_control, lr.account_restriction " +
+                            "FROM signer_limit_req lr WHERE lr.signer_req_id = ? ORDER BY lr.id", [reqNum]
+                        );
+                        var tbody = document.getElementById('limitsBody');
+                        if (lrRes.length) {
+                            lrRes[0].values.forEach(function(lr) {
+                                var act = lr[0];
+                                var srcData = lr[1] ? JSON.parse(lr[1]) : null;
+                                var np = polMap[lr[3]] || {};
+                                var newVals = [
+                                    terrMap[lr[2]] || '', np.cat || '',
+                                    lr[4] != null ? Number(lr[4]).toLocaleString() : '',
+                                    lr[5] || '', ccMap[lr[6]] || '',
+                                    lr[7] ? 'Y' : 'N', lr[8] ? 'Y' : 'N',
+                                    lr[9] ? 'Y' : 'N', lr[10] ? 'Y' : 'N',
+                                    np.sys || '', lr[11] || ''
+                                ];
+                                if (act === 'Change' && srcData) {
+                                    var sv = resolveSource(srcData);
+                                    var btr = makeLimRow(sv);
+                                    btr.style.cssText = 'border-top:3px solid #555;border-left:3px solid #555;border-right:3px solid #555;';
+                                    btr.insertBefore(makeCtTd('Change (Before)', '#2e86c1'), btr.firstChild);
+                                    tbody.appendChild(btr);
+                                    var atr = makeLimRow(newVals, function(td, i) {
+                                        if (newVals[i] !== sv[i]) { td.style.backgroundColor = '#ffff00'; td.style.fontWeight = 'bold'; }
+                                    });
+                                    atr.style.cssText = 'border-bottom:3px solid #555;border-left:3px solid #555;border-right:3px solid #555;';
+                                    atr.insertBefore(makeCtTd('Change (After)', '#2e86c1'), atr.firstChild);
+                                    tbody.appendChild(atr);
+                                } else if (act === 'Remove' && srcData) {
+                                    var sv = resolveSource(srcData);
+                                    var rtr = makeLimRow(sv, function(td) { td.style.textDecoration = 'line-through'; td.style.color = '#c0392b'; });
+                                    rtr.style.cssText = 'background:#ffe6e6;border:3px solid #555;';
+                                    rtr.insertBefore(makeCtTd('Removal', '#c0392b'), rtr.firstChild);
+                                    tbody.appendChild(rtr);
+                                } else if (act === 'Add') {
+                                    var ntr = makeLimRow(newVals, function(td) { td.style.backgroundColor = '#ffff00'; });
+                                    ntr.style.cssText = 'border:3px solid #555;';
+                                    ntr.insertBefore(makeCtTd('Additional', '#8e44ad'), ntr.firstChild);
+                                    tbody.appendChild(ntr);
+                                }
+                            });
+                        }
+                        window._DADREQ_RENDERED = true;
+                    }
+                } else if (upn) {
+
+                // Table 1: Signer Profile
+                var profRes = db.exec(
+                    "SELECT s.gad_id, s.status, s.pickup_cheque, s.expire_date, " +
+                    "u.last_name, u.first_name, u.employee_id, " +
+                    "b.name AS bu_name, " +
+                    "cc_s.cc AS signer_cc, " +
+                    "j.job_grade, j.job_title " +
+                    "FROM signer s " +
+                    "LEFT JOIN user_profile u ON s.gad_id = u.gad_id " +
+                    "LEFT JOIN business_unit b ON s.bu_id = b.id " +
+                    "LEFT JOIN cost_center cc_s ON u.signer_cc_id = cc_s.id " +
+                    "LEFT JOIN job j ON u.job_level_id = j.id " +
+                    "WHERE s.gad_id = ?", [upn]
+                );
+
+                if (profRes.length && profRes[0].values.length) {
+                    var r = profRes[0].values[0];
+                    var statusColors = { 1: '#2e7d32', 0: '#c62828' };
+                    var statusLabels = { 1: 'Active', 0: 'Inactive' };
+                    document.getElementById('gadId').textContent = r[0] || '';
+                    document.getElementById('profLastName').textContent = r[4] || '';
+                    document.getElementById('profFirstName').textContent = r[5] || '';
+                    document.getElementById('profBU').textContent = r[7] || '';
+                    document.getElementById('profCC').textContent = r[8] || '';
+                    document.getElementById('profJobGrade').textContent = r[9] || '';
+                    document.getElementById('profJobTitle').textContent = r[10] || '';
+                    document.getElementById('profEmpNo').textContent = r[6] || '';
+                    document.getElementById('profPickup').textContent = r[2] ? 'Y' : 'N';
+                    document.getElementById('profExpireDate').textContent = r[3] || '—';
+                    document.getElementById('profStatus').innerHTML =
+                        '<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:0.75rem;color:#fff;background:' +
+                        (statusColors[r[1]] || '#757575') + ';">' + (statusLabels[r[1]] || '') + '</span>';
+                }
+
+                // Table 2: Signing Limit Authorizations (1:M via gad_id)
+                var limRes = db.exec(
+                    "SELECT t.country_code, p.category, sl.limit_amount, sl.currency, " +
+                    "cc.cc, sl.exception, sl.temporary, sl.business_rationale, sl.business_control, " +
+                    "p.system, sl.account_restriction " +
+                    "FROM signer_limit sl " +
+                    "LEFT JOIN territory t ON sl.territory_id = t.id " +
+                    "LEFT JOIN policy p ON sl.policy_id = p.id " +
+                    "LEFT JOIN cost_center cc ON sl.approval_cc_id = cc.id " +
+                    "WHERE sl.gad_id = ? ORDER BY sl.id", [upn]
+                );
+
+                var tbody = document.getElementById('limitsBody');
+                if (limRes.length) {
+                    limRes[0].values.forEach(function(r) {
+                        var tr = document.createElement('tr');
+                        tr.setAttribute('data-status', 'original');
+                        // Action col (hidden)
+                        var actTd = document.createElement('td');
+                        actTd.className = 'action-col';
+                        actTd.style.display = 'none';
+                        actTd.style.textAlign = 'center';
+                        actTd.innerHTML = '<button onclick="deleteRow(this)" style="color:red; cursor:pointer;" title="Delete">X</button>';
+                        tr.appendChild(actTd);
+                        // Data cells
+                        var amt = r[2] != null ? Number(r[2]).toLocaleString() : '';
+                        var vals = [
+                            r[0] || '', r[1] || '', amt, r[3] || '', r[4] || '',
+                            r[5] ? 'Y' : 'N', r[6] ? 'Y' : 'N', r[7] ? 'Y' : 'N', r[8] ? 'Y' : 'N',
+                            r[9] || '', r[10] || ''
+                        ];
+                        vals.forEach(function(v, idx) {
+                            var td = document.createElement('td');
+                            td.textContent = v;
+                            if (idx >= 5 && idx <= 8) td.className = 'text-center';
+                            tr.appendChild(td);
+                        });
+                        tbody.appendChild(tr);
+                    });
+                }
+
+                // Trigger edit mode after data loaded if action=update
+                if (action === 'update') {
+                    enterEditMode();
+                }
+                } // end else if (upn)
+            });
+        });
+
         // Dummy DADREQ change data keyed by reqid (local demo entry + shared data from db/dadreq.db)
         var dadreqChanges = {
             'DADREQ123456': {
@@ -237,6 +473,8 @@
             }
         });
 
+        var originalProfileData = {};
+
         function enterEditMode() {
             isEditMode = true;
             // Show delete button on profile
@@ -246,6 +484,50 @@
             // Show Save/Cancel in action bar, hide view actions
             document.getElementById('editActions').style.display = 'contents';
             document.getElementById('viewActions').style.display = 'none';
+
+            // Make profile fields editable: Pickup Cheques, Temporary Delegation, Status
+            var pickupTd = document.getElementById('profPickup');
+            var expireTd = document.getElementById('profExpireDate');
+            var statusTd = document.getElementById('profStatus');
+
+            originalProfileData.pickup = pickupTd.textContent.trim();
+            originalProfileData.expire = expireTd.textContent.trim();
+            originalProfileData.statusText = statusTd.textContent.trim();
+            originalProfileData.statusHTML = statusTd.innerHTML;
+
+            // Pickup Cheques → Y/N select
+            var pickupVal = originalProfileData.pickup;
+            pickupTd.innerHTML = '<select class="edit-input" data-orig="' + pickupVal + '" style="padding:4px; width:auto;"><option value="Y"' + (pickupVal === 'Y' ? ' selected' : '') + '>Y</option><option value="N"' + (pickupVal === 'N' ? ' selected' : '') + '>N</option></select>';
+
+            // Temporary Delegation → date input
+            var expireVal = originalProfileData.expire === '—' ? '' : originalProfileData.expire;
+            expireTd.innerHTML = '<input type="date" class="edit-input" data-orig="' + expireVal + '" value="' + expireVal + '" style="padding:4px; width:auto;">' +
+                '<button type="button" onclick="var inp=this.previousElementSibling;inp.value=\'\';if(inp.value===inp.getAttribute(\'data-orig\')){inp.style.backgroundColor=\'\';}else{inp.style.backgroundColor=\'#ffff00\';}" style="margin-left:4px; padding:2px 8px; font-size:0.75rem; cursor:pointer;">Clear</button>';
+
+            // Status → Active/Inactive select
+            var isActive = originalProfileData.statusText === 'Active';
+            statusTd.innerHTML = '<select class="edit-input" data-orig="' + (isActive ? 'Active' : 'Inactive') + '" style="padding:4px; width:auto;"><option value="Active"' + (isActive ? ' selected' : '') + '>Active</option><option value="Inactive"' + (!isActive ? ' selected' : '') + '>Inactive</option></select>';
+
+            // Attach highlight listeners to profile edits
+            [pickupTd, expireTd, statusTd].forEach(function(td) {
+                var input = td.querySelector('.edit-input');
+                if (input) {
+                    input.addEventListener('input', function() {
+                        if (this.value !== this.getAttribute('data-orig')) {
+                            this.style.backgroundColor = '#ffff00';
+                        } else {
+                            this.style.backgroundColor = '';
+                        }
+                    });
+                    input.addEventListener('change', function() {
+                        if (this.value !== this.getAttribute('data-orig')) {
+                            this.style.backgroundColor = '#ffff00';
+                        } else {
+                            this.style.backgroundColor = '';
+                        }
+                    });
+                }
+            });
 
             // Show action column
             document.querySelectorAll('.action-col').forEach(el => el.style.display = 'table-cell');
@@ -303,6 +585,11 @@
             document.getElementById('btnNewRow').style.display = 'none';
             document.getElementById('editActions').style.display = 'none';
             document.getElementById('viewActions').style.display = 'contents';
+
+            // Restore profile fields
+            document.getElementById('profPickup').textContent = originalProfileData.pickup;
+            document.getElementById('profExpireDate').textContent = originalProfileData.expire;
+            document.getElementById('profStatus').innerHTML = originalProfileData.statusHTML;
 
             document.querySelectorAll('.action-col').forEach(el => el.style.display = 'none');
 
@@ -500,56 +787,48 @@
             alert('Export triggered for ' + (upn || 'unknown user'));
         }
 
-        if (action === 'update') {
-            enterEditMode();
-        }
-
         // Simulate current logged-in user
         var currentUser = 'alice.smith@manulife.com';
 
         function initDADREQPanel() {
             if (!isDADREQMode) return;
 
-            // Hide normal view actions, show DADREQ-only actions
             document.getElementById('viewActions').style.display = 'none';
             document.getElementById('dadreqActions').style.display = 'contents';
+            document.getElementById('dadreqPanel').style.display = '';
 
-            // Show DADREQ panel
-            var dadreqPanel = document.getElementById('dadreqPanel');
-            dadreqPanel.style.display = '';
+            var changes = window._dadreqDbData || dadreqChanges[reqid.toUpperCase()] || { requestStatus: 'Open', requester: 'unknown', reason: '' };
 
-            // Populate DADREQ info
-            var changes = dadreqChanges[reqid.toUpperCase()] || { requestStatus: 'Open', requester: 'unknown', reason: '' };
-            document.getElementById('dadreqId').textContent = reqid.toUpperCase();
-            document.getElementById('dadreqRequester').textContent = changes.requester || 'unknown';
+            if (!window._DADREQ_RENDERED) {
+                document.getElementById('dadreqId').textContent = reqid.toUpperCase();
+                document.getElementById('dadreqRequester').textContent = changes.requester || 'unknown';
+                var statusColors = { Open: '#2a5a8a', Complete: '#2e7d32', Reject: '#c62828', Cancel: '#757575' };
+                var color = statusColors[changes.requestStatus] || '#555';
+                document.getElementById('dadreqStatus').innerHTML = '<span style="display:inline-block;padding:2px 10px;border-radius:12px;font-size:0.78rem;font-weight:600;color:#fff;background:' + color + ';">' + changes.requestStatus + '</span>';
+            }
 
-            var statusColors = { Open: '#2a5a8a', Complete: '#2e7d32', Reject: '#c62828', Cancel: '#757575' };
-            var color = statusColors[changes.requestStatus] || '#555';
-            document.getElementById('dadreqStatus').innerHTML = '<span style="display:inline-block;padding:2px 10px;border-radius:12px;font-size:0.78rem;font-weight:600;color:#fff;background:' + color + ';">' + changes.requestStatus + '</span>';
-
-            // Show Reason row only for Reject or Cancel
             if ((changes.requestStatus === 'Reject' || changes.requestStatus === 'Cancel') && changes.reason) {
                 document.getElementById('dadreqReasonRow').style.display = '';
                 document.getElementById('dadreqReason').textContent = changes.reason;
             }
 
-            // Show Approve/Reject buttons only if approval mode AND status is Open
             if (isApprovalMode && changes.requestStatus === 'Open') {
                 document.getElementById('btnApproveSigner').style.display = 'inline-block';
                 document.getElementById('btnRejectSigner').style.display = 'inline-block';
             }
 
-            // Show Cancel Request button if requester is current user AND status is Open
             if (changes.requester === currentUser && changes.requestStatus === 'Open') {
                 document.getElementById('btnCancelRequest').style.display = 'inline-block';
             }
 
-            // Apply the DADREQ changes as a read-only view
-            if (changes) applyDADREQView(changes);
+            if (!window._DADREQ_RENDERED) {
+                var fallback = dadreqChanges[reqid.toUpperCase()];
+                if (fallback) applyDADREQView(fallback);
+            }
         }
 
         // Load shared DADREQ data from db, merge into dadreqChanges, then render
-        window.DADREQ_READY.then(function() {
+        Promise.all([SIGNER_DB_READY, window.DADREQ_READY]).then(function() {
             Object.assign(dadreqChanges, window.DADREQ_MAP);
             initDADREQPanel();
         });

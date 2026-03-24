@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DAD - Cost Centres</title>
     <link rel="stylesheet" href="css/style.css">
+    <script src="js/sql-js/sql-wasm.js"></script>
 </head>
 <body>
     <div class="container">
@@ -61,16 +62,6 @@
                         </tr>
                     </thead>
                     <tbody id="resultsBody">
-                        <tr><td>1010</td><td>Canadian IS – Technology</td><td>Active</td></tr>
-                        <tr><td>2020</td><td>Finance Operations – AP</td><td>Active</td></tr>
-                        <tr><td>3030</td><td>HR Technology</td><td>Active</td></tr>
-                        <tr><td>4040</td><td>Global Tech Services</td><td>Active</td></tr>
-                        <tr><td>5050</td><td>Actuarial – Modelling</td><td>Active</td></tr>
-                        <tr><td>6060</td><td>Marketing – Digital</td><td>Inactive</td></tr>
-                        <tr><td>7070</td><td>Legal & Compliance</td><td>Active</td></tr>
-                        <tr><td>8080</td><td>Operations – Claims</td><td>Active</td></tr>
-                        <tr><td>8352</td><td>Risk Management</td><td>Active</td></tr>
-                        <tr><td>T08</td><td>Investments – Treasury</td><td>Inactive</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -78,6 +69,23 @@
     </div>
 
     <script>
+        // Load cost centre data from db/data.db
+        (async function() {
+            var SQL = await initSqlJs({ locateFile: function() { return 'js/sql-js/sql-wasm.wasm'; } });
+            var buf = await fetch('db/data.db').then(function(r) { return r.arrayBuffer(); });
+            var db = new SQL.Database(new Uint8Array(buf));
+            var results = db.exec('SELECT cc, description, status FROM cost_center ORDER BY id');
+            var tbody = document.getElementById('resultsBody');
+            if (results.length > 0) {
+                results[0].values.forEach(function(row) {
+                    var tr = document.createElement('tr');
+                    tr.innerHTML = '<td>' + row[0] + '</td><td>' + row[1] + '</td><td>' + (row[2] ? 'Active' : 'Inactive') + '</td>';
+                    tbody.appendChild(tr);
+                });
+            }
+            db.close();
+        })();
+
         function doSearch() {
             var panel = document.getElementById('searchPanel');
             panel.style.display = (panel.style.display === 'none') ? 'block' : 'none';

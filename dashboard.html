@@ -245,8 +245,47 @@
         // Table 2: Temporary = Y, top 30
         renderSignerTable('tempBody', genSignerRows(30, { temp: 'Y' }));
 
-        // Table 3: Exception = Y, top 30
-        renderSignerTable('exceptionBody', genSignerRows(30, { exc: 'Y' }));
+        // Table 3: Exception = Y, top 30 (from db)
+        (async function() {
+            var SQL = await initSqlJs({ locateFile: function(f) { return 'js/sql-js/' + f; } });
+            var buf = await fetch('db/data.db').then(function(r) { return r.arrayBuffer(); });
+            var db = new SQL.Database(new Uint8Array(buf));
+
+            var res = db.exec(
+                "SELECT s.gad_id, u.last_name, u.first_name, b.name, " +
+                "cc_s.cc, j.job_grade, j.job_title, u.employee_id, s.pickup_cheque, " +
+                "t.country_code, p.category, sl.limit_amount, sl.currency, " +
+                "cc_a.cc, sl.exception, sl.temporary, sl.business_rationale, sl.business_control, " +
+                "p.system, sl.account_restriction " +
+                "FROM signer s " +
+                "JOIN signer_limit sl ON sl.gad_id = s.gad_id " +
+                "LEFT JOIN user_profile u ON s.gad_id = u.gad_id " +
+                "LEFT JOIN business_unit b ON s.bu_id = b.id " +
+                "LEFT JOIN cost_center cc_s ON u.signer_cc_id = cc_s.id " +
+                "LEFT JOIN job j ON u.job_level_id = j.id " +
+                "LEFT JOIN territory t ON sl.territory_id = t.id " +
+                "LEFT JOIN policy p ON sl.policy_id = p.id " +
+                "LEFT JOIN cost_center cc_a ON sl.approval_cc_id = cc_a.id " +
+                "WHERE sl.exception = 1 " +
+                "ORDER BY s.gad_id " +
+                "LIMIT 30"
+            );
+
+            if (res.length) {
+                var rows = res[0].values.map(function(r) {
+                    return {
+                        gadId: r[0] || '', ln: r[1] || '', fn: r[2] || '', bu: r[3] || '',
+                        cc: r[4] || '', jl: r[5] || '', jt: r[6] || '', emp: r[7] || '',
+                        chq: r[8] ? 'Y' : 'N', country: r[9] || '', pcat: r[10] || '',
+                        limit: r[11] || 0, curr: r[12] || '', apprCC: r[13] || '',
+                        exc: r[14] ? 'Y' : 'N', temp: r[15] ? 'Y' : 'N',
+                        br: r[16] ? 'Y' : 'N', bc: r[17] ? 'Y' : 'N',
+                        sys: r[18] || '', acct: r[19] || ''
+                    };
+                });
+                renderSignerTable('exceptionBody', rows);
+            }
+        })();
 
         function filterRequestStatus() {
             var val = document.getElementById('fReqStatus').value;
