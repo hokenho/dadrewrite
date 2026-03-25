@@ -6,7 +6,8 @@
         { label: 'Signer Authorization', href: 'signer.html' },
         { label: 'Signer Onboarding', children: [
             { label: 'Request New Signer', href: 'request_signer.html' },
-            { label: 'Signer Request Status', href: 'request_status.html' }
+            { label: 'Signer Request Status', href: 'request_status.html' },
+            { label: 'Signer Request Approval (AVP+)', href: 'req_approval_avp.html' }
         ]},
         { label: 'Tables Administration', children: [
             { label: 'Policies Categories', href: 'table_policy.html' },

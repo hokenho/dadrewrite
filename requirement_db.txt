@@ -1,20 +1,32 @@
-ok now lets setup the backend data.db tables dummy data first
-
-# User Information Table (sync from workday)
-CREATE TABLE user_profile (
-    gad_id        NUMBER PRIMARY KEY,
-    employee_id   NUMBER,
-    last_name     NVARCHAR(255),
-    first_name    NVARCHAR(255),
-    signer_cc_id  NUMBER FK, (-> cost_center.id)
-    job_level_id  NUMBER FK, (-> job_level.id)
-    territory_id  NUMBER FK (-> territory.id)
-)
-
 =========================================================
 =========================================================
 
 # Tables Administration
+# ---------------------------------- Workday tables ----------------------------------
+# User Information Table (sync from workday)
+CREATE TABLE user_profile (
+    gad_id        NVARCHAR(255) PRIMARY KEY,
+    employee_id   NUMBER,
+    last_name     NVARCHAR(255),
+    first_name    NVARCHAR(255),
+    signer_cc     NVARCHAR(255),
+    job_level_id  NUMBER FK, (-> job_level.id)
+    territory_id  NUMBER FK (-> territory.id)
+)
+# Job Levels (source=Workday)
+CREATE TABLE job (
+    id           NUMBER PRIMARY KEY,
+    job_grade    NVARCHAR(255),
+    job_title    NVARCHAR(MAX),    # assume title could have japanese characters
+    limit_amount	INTEGER,
+)
+# Countries/Territories (source=Workday)
+CREATE TABLE territory (
+    id              NUMBER PRIMARY KEY,
+    country_code    NVARCHAR(255),
+    territory       NVARCHAR(255)
+)
+# ---------------------------------- GDAS tables ----------------------------------
 # Policies Categories (source=GDAS)
 CREATE TABLE policy (
     id                  NUMBER PRIMARY KEY,
@@ -27,20 +39,13 @@ CREATE TABLE policy (
     manual_approval     BIT
 )
 
-# Countries/Territories (source=Workday)
-CREATE TABLE territory (
-    id              NUMBER PRIMARY KEY,
-    country_code    NVARCHAR(255),
-    territory       NVARCHAR(255)
-)
-
+# ---------------------------------- Infor tables ----------------------------------
 # Business Units (source=Infor)
 CREATE TABLE business_unit (
     id              NUMBER PRIMARY KEY,
     security_group  NVARCHAR(255),
     name            NVARCHAR(255)
 )
-
 # Cost Centres (source=Infor)
 CREATE TABLE cost_center (
     id           NUMBER PRIMARY KEY,
@@ -48,13 +53,11 @@ CREATE TABLE cost_center (
     description  NVARCHAR(255),
     status       BIT
 )
-
 # Currencies (source=Infor)
 CREATE TABLE currency (
     currency     NVARCHAR(255) PRIMARY KEY,
     name         NVARCHAR(255)
 )
-
 # Exchange Rates (source=Infor)
 CREATE TABLE exchange_rate (
     source_currency       NVARCHAR(255),
@@ -63,30 +66,22 @@ CREATE TABLE exchange_rate (
     PRIMARY KEY (source, target)  # Composite PK - using both source and target currency
 )
 
-# Job Levels (source=Workday)
-CREATE TABLE job (
-    id           NUMBER PRIMARY KEY,
-    job_grade    NVARCHAR(255),
-    job_title    NVARCHAR(MAX),    # assume title could have japanese characters
-    limit_amount	INTEGER,
-)
-
 =========================================================
 =========================================================
 
 # Tables for Signer approval
 CREATE TABLE signer (
-    gad_id NUMBER PRIMARY KEY, (->user_profile.gad_id)
+    gad_id NVARCHAR(255) PRIMARY KEY, (->user_profile.gad_id)
     bu_id NUMBER FK (->business_unit.id)
     pickup_cheque BIT,
-    limit_id NUMBER FK, (-> signer_limit.id)
     temp BIT,
     temp_start_date DATE,
     temp_end_date DATE,
     status      BIT
 )
 CREATE TABLE signer_limit (
-    id            NUMBER PRIMARY KEY,
+    id      NUMBER PRIMARY KEY,
+    gad_id  NVARCHAR(255),  (-> signer.gad_id 1:M signer_limit.gad_id)
     territory_id  NUMBER FK, (-> territory.id)
     policy_id     NUMBER FK, (-> policy.id)
     limit_amount  NUMBER,
@@ -109,23 +104,30 @@ CREATE TABLE signer_req (
     id          NUMBER PRIMARY KEY,
     req_date    DATE,
     submitter   NVARCHAR(255) FK, (-> user_profile.gad_id),
-    gad_id NUMBER, (->user_profile.gad_id)
+    gad_id NVARCHAR(255), (->user_profile.gad_id)
     bu_id NUMBER FK (->business_unit.id)
-    limit_id NUMBER FK, (-> signer_limit.id)
+    approver_avp_gad_id NVARCHAR(255),
+    approver_avp_result BIT NULLABLE, # NULL=pending approval,0=reject,1=approve
+    approver_avp_reason NVARCHAR(255), 
+    approver_tsa_gad_id NVARCHAR(255),
+    approver_tsa_result BIT NULLABLE, # NULL=pending approval,0=reject,1=approve
+    approver_tsa_reason NVARCHAR(255),
 
     # storing pickup_cheque, temp, temp_start_date, temp_end_date, status signer data in json format when submit the request
-    source_data     NVARCHAR(255),       
+    source_data     NVARCHAR(MAX),       
 
     # below fields format is the same as signer, but only save the new values
     pickup_cheque BIT,
     temp BIT,
     temp_start_date DATE,
     temp_end_date DATE,
-    status      BIT     # temporary, signer_req is for Open req only. other status should be frm audit_dadreq
+    status      BIT     # NULL=pending approval,0=reject,1=approve
+    status_reason   NVARCHAR(255)
 )
 
 CREATE TABLE signer_limit_req (
     id            NUMBER PRIMARY KEY,
+    signer_req_id NUMBER, (-> signer_req.id 1:M signer_limit_req.signer_req_id)
     action        NVARCHAR(255), # 3 values only (Change/Add/Remove) -> store directly
     source_id     NUMBER FK, (-> signer_limit.id, NULL for action=Add)
 

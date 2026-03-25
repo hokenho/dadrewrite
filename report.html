@@ -34,7 +34,9 @@
 
         <!-- Section 1: Filter (shown by default) -->
         <div class="panel panel--blue" id="searchPanel">
-            <div class="panel-title">Filter Signer Data</div>
+            <div class="panel-title" style="position:relative;">Filter Signer Data
+                <button onclick="document.getElementById('devNoteS1Modal').style.display='flex'" style="position:absolute;right:0;top:50%;transform:translateY(-50%);background:#6a1b9a;color:#fff;border:none;padding:4px 14px;border-radius:4px;font-size:0.78rem;cursor:pointer;">DEV Note</button>
+            </div>
             <div class="filter-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
                 <div class="filter-field">
                     <label for="fBU">Business Unit</label>
@@ -106,7 +108,9 @@
 
         <!-- Section 2: Results (hidden until Apply) -->
         <div class="panel panel--blue" id="resultsPanel" style="display:none;">
-            <div class="panel-title">Results (Top 30 rows) <button style="margin-left:10px; font-size:0.75rem; padding:2px 10px;" onclick="exportCSV()">Export all data</button></div>
+            <div class="panel-title" style="position:relative;">Results (Top 30 rows) <button style="margin-left:10px; font-size:0.75rem; padding:2px 10px;" onclick="exportCSV()">Export all data</button>
+                <button onclick="document.getElementById('devNoteS2Modal').style.display='flex'" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:#6a1b9a;color:#fff;border:none;padding:4px 14px;border-radius:4px;font-size:0.78rem;cursor:pointer;">DEV Note</button>
+            </div>
             <div class="data-table-wrapper">
                 <table class="data-table" id="resultsTable" style="font-size:0.7rem; word-break:break-word; width:100%;">
                     <style>
@@ -211,7 +215,7 @@
         }
 
         var baseSql = "SELECT s.gad_id, u.last_name, u.first_name, b.name, " +
-            "cc_s.cc, j.job_grade, j.job_title, u.employee_id, s.pickup_cheque, " +
+            "u.signer_cc, j.job_grade, j.job_title, u.employee_id, s.pickup_cheque, " +
             "t.country_code, p.category, sl.limit_amount, sl.currency, " +
             "cc_a.cc, sl.exception, sl.temp, sl.temp_start_date, sl.temp_end_date, sl.business_rationale, sl.business_control, " +
             "p.system, sl.account_restriction " +
@@ -219,7 +223,6 @@
             "JOIN signer_limit sl ON sl.gad_id = s.gad_id " +
             "LEFT JOIN user_profile u ON s.gad_id = u.gad_id " +
             "LEFT JOIN business_unit b ON s.bu_id = b.id " +
-            "LEFT JOIN cost_center cc_s ON u.signer_cc_id = cc_s.id " +
             "LEFT JOIN job j ON u.job_level_id = j.id " +
             "LEFT JOIN territory t ON sl.territory_id = t.id " +
             "LEFT JOIN policy p ON sl.policy_id = p.id " +
@@ -239,7 +242,7 @@
             var conditions = [];
             var params = [];
             if (fBU)  { conditions.push('b.name = ?'); params.push(fBU); }
-            if (fCC)  { conditions.push('cc_s.cc = ?'); params.push(fCC); }
+            if (fCC)  { conditions.push('u.signer_cc = ?'); params.push(fCC); }
             if (fJL)  { conditions.push('j.job_grade = ?'); params.push(fJL); }
             if (fChq) { conditions.push('s.pickup_cheque = ?'); params.push(fChq === 'Y' ? 1 : 0); }
             if (fCnt) { conditions.push('t.country_code = ?'); params.push(fCnt); }
@@ -348,5 +351,91 @@
             URL.revokeObjectURL(link.href);
         }
     </script>
+
+    <!-- DEV Note Modal (Section 1: Filter) -->
+    <div id="devNoteS1Modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.4);z-index:9999;align-items:center;justify-content:center;" onclick="if(event.target===this)this.style.display='none'">
+        <div style="background:#fff;border-radius:8px;padding:28px 32px;max-width:620px;width:90%;max-height:80vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,0.25);position:relative;">
+            <button onclick="document.getElementById('devNoteS1Modal').style.display='none'" style="position:absolute;top:10px;right:14px;background:none;border:none;font-size:1.3rem;cursor:pointer;color:#888;">&times;</button>
+            <h3 style="margin:0 0 14px;color:#6a1b9a;">DEV Note – Filter Signer Data</h3>
+            <h4 style="margin:0 0 8px;color:#6a1b9a;font-size:0.85rem;">Filter Fields:</h4>
+            <pre style="background:#f3e5f5;color:#4a148c;padding:14px;border-radius:6px;font-size:0.75rem;line-height:1.6;margin:0 0 16px;white-space:pre-wrap;">Business Unit = Distinct business_unit.name
+Signer Cost Center = Distinct cost_center.cc
+Job Level / Job Grade = Distinct job.job_grade
+Pickup Cheques = Dropdown (Y/N)
+Countries = Distinct policy.country
+Policy Category = Distinct policy.category
+Limit Amounts (max) = free number input
+Currency = Distinct currency.currency
+Approval Cost Center = Distinct cost_center.cc
+System = Distinct policy.system</pre>
+            <h4 style="margin:0 0 8px;color:#6a1b9a;font-size:0.85rem;">Inbound:</h4>
+            <pre style="background:#f3e5f5;color:#4a148c;padding:14px;border-radius:6px;font-size:0.75rem;line-height:1.6;margin:0;white-space:pre-wrap;">Workday + AD (gad_id)
+- user_profile
+- territory
+- job
+
+GDAS
+- policy
+
+Infor
+- business_unit
+- cost_center
+- currency
+- exchange_rate
+
+DAD Request
+- signer
+- signer_limit</pre>
+        </div>
+    </div>
+
+    <!-- DEV Note Modal (Section 2: Results) -->
+    <div id="devNoteS2Modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.4);z-index:9999;align-items:center;justify-content:center;" onclick="if(event.target===this)this.style.display='none'">
+        <div style="background:#fff;border-radius:8px;padding:28px 32px;max-width:700px;width:90%;max-height:80vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,0.25);position:relative;">
+            <button onclick="document.getElementById('devNoteS2Modal').style.display='none'" style="position:absolute;top:10px;right:14px;background:none;border:none;font-size:1.3rem;cursor:pointer;color:#888;">&times;</button>
+            <h3 style="margin:0 0 14px;color:#6a1b9a;">DEV Note – Results</h3>
+            <h4 style="margin:0 0 8px;color:#6a1b9a;font-size:0.85rem;">Fields mapping (key=signer.gad_id, join signer_limit on gad_id):</h4>
+            <pre style="background:#f3e5f5;color:#4a148c;padding:14px;border-radius:6px;font-size:0.75rem;line-height:1.6;margin:0 0 16px;white-space:pre-wrap;">GAD ID              = signer.gad_id
+Last Name           = signer.gad_id -> user_profile.last_name
+First Name          = signer.gad_id -> user_profile.first_name
+Business Unit       = signer.bu_id -> business_unit.name
+Signers Cost Center = signer.gad_id -> user_profile.signer_cc
+Job Level / Job Grade = signer.gad_id -> user_profile.job_level_id -> job.job_grade
+Job Title           = signer.gad_id -> user_profile.job_level_id -> job.job_title
+Employee No.        = signer.gad_id -> user_profile.employee_id
+Pickup Cheques      = signer.pickup_cheque
+Countries           = signer_limit.territory_id -> territory.country_code
+Policy Category     = signer_limit.policy_id -> policy.category
+Limit Amounts       = signer_limit.limit_amount
+Currency            = signer_limit.currency
+Approval Cost Center = signer_limit.approval_cc_id -> cost_center.cc
+Exception           = signer_limit.exception
+Temporary           = signer_limit.temp
+Temporary Start Date = signer_limit.temp_start_date
+Temporary End Date  = signer_limit.temp_end_date
+Business Rationale  = signer_limit.business_rationale
+Business Controls   = signer_limit.business_control
+System              = signer_limit.policy_id -> policy.system
+Accounts Restriction = signer_limit.account_restriction</pre>
+            <h4 style="margin:0 0 8px;color:#6a1b9a;font-size:0.85rem;">Inbound:</h4>
+            <pre style="background:#f3e5f5;color:#4a148c;padding:14px;border-radius:6px;font-size:0.75rem;line-height:1.6;margin:0;white-space:pre-wrap;">Workday + AD (gad_id)
+- user_profile
+- territory
+- job
+
+GDAS
+- policy
+
+Infor
+- business_unit
+- cost_center
+- currency
+- exchange_rate
+
+DAD Request
+- signer
+- signer_limit</pre>
+        </div>
+    </div>
 </body>
 </html>

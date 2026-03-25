@@ -89,6 +89,8 @@
                             <th style="background:#c8e6c9;">Date Submitted</th>
                             <th>Submitted By</th>
                             <th>Submitted For</th>
+                            <th>Approve (AVP+)</th>
+                            <th>Approve (TSA)</th>
                             <th>Request Status</th>
                         </tr>
                     </thead>
@@ -162,17 +164,21 @@
         window.DADREQ_READY.then(function() {
             var list = window.DADREQ_LIST || [];
             var tbody = document.getElementById('requestBody');
-            var statusColors = { Open: '#2a5a8a', Complete: '#2e7d32', Reject: '#c62828', Cancel: '#757575' };
+            var statusColors = { Pending: '#2a5a8a', Approved: '#2e7d32', Rejected: '#c62828', Complete: '#2e7d32', Reject: '#c62828', Cancel: '#757575' };
 
             list.forEach(function(item) {
                 var tr = document.createElement('tr');
                 tr.style.cursor = 'pointer';
                 tr.setAttribute('onclick', "window.location='signer_details.html?reqid=" + item.reqId + "&approval=true'");
+                var avpColor = statusColors[item.avpResult] || '#757575';
+                var tsaColor = statusColors[item.tsaResult] || '#757575';
                 tr.innerHTML =
                     '<td>' + item.reqId + '</td>' +
                     '<td style="background:#e8f5e9;">' + item.date + '</td>' +
                     '<td>' + item.submitter + '</td>' +
                     '<td>' + item.submittedFor + '</td>' +
+                    '<td><span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:0.75rem;color:#fff;background:' + avpColor + ';">' + (item.avpResult || 'Pending') + '</span></td>' +
+                    '<td><span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:0.75rem;color:#fff;background:' + tsaColor + ';">' + (item.tsaResult || 'Pending') + '</span></td>' +
                     '<td><span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:0.75rem;color:#fff;background:' + statusColors[item.status] + ';">' + item.status + '</span></td>';
                 tbody.appendChild(tr);
             });
@@ -194,7 +200,7 @@
                 "FROM signer s " +
                 "LEFT JOIN user_profile u ON s.gad_id = u.gad_id " +
                 "LEFT JOIN business_unit b ON s.bu_id = b.id " +
-                "LEFT JOIN signer_limit sl ON s.limit_id = sl.id " +
+                "LEFT JOIN signer_limit sl ON sl.gad_id = s.gad_id " +
                 "LEFT JOIN policy p ON sl.policy_id = p.id " +
                 "LEFT JOIN cost_center cc ON sl.approval_cc_id = cc.id " +
                 "WHERE s.temp = 1 " +
@@ -250,7 +256,7 @@
                 "FROM signer s " +
                 "LEFT JOIN user_profile u ON s.gad_id = u.gad_id " +
                 "LEFT JOIN business_unit b ON s.bu_id = b.id " +
-                "LEFT JOIN signer_limit sl ON s.limit_id = sl.id " +
+                "LEFT JOIN signer_limit sl ON sl.gad_id = s.gad_id " +
                 "LEFT JOIN policy p ON sl.policy_id = p.id " +
                 "LEFT JOIN cost_center cc ON sl.approval_cc_id = cc.id " +
                 "WHERE sl.exception = 1 " +
@@ -293,7 +299,7 @@
         function filterRequestStatus() {
             var val = document.getElementById('fReqStatus').value;
             document.querySelectorAll('#requestBody tr').forEach(function(row) {
-                var statusCell = row.querySelectorAll('td')[4];
+                var statusCell = row.querySelectorAll('td')[6];
                 if (!statusCell) return;
                 var rowStatus = statusCell.textContent.trim();
                 row.style.display = (!val || rowStatus === val) ? '' : 'none';
@@ -333,7 +339,18 @@
 Date Submitted = signer_req.req_date
 Submitted By   = signer_req.submitter
 Submitted For  = signer_req.gad_id
-Request Status = signer_req.status</pre>
+Approve (AVP+) = signer_req.approver_avp_result (NULL=Pending, 0=Rejected, 1=Approved)
+Approve (TSA)  = signer_req.approver_tsa_result (NULL=Pending, 0=Rejected, 1=Approved)
+Request Status = signer_req.status (NULL=Pending, 0=Rejected, 1=Approved)
+
+Approval:
+AVP Approver   = signer_req.approver_avp_gad_id
+AVP Result     = signer_req.approver_avp_result (NULL=Pending, 0=Reject, 1=Approve)
+AVP Reason     = signer_req.approver_avp_reason
+TSA Approver   = signer_req.approver_tsa_gad_id
+TSA Result     = signer_req.approver_tsa_result (NULL=Pending, 0=Reject, 1=Approve)
+TSA Reason     = signer_req.approver_tsa_reason
+Status Reason  = signer_req.status_reason</pre>
             <h4 style="margin:12px 0 6px 0;color:#6a1b9a;">Inbound:</h4>
             <pre style="background:#f3e5f5;padding:12px;border-radius:6px;font-size:0.82rem;white-space:pre;overflow-x:auto;">Workday + AD (gad_id)
 - user_profile
@@ -367,13 +384,13 @@ Employee No.        = signer.gad_id -> user_profile.employee_id
 First Name          = signer.gad_id -> user_profile.first_name
 Last Name           = signer.gad_id -> user_profile.last_name
 Business Unit       = signer.bu_id -> business_unit.name
-Currency            = signer.limit_id -> signer_limit.currency
-Limit Amounts       = signer.limit_id -> signer_limit.limit_amount
-Approval Cost Centre= signer.limit_id -> signer_limit.approval_cc_id -> cost_center.cc
-Policy Category     = signer.limit_id -> signer_limit.policy_id -> policy.category
-System              = signer.limit_id -> signer_limit.policy_id -> policy.system
+Currency            = signer_limit.currency
+Limit Amounts       = signer_limit.limit_amount
+Approval Cost Centre= signer_limit.approval_cc_id -> cost_center.cc
+Policy Category     = signer_limit.policy_id -> policy.category
+System              = signer_limit.policy_id -> policy.system
 Cheque Pick Up      = signer.pickup_cheque
-Exception           = signer.limit_id -> signer_limit.exception
+Exception           = signer_limit.exception
 Temporary           = signer.temp
 Temporary Start Date= signer.temp_start_date
 Temporary End Date  = signer.temp_end_date</pre>
@@ -410,13 +427,13 @@ Employee No.        = signer.gad_id -> user_profile.employee_id
 First Name          = signer.gad_id -> user_profile.first_name
 Last Name           = signer.gad_id -> user_profile.last_name
 Business Unit       = signer.bu_id -> business_unit.name
-Currency            = signer.limit_id -> signer_limit.currency
-Limit Amounts       = signer.limit_id -> signer_limit.limit_amount
-Approval Cost Centre= signer.limit_id -> signer_limit.approval_cc_id -> cost_center.cc
-Policy Category     = signer.limit_id -> signer_limit.policy_id -> policy.category
-System              = signer.limit_id -> signer_limit.policy_id -> policy.system
+Currency            = signer_limit.currency
+Limit Amounts       = signer_limit.limit_amount
+Approval Cost Centre= signer_limit.approval_cc_id -> cost_center.cc
+Policy Category     = signer_limit.policy_id -> policy.category
+System              = signer_limit.policy_id -> policy.system
 Cheque Pick Up      = signer.pickup_cheque
-Exception           = signer.limit_id -> signer_limit.exception
+Exception           = signer_limit.exception
 Temporary           = signer.temp
 Temporary Start Date= signer.temp_start_date
 Temporary End Date  = signer.temp_end_date</pre>

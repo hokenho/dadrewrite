@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DAD - Signer Request Status</title>
+    <title>DAD - Signer Request Approval (AVP+)</title>
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
     <div class="container">
         <div class="page-header">
-            <h1>Disbursement Authorization Database <span class="subtitle">– Signer Request Status</span></h1>
+            <h1>Disbursement Authorization Database <span class="subtitle">– Signer Request Approval (AVP+)</span></h1>
         </div>
 
         <script src="js/sql-js/sql-wasm.js"></script>
@@ -66,7 +66,7 @@
 
         <!-- Section 2: Results -->
         <div class="panel panel--blue">
-            <div class="panel-title" style="position:relative;">Signer Request in the past 90 days
+            <div class="panel-title" style="position:relative;">Signer Request Approval (AVP+) in the past 90 days
                 <button onclick="document.getElementById('devNoteS2Modal').style.display='flex'" style="position:absolute;right:0;top:50%;transform:translateY(-50%);background:#6a1b9a;color:#fff;border:none;padding:4px 14px;border-radius:4px;font-size:0.78rem;cursor:pointer;">DEV Note</button>
             </div>
             <div class="data-table-wrapper">
@@ -78,7 +78,6 @@
                             <th>Submitted By</th>
                             <th>Submitted For</th>
                             <th>Approve (AVP+)</th>
-                            <th>Approve (TSA)</th>
                             <th>Request Status</th>
                         </tr>
                     </thead>
@@ -107,7 +106,7 @@
             panel.style.display = (panel.style.display === 'none') ? 'block' : 'none';
         }
 
-        // Load DADREQ rows from db/dadreq.db via sql.js
+        // Load DADREQ rows from db/data.db via sql.js
         window.DADREQ_READY.then(function() {
             var list = window.DADREQ_LIST || [];
             var statusClasses = { Pending: 'status-open', Approved: 'status-complete', Rejected: 'status-reject', Complete: 'status-complete', Reject: 'status-reject', Cancel: 'status-cancel' };
@@ -122,7 +121,6 @@
                     '<td>' + item.submitter + '</td>' +
                     '<td>' + item.submittedFor + '</td>' +
                     '<td><span class="status-badge ' + (statusClasses[item.avpResult] || 'status-open') + '">' + (item.avpResult || 'Pending') + '</span></td>' +
-                    '<td><span class="status-badge ' + (statusClasses[item.tsaResult] || 'status-open') + '">' + (item.tsaResult || 'Pending') + '</span></td>' +
                     '<td><span class="status-badge ' + statusClasses[item.status] + '">' + item.status + '</span></td>';
                 tbody.appendChild(tr);
             });
@@ -141,7 +139,7 @@
                 var rowDate   = cells[1].textContent.trim();
                 var rowSubBy  = cells[2].textContent.trim().toLowerCase();
                 var rowSubFor = cells[3].textContent.trim().toLowerCase();
-                var rowStatus = cells[6].textContent.trim().toLowerCase();
+                var rowStatus = cells[5].textContent.trim().toLowerCase();
 
                 var match = (!reqId  || rowReqId.includes(reqId))
                          && (!dateSub || rowDate === dateSub)
@@ -166,7 +164,7 @@
         }
 
         function handleRowClick(dadReqId) {
-            window.location = 'signer_details.html?reqid=' + encodeURIComponent(dadReqId);
+            window.location = 'signer_details.html?reqid=' + encodeURIComponent(dadReqId) + '&mode=approval_avp';
         }
 
         function doExport() {
@@ -213,35 +211,14 @@ Date Submitted = signer_req.req_date
 Submitted By = signer_req.submitter
 Submitted For = signer_req.gad_id
 Approve (AVP+) = signer_req.approver_avp_result (NULL=Pending, 0=Rejected, 1=Approved)
-Approve (TSA) = signer_req.approver_tsa_result (NULL=Pending, 0=Rejected, 1=Approved)
 Request Status = signer_req.status (NULL=Pending, 0=Rejected, 1=Approved)
 
-Approval:
-AVP Approver = signer_req.approver_avp_gad_id
-AVP Result = signer_req.approver_avp_result (NULL=Pending, 0=Reject, 1=Approve)
-AVP Reason = signer_req.approver_avp_reason
-TSA Approver = signer_req.approver_tsa_gad_id
-TSA Result = signer_req.approver_tsa_result (NULL=Pending, 0=Reject, 1=Approve)
-TSA Reason = signer_req.approver_tsa_reason
-Status Reason = signer_req.status_reason</pre>
+Row click → signer_details.html?reqid=DADREQ{id}&mode=approval_avp
+Opens in DADREQ mode with AVP Result and AVP Reason editable.</pre>
             <h4 style="margin:0 0 8px;color:#6a1b9a;font-size:0.85rem;">Inbound:</h4>
-            <pre style="background:#f3e5f5;color:#4a148c;padding:14px;border-radius:6px;font-size:0.75rem;line-height:1.6;margin:0;white-space:pre-wrap;">Workday + AD (gad_id)
-- user_profile
-- territory
-- job
-
-GDAS
-- policy
-
-Infor
-- business_unit
-- cost_center
-- currency
-- exchange_rate
-
-DAD Request
-- signer
-- signer_limit</pre>
+            <pre style="background:#f3e5f5;color:#4a148c;padding:14px;border-radius:6px;font-size:0.75rem;line-height:1.6;margin:0;white-space:pre-wrap;">DAD Request
+- signer_req
+- signer_limit_req</pre>
         </div>
     </div>
 </body>

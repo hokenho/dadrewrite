@@ -79,7 +79,7 @@ Currency = Distinct currency.currency
 Limit Amounts = free number input
 Approval Cost Centre = Distinct cost_center.cc
 Policy Category = Distinct policy.category
-System = Distinct policy.system_id
+System = Distinct policy.system
 Cheque Pick Up = Dropdown (Y/N)
 Exception = Dropdown (Y/N)
 Temporary = Dropdown (Y/N)
@@ -95,12 +95,12 @@ Employee No. = signer.gad_id -> user_profile.employee_id
 First Name = signer.gad_id -> user_profile.first_name
 Last Name = signer.gad_id -> user_profile.last_name
 Business Unit = signer.bu_id -> business_unit.name
-Limit Amounts = signer.limit_id -> signer_limit.limit_amount
-Exception =  signer.limit_id -> signer_limit.exception
-Currency = signer.limit_id -> signer_limit.currency
-Approval Cost Centre = signer.limit_id -> signer_limit.approval_cc_id -> cost_center.cc
-Policy Category	= signer.limit_id -> signer_limit.policy_id -> policy.category
-System = signer.limit_id -> signer_limit.policy_id -> policy.system_id
+Limit Amounts = signer_limit.limit_amount
+Exception =  signer_limit.exception
+Currency = signer_limit.currency
+Approval Cost Centre = signer_limit.approval_cc_id -> cost_center.cc
+Policy Category	= signer_limit.policy_id -> policy.category
+System = signer_limit.policy_id -> policy.system
 
 
 ===============================
@@ -113,6 +113,8 @@ URL Parameters:
   • upn: Signer's email/UPN (used for audit link and export).
   • action: If "update", enters edit mode on load.
   • reqid: If contains "DADREQ", enters DADREQ read-only mode.
+  • mode: If "approval_avp", makes AVP Result (dropdown) and AVP Reason (text input) editable.
+          If "approval_tsa", (future) makes TSA Result and TSA Reason editable.
 
 Action Bar (3 modes):
   1. View Mode: Request Update | Refresh | Export | Print | View Audit Log (→ audit_signer.html?upn=...)
@@ -130,6 +132,15 @@ Table 1 – Signer Profile (detail-table, read-only):
     • Job Title
     • Employee No.
     • Pickup Cheques
+  Data source:
+    • Existing Signer (gad_id exists in signer table):
+        Query: signer LEFT JOIN user_profile, business_unit, job
+        All fields populated from signer + user_profile lookups.
+    • New Signer (gad_id NOT in signer table):
+        Query: user_profile LEFT JOIN job
+        Populates: GAD ID, Last Name, First Name, Cost Center, Job Grade, Job Title, Employee No.
+        Defaults: Business Unit=(dropdown from business_unit.name), Pickup Cheques=N, Temporary=N, Status=Inactive.
+  In edit mode: Business Unit is editable via dropdown (business_unit.name).
   In DADREQ mode: Changed profile fields show original value → arrow → new value (yellow highlight).
   In Edit mode: A "Delete" button appears to delete the entire signer.
 
@@ -208,7 +219,7 @@ GAD ID = from URL parameter
 Last Name = signer.gad_id -> user_profile.last_name
 First Name = signer.gad_id -> user_profile.first_name
 Business Unit = signer.bu_id -> business_unit.name
-Signers Cost Center = signer.gad_id -> user_profile.signer_cc_id -> cost_center.cc
+Signers Cost Center = signer.gad_id -> user_profile.signer_cc
 Job Level / Job Grade = signer.gad_id -> user_profile.job_level_id -> job.job_grade
 Job Title = signer.gad_id -> user_profile.job_level_id -> job.job_title
 Employee No. = signer.gad_id -> user_profile.employee_id
@@ -218,27 +229,36 @@ Temporary Start Date = signer.temp_start_date
 Temporary End Date = signer.temp_end_date
 Status = signer.status
 
-Second table (1:M joining signer.limit_id=signer_limit_req.id)
-Countries (Territories) = signer.limit_id -> signer_limit.territory_id -> policy.country_code
-Policy Category = signer.limit_id -> signer_limit.policy_id -> policy.category
-Limit Amounts = signer.limit_id -> signer_limit.limit_amount
-Currency = signer.limit_id -> signer_limit.currency
-Approval Cost Center = signer.limit_id -> signer_limit.approval_cc_id -> cost_center.cc
-Exception = signer.limit_id -> signer_limit.exception
-Temporary = signer.limit_id -> signer_limit.temp
-Temporary Start Date = signer.limit_id -> signer_limit.temp_start_date
-Temporary End Date = signer.limit_id -> signer_limit.temp_end_date
-Business Rationale = signer.limit_id -> signer_limit.business_rationale
-Business Controls = signer.limit_id -> signer_limit.business_control
-System = signer.limit_id -> signer_limit.policy_id -> policy.system_id
-Accounts Restriction = signer.limit_id -> signer_limit.account_restriction
+Second table (1:M joining signer.gad_id=signer_limit.gad_id)
+Countries (Territories) = signer_limit.territory_id -> territory.country_code
+Policy Category = signer_limit.policy_id -> policy.category
+Limit Amounts = signer_limit.limit_amount
+Currency = signer_limit.currency
+Approval Cost Center = signer_limit.approval_cc_id -> cost_center.cc
+Exception = signer_limit.exception
+Temporary = signer_limit.temp
+Temporary Start Date = signer_limit.temp_start_date
+Temporary End Date = signer_limit.temp_end_date
+Business Rationale = signer_limit.business_rationale
+Business Controls = signer_limit.business_control
+System = signer_limit.policy_id -> policy.system
+Accounts Restriction = signer_limit.account_restriction
 
 DADREQ mode:
 First table - DAD Change Request
 Request ID = from url parameter (reqid=DADREQ100005)
 Request Date = signer_req.req_date
 Requester = signer_req.submitter
-Request Status = signer_req.status
+Request Status = signer_req.status (NULL=Pending, 0=Rejected, 1=Approved)
+
+Approval:
+AVP Approver = signer_req.approver_avp_gad_id
+AVP Result = signer_req.approver_avp_result (NULL=Pending, 0=Reject, 1=Approve)
+AVP Reason = signer_req.approver_avp_reason
+TSA Approver = signer_req.approver_tsa_gad_id
+TSA Result = signer_req.approver_tsa_result (NULL=Pending, 0=Reject, 1=Approve)
+TSA Reason = signer_req.approver_tsa_reason
+Status Reason = signer_req.status_reason
 
 Second table - Signer Profile
 - Editable fields (pickup_cheque, temp, temp_start_date, temp_end_date, status)
@@ -254,28 +274,28 @@ New data:
 Last Name = signer_req.gad_id -> user_profile.last_name
 First Name = signer_req.gad_id -> user_profile.first_name
 Business Unit = signer_req.bu_id -> business_unit.name
-Signers Cost Center = signer_req.gad_id -> user_profile.signer_cc_id -> cost_center.cc
+Signers Cost Center = signer_req.gad_id -> user_profile.signer_cc
 Job Level / Job Grade = signer_req.gad_id -> user_profile.job_level_id -> job.job_grade
 Job Title = signer_req.gad_id -> user_profile.job_level_id -> job.job_title
 Employee No. = signer_req.gad_id -> user_profile.employee_id
 
-Third table (1:M joining signer_req.limit_id=signer_limit_req.id)
-Change Type = signer_req.limit_id -> signer_limit_req.action
-Before row = decode signer_req.limit_id -> signer_limit_req.source_data json data
+Third table (1:M joining signer_req.id=signer_limit_req.signer_req_id)
+Change Type = signer_limit_req.action
+Before row = decode signer_limit_req.source_data json data
 After row:
-Countries (Territories) = signer_req.limit_id -> signer_limit_req.territory_id -> policy.country_code
-Policy Category = signer_req.limit_id -> signer_limit_req.policy_id -> policy.category
-Limit Amounts = signer_req.limit_id -> signer_limit_req.limit_amount
-Currency = signer_req.limit_id -> signer_limit_req.currency
-Approval Cost Center = signer_req.limit_id -> signer_limit_req.approval_cc_id -> cost_center.cc
-Exception = signer_req.limit_id -> signer_limit_req.exception
-Temporary = signer_req.limit_id -> signer_limit_req.temp
-Temporary Start Date = signer_req.limit_id -> signer_limit_req.temp_start_date
-Temporary End Date = signer_req.limit_id -> signer_limit_req.temp_end_date
-Business Rationale = signer_req.limit_id -> signer_limit_req.business_rationale
-Business Controls = signer_req.limit_id -> signer_limit_req.business_control
-System = signer_req.limit_id -> signer_limit_req.policy_id -> policy.system_id
-Accounts Restriction = signer_req.limit_id -> signer_limit_req.account_restriction
+Countries (Territories) = signer_limit_req.territory_id -> territory.country_code
+Policy Category = signer_limit_req.policy_id -> policy.category
+Limit Amounts = signer_limit_req.limit_amount
+Currency = signer_limit_req.currency
+Approval Cost Center = signer_limit_req.approval_cc_id -> cost_center.cc
+Exception = signer_limit_req.exception
+Temporary = signer_limit_req.temp
+Temporary Start Date = signer_limit_req.temp_start_date
+Temporary End Date = signer_limit_req.temp_end_date
+Business Rationale = signer_limit_req.business_rationale
+Business Controls = signer_limit_req.business_control
+System = signer_limit_req.policy_id -> policy.system
+Accounts Restriction = signer_limit_req.account_restriction
 
 
 ===============================
@@ -302,9 +322,10 @@ Section 2 – Results:
 Logic:
   - doSearch(): Placeholder alert — "connect to backend API to fetch results."
   - clearFilters(): Clears all text inputs in the filter section.
-  - handleRowClick(isExisting, gadId): Navigates to signer_details.html?reqid=DADREQ123456.
-    In production, would pass the actual GAD ID and determine whether to create a new
-    signer request or modify an existing one.
+  - handleRowClick(isExisting, gadId):
+      • Existing Signer (Y): Navigates to signer_details.html?upn=<gadId> (view mode).
+      • New Signer (N): Navigates to signer_details.html?upn=<gadId>&action=update (edit mode).
+        signer_details.html will fallback to load profile from user_profile table.
 
 Data Mapping:
 Section 1 – Search Signer:
@@ -365,6 +386,37 @@ Request ID = signer_req.id
 Date Submitted = signer_req.req_date
 Submitted By = signer_req.submitter
 Submitted For = signer_req.gad_id
+Request Status = signer_req.status
+
+===============================
+req_approval_avp.html
+Title: DAD – Signer Request Approval (AVP+)
+Purpose: View pending signer requests for AVP+ approval. Copied from request_status.html.
+
+Action Bar: Search | Refresh | Export | Print
+
+Search Panel (hidden by default):
+  Fields: Request ID, Date Submitted, Submitted By, Submitted For, Request Status (dropdown)
+
+Results Table (6 columns — no TSA column):
+  • Request ID
+  • Date Submitted
+  • Submitted By
+  • Submitted For
+  • Approve (AVP+)
+  • Request Status
+
+Logic:
+  - handleRowClick(dadReqId): Navigates to signer_details.html?reqid=<dadReqId>&mode=approval_avp.
+    Opens in DADREQ mode with AVP Result (dropdown) and AVP Reason (text input) editable.
+  - filterTable(): Filters on cells[5] for Request Status (6-column table).
+
+Mapping:
+Request ID = signer_req.id
+Date Submitted = signer_req.req_date
+Submitted By = signer_req.submitter
+Submitted For = signer_req.gad_id
+Approve (AVP+) = signer_req.approver_avp_result
 Request Status = signer_req.status
 
 ===============================
@@ -628,31 +680,31 @@ Policy Category = Distinct policy.category
 Limit Amounts (max) = free number input
 Currency = Distinct currency.currency
 Approval Cost Center = Distinct cost_center.cc
-System = Distinct policy.system_id
+System = Distinct policy.system
 
 Result table:
 GAD ID = signer.gad_id
 Last Name = signer.gad_id -> user_profile.last_name
 First Name = signer.gad_id -> user_profile.first_name
 Business Unit = signer.bu_id -> business_unit.name
-Signers Cost Center = signer.gad_id -> user_profile.signer_cc_id -> cost_center.cc
+Signers Cost Center = signer.gad_id -> user_profile.signer_cc
 Job Level / Job Grade = signer.gad_id -> user_profile.job_level_id -> job.job_grade
 Job Title = signer.gad_id -> user_profile.job_level_id -> job.job_title
 Employee No. = signer.gad_id -> user_profile.employee_id
 Pickup Cheques = signer.pickup_cheque
-Countries = signer.limit_id -> signer_limit.territory_id -> policy.country_code
-Policy Category = signer.limit_id -> signer_limit.policy_id -> policy.category
-Limit Amounts = signer.limit_id -> signer_limit.limit_amount
-Currency = signer.limit_id -> signer_limit.currency
-Approval Cost Center = signer.limit_id -> signer_limit.approval_cc_id -> cost_center.cc
-Exception = signer.limit_id -> signer_limit.exception
-Temporary = signer.limit_id -> signer_limit.temp
-Temporary Start Date = signer.limit_id -> signer_limit.temp_start_date
-Temporary End Date = signer.limit_id -> signer_limit.temp_end_date
-Business Rationale = signer.limit_id -> signer_limit.business_rationale
-Business Controls = signer.limit_id -> signer_limit.business_control
-System = signer.limit_id -> signer_limit.policy_id -> policy.system_id
-Accounts Restriction = signer.limit_id -> signer_limit.account_restriction
+Countries = signer_limit.territory_id -> policy.country_code
+Policy Category = signer_limit.policy_id -> policy.category
+Limit Amounts = signer_limit.limit_amount
+Currency = signer_limit.currency
+Approval Cost Center = signer_limit.approval_cc_id -> cost_center.cc
+Exception = signer_limit.exception
+Temporary = signer_limit.temp
+Temporary Start Date = signer_limit.temp_start_date
+Temporary End Date = signer_limit.temp_end_date
+Business Rationale = signer_limit.business_rationale
+Business Controls = signer_limit.business_control
+System = signer_limit.policy_id -> policy.system
+Accounts Restriction = signer_limit.account_restriction
 
 ===============================
 upload.html
@@ -750,23 +802,23 @@ GAD ID = signer.gad_id
 Last Name = signer.gad_id -> user_profile.last_name
 First Name = signer.gad_id -> user_profile.first_name
 Business Unit = signer.bu_id -> business_unit.name
-Signers Cost Center = signer.gad_id -> user_profile.signer_cc_id -> cost_center.cc
+Signers Cost Center = signer.gad_id -> user_profile.signer_cc
 Job Level / Job Grade = signer.gad_id -> user_profile.job_level_id -> job.job_grade
 Job Title = signer.gad_id -> user_profile.job_level_id -> job.job_title
 Employee No. = signer.gad_id -> user_profile.employee_id
 Pickup Cheques = signer.pickup_cheque
-Countries = signer.limit_id -> signer_limit.territory_id -> policy.country_code
-Policy Category = signer.limit_id -> signer_limit.policy_id -> policy.category
-Limit Amounts = signer.limit_id -> signer_limit.limit_amount
-Currency = signer.limit_id -> signer_limit.currency
-Approval Cost Center = signer.limit_id -> signer_limit.approval_cc_id -> cost_center.cc
-Exception = signer.limit_id -> signer_limit.exception
-Temporary = signer.limit_id -> signer_limit.temp
-Temporary Start Date = signer.limit_id -> signer_limit.temp_start_date
-Temporary End Date = signer.limit_id -> signer_limit.temp_end_date
-Business Rationale = signer.limit_id -> signer_limit.business_rationale
-Business Controls = signer.limit_id -> signer_limit.business_control
-System = signer.limit_id -> signer_limit.policy_id -> policy.system_id
-Accounts Restriction = signer.limit_id -> signer_limit.account_restriction
+Countries = signer_limit.territory_id -> policy.country_code
+Policy Category = signer_limit.policy_id -> policy.category
+Limit Amounts = signer_limit.limit_amount
+Currency = signer_limit.currency
+Approval Cost Center = signer_limit.approval_cc_id -> cost_center.cc
+Exception = signer_limit.exception
+Temporary = signer_limit.temp
+Temporary Start Date = signer_limit.temp_start_date
+Temporary End Date = signer_limit.temp_end_date
+Business Rationale = signer_limit.business_rationale
+Business Controls = signer_limit.business_control
+System = signer_limit.policy_id -> policy.system
+Accounts Restriction = signer_limit.account_restriction
 
 ===============================

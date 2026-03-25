@@ -14,7 +14,8 @@
 
             // Load Open requests from signer_req + signer_limit_req
             var openResults = db.exec(
-                "SELECT o.id, o.req_date, o.submitter, o.gad_id, " +
+                "SELECT o.id, o.req_date, o.submitter, o.gad_id, o.status, o.status_reason, " +
+                "o.approver_avp_result, o.approver_tsa_result, " +
                 "l.id as lid, l.action, l.source_id, l.territory_id, l.policy_id, l.limit_amount, " +
                 "l.approval_cc_id, l.exception, l.temp, l.temp_start_date, l.temp_end_date, l.business_rationale, l.business_control, " +
                 "l.account_restriction, l.currency " +
@@ -42,23 +43,28 @@
                 openResults[0].values.forEach(function(r) {
                     var reqNum = r[0];
                     if (!openMap[reqNum]) {
+                        var reqStatusMap = { 1: 'Approved', 0: 'Rejected' };
+                        var avpResultMap = { 1: 'Approved', 0: 'Rejected' };
                         openMap[reqNum] = {
                             id: reqNum, date: r[1], submitter: r[2], submittedFor: r[3],
+                            status: reqStatusMap[r[4]] || 'Pending', reason: r[5] || '',
+                            avpResult: avpResultMap[r[6]] || 'Pending',
+                            tsaResult: avpResultMap[r[7]] || 'Pending',
                             limits: []
                         };
                     }
-                    if (r[4] !== null) {
+                    if (r[8] !== null) {
                         var actionMap = { 'Change': 'update', 'Remove': 'delete', 'Add': 'new' };
-                        var limEntry = { type: actionMap[r[5]] || r[5] };
-                        if (r[6] !== null) limEntry.rowIndex = r[6];
-                        if (r[5] !== 'Remove') {
-                            var amt = r[9] ? Number(r[9]).toLocaleString() : '0';
-                            var pol = policyMap[r[8]] || {};
+                        var limEntry = { type: actionMap[r[9]] || r[9] };
+                        if (r[10] !== null) limEntry.rowIndex = r[10];
+                        if (r[9] !== 'Remove') {
+                            var amt = r[13] ? Number(r[13]).toLocaleString() : '0';
+                            var pol = policyMap[r[12]] || {};
                             limEntry.newData = [
-                                terrMap[r[7]] || '', pol.cat || '', amt, r[18] || '',
-                                ccMap[r[10]] || '', r[11] ? 'Y' : 'N', r[12] ? 'Y' : 'N',
-                                r[13] || '\u2014', r[14] || '\u2014',
-                                r[15] ? 'Y' : 'N', r[16] ? 'Y' : 'N', pol.sys || '', r[17] || ''
+                                terrMap[r[11]] || '', pol.cat || '', amt, r[22] || '',
+                                ccMap[r[14]] || '', r[15] ? 'Y' : 'N', r[16] ? 'Y' : 'N',
+                                r[17] || '\u2014', r[18] || '\u2014',
+                                r[19] ? 'Y' : 'N', r[20] ? 'Y' : 'N', pol.sys || '', r[21] || ''
                             ];
                         }
                         openMap[reqNum].limits.push(limEntry);
@@ -72,12 +78,13 @@
                 var reqId = 'DADREQ' + o.id;
                 var entry = {
                     reqId: reqId, date: o.date, submitter: o.submitter,
-                    submittedFor: o.submittedFor, status: 'Open', reason: '',
+                    submittedFor: o.submittedFor, status: o.status, reason: o.reason,
+                    avpResult: o.avpResult, tsaResult: o.tsaResult,
                     profile: {}, limits: o.limits
                 };
                 window.DADREQ_LIST.push(entry);
                 window.DADREQ_MAP[reqId] = {
-                    requestStatus: 'Open', requester: o.submitter, reason: '',
+                    requestStatus: o.status, requester: o.submitter, reason: o.reason,
                     profile: {}, limits: o.limits
                 };
             });

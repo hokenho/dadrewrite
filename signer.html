@@ -177,7 +177,7 @@
                 "FROM signer s " +
                 "LEFT JOIN user_profile u ON s.gad_id = u.gad_id " +
                 "LEFT JOIN business_unit b ON s.bu_id = b.id " +
-                "LEFT JOIN signer_limit sl ON s.limit_id = sl.id " +
+                "LEFT JOIN signer_limit sl ON sl.gad_id = s.gad_id " +
                 "LEFT JOIN policy p ON sl.policy_id = p.id " +
                 "LEFT JOIN cost_center cc ON sl.approval_cc_id = cc.id " +
                 "ORDER BY u.last_name, u.first_name"
@@ -324,7 +324,7 @@ Currency = Distinct currency.currency
 Limit Amounts = free number input
 Approval Cost Centre = Distinct cost_center.cc
 Policy Category = Distinct policy.category
-System = Distinct policy.system_id
+System = Distinct policy.system
 Cheque Pick Up = Dropdown (Y/N)
 Exception = Dropdown (Y/N)
 Temporary = Dropdown (Y/N)</pre>
@@ -361,13 +361,13 @@ Employee No. = signer.gad_id -> user_profile.employee_id
 Last Name = signer.gad_id -> user_profile.last_name
 First Name = signer.gad_id -> user_profile.first_name
 Business Unit = signer.bu_id -> business_unit.name
-Currency = signer.limit_id -> signer_limit.currency
-Limit Amounts = signer.limit_id -> signer_limit.limit_amount
-Approval Cost Centre = signer.limit_id -> signer_limit.approval_cc_id -> cost_center.cc
-Policy Category = signer.limit_id -> signer_limit.policy_id -> policy.category
-System = signer.limit_id -> signer_limit.policy_id -> policy.system_id
+Currency = signer_limit.currency
+Limit Amounts = signer_limit.limit_amount
+Approval Cost Centre = signer_limit.approval_cc_id -> cost_center.cc
+Policy Category = signer_limit.policy_id -> policy.category
+System = signer_limit.policy_id -> policy.system
 Cheque Pick Up = signer.pickup_cheque
-Exception = signer.limit_id -> signer_limit.exception
+Exception = signer_limit.exception
 Temporary = signer.temp
 Temporary Start Date = signer.temp_start_date
 Temporary End Date = signer.temp_end_date</pre>
