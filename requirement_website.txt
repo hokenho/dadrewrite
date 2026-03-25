@@ -61,7 +61,7 @@ Results Table:
     • Cheque Pick Up
     • Exception
     • Temporary Delegation
-  Rows are clickable → navigates to signer_details.html?upn=<email>.
+  Rows are clickable → navigates to signer_details.html?action=view_signer&upn=<email>.
 
 Logic:
   - doSearch(): Placeholder alert — "connect to backend API to fetch results."
@@ -75,14 +75,16 @@ Purpose: View and edit a signer's profile and signing limit authorizations.
          Also displays DADREQ change request details in read-only mode.
 
 URL Parameters:
-  • upn: Signer's email/UPN (used for audit link and export).
-  • action: If "update", enters edit mode on load.
-  • reqid: If contains "DADREQ", enters DADREQ read-only mode.
+  • action: Page mode — new_signer, view_signer, update_signer, view_request, approval1
+  • upn: Signer's GAD ID (for new_signer, view_signer, update_signer)
+  • id: Request ID number (for view_request, approval1)
 
-Action Bar (3 modes):
-  1. View Mode: Request Update | Refresh | Export | Print | View Audit Log (→ audit_signer.html?upn=...)
-  2. Edit Mode: Submit for Review | Cancel
-  3. DADREQ Mode: Refresh | Export | Print
+Action Bar (5 modes):
+  1. action=view_signer: Request Update | Refresh | Export | Print | View Audit Log
+  2. action=new_signer: Submit for Review | Cancel (auto-enters edit mode)
+  3. action=update_signer: Submit for Review | Cancel (auto-enters edit mode)
+  4. action=view_request: Refresh | Export | Print + DAD Change Request panel
+  5. action=approval1: Same as view_request + Approve/Reject buttons
 
 Table 1 – Signer Profile (detail-table, read-only):
   Fields:
@@ -153,7 +155,7 @@ Logic – Edit Mode:
   - deleteSigner(): Confirmation dialog, then placeholder alert.
 
 Logic – DADREQ Mode (read-only change review):
-  - Activated when URL has ?reqid=DADREQ...
+  - Activated when URL has ?action=view_request or ?action=approval1
   - Hides view actions, shows DADREQ actions (Refresh | Export | Print).
   - Shows DADREQ badge next to Signer Profile title.
   - applyDADREQView(changes): Reads change definitions from dadreqChanges object:
@@ -189,9 +191,8 @@ Section 2 – Results:
 Logic:
   - doSearch(): Placeholder alert — "connect to backend API to fetch results."
   - clearFilters(): Clears all text inputs in the filter section.
-  - handleRowClick(isExisting, gadId): Navigates to signer_details.html?reqid=DADREQ123456.
-    In production, would pass the actual GAD ID and determine whether to create a new
-    signer request or modify an existing one.
+  - handleRowClick(isExisting, gadId): Always navigates to signer_details.html?action=view_signer&upn=<gadId>
+    (view mode for both existing and new signers). User clicks "Request Update" to enter edit mode.
 
 ===============================
 request_status.html
@@ -231,7 +232,7 @@ Logic:
       • Request Status: case-insensitive substring match.
     All conditions ANDed.
   - clearFilters(): Clears all inputs/selects, shows all rows.
-  - handleRowClick(dadReqId): Navigates to signer_details.html?reqid=<dadReqId>.
+  - handleRowClick(dadReqId): Navigates to signer_details.html?action=view_request&id=<numericId>.
   - doExport(): Placeholder alert.
 
 ===============================

@@ -7,7 +7,7 @@
         { label: 'Signer Onboarding', children: [
             { label: 'Request New Signer', href: 'request_signer.html' },
             { label: 'Signer Request Status', href: 'request_status.html' },
-            { label: 'Signer Request Approval (AVP+)', href: 'req_approval_avp.html' }
+            { label: 'Signer Request Approval (AVP+)', href: 'req_approval.html?mode=approver1' }
         ]},
         { label: 'Tables Administration', children: [
             { label: 'Policies Categories', href: 'table_policy.html' },
@@ -22,9 +22,10 @@
             { label: 'Reports and Extracts', href: 'report.html' }
         ]},
         { label: 'Utilities', children: [
-            { label: 'Upload Tool', href: 'upload.html' },
             { label: 'Dashboard', href: 'dashboard.html' },
-            { label: 'User Access', href: 'user.html' }
+            { label: 'Signer Request Approval (TSA)', href: 'req_approval.html?mode=approver2' },
+            { label: 'User Access', href: 'user_access.html' },
+            { label: 'Upload Tool', href: 'upload.html' }
         ]}
     ];
 
@@ -82,6 +83,25 @@
     spacer.className = 'nav-spacer';
     nav.appendChild(spacer);
 
+    // Mode switch buttons (index.html only) — before My Alerts
+    if (page === 'index.html') {
+        var modes = [
+            { label: 'Public User View', param: 'public_user' },
+            { label: 'DAD User View', param: 'dad_user' },
+            { label: 'TSA User View', param: 'tsa' }
+        ];
+        modes.forEach(function(m) {
+            var btn = document.createElement('button');
+            btn.className = 'nav-btn';
+            btn.style.cssText = 'background:#6a1b9a;color:#fff;border:none;padding:4px 12px;border-radius:4px;font-size:0.78rem;font-weight:600;cursor:pointer;margin-left:6px;';
+            btn.textContent = m.label;
+            btn.addEventListener('click', function() {
+                window.location.href = 'index.html?mode=' + m.param;
+            });
+            nav.appendChild(btn);
+        });
+    }
+
     // My Alerts button (all pages)
     var alertsBtn = document.createElement('button');
     alertsBtn.id = 'alertsBtn';
@@ -130,7 +150,7 @@
                 '<li class="alerts-list-item"><a href="dashboard.html" class="alerts-link"><svg class="alerts-item-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 5v4c0 1.66-4.03 3-9 3S3 10.66 3 9V5"/><path d="M21 13v4c0 1.66-4.03 3-9 3S3 18.66 3 17v-4"/></svg><span>Source Data Change &ndash; Policies Categories</span></a></li>' +
                 '<li class="alerts-list-item"><a href="dashboard.html" class="alerts-link"><svg class="alerts-item-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 5v4c0 1.66-4.03 3-9 3S3 10.66 3 9V5"/><path d="M21 13v4c0 1.66-4.03 3-9 3S3 18.66 3 17v-4"/></svg><span>Source Data Change &ndash; Cost Centres</span></a></li>' +
                 '<li class="alerts-list-item"><a href="dashboard.html" class="alerts-link"><svg class="alerts-item-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 5v4c0 1.66-4.03 3-9 3S3 10.66 3 9V5"/><path d="M21 13v4c0 1.66-4.03 3-9 3S3 18.66 3 17v-4"/></svg><span>Source Data Change &ndash; Workday User</span></a></li>' +
-                '<li class="alerts-list-item"><a href="signer_details.html?reqid=DADREQ100001" class="alerts-link"><svg class="alerts-item-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><span>Pending Change: DADREQ100001</span></a></li>' +
+                '<li class="alerts-list-item"><a href="signer_details.html?action=view_request&id=100001" class="alerts-link"><svg class="alerts-item-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><span>Pending Change: DADREQ100001</span></a></li>' +
             '</ul>';
         document.body.appendChild(panel);
 

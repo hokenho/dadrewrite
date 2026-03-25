@@ -4,65 +4,80 @@
 # Tables Administration
 # ---------------------------------- Workday tables ----------------------------------
 # User Information Table (sync from workday)
-CREATE TABLE user_profile (
+CREATE TABLE wd_user_profile (
     gad_id        NVARCHAR(255) PRIMARY KEY,
     employee_id   NUMBER,
     last_name     NVARCHAR(255),
     first_name    NVARCHAR(255),
-    signer_cc     NVARCHAR(255),
-    job_level_id  NUMBER FK, (-> job_level.id)
-    territory_id  NUMBER FK (-> territory.id)
+    signer_cost_center     NVARCHAR(255),
+    job_level_id  NUMBER FK, (-> wd_job_level.id)
+    territory_id  NUMBER FK, (-> wd_territory.id)
+    status       BIT
+    last_update_date  DATE
 )
 # Job Levels (source=Workday)
-CREATE TABLE job (
+CREATE TABLE wd_job_level (
     id           NUMBER PRIMARY KEY,
     job_grade    NVARCHAR(255),
     job_title    NVARCHAR(MAX),    # assume title could have japanese characters
-    limit_amount	INTEGER,
+    limit_amount_max	INTEGER,
+    status       BIT
+    last_update_date  DATE
 )
 # Countries/Territories (source=Workday)
-CREATE TABLE territory (
+CREATE TABLE wd_territory (
     id              NUMBER PRIMARY KEY,
     country_code    NVARCHAR(255),
-    territory       NVARCHAR(255)
+    territory       NVARCHAR(255),
+    status       BIT
+    last_update_date  DATE
 )
 # ---------------------------------- GDAS tables ----------------------------------
 # Policies Categories (source=GDAS)
-CREATE TABLE policy (
+CREATE TABLE gdas_policy (
     id                  NUMBER PRIMARY KEY,
-    country             NVARCHAR(255),
+    country_code        NVARCHAR(255),
     category            NVARCHAR(255),
     description         NVARCHAR(255),
     system              NVARCHAR(255), # 3 values only (AP/SNOW/Concur) -> store directly
-    approval_no         NUMBER(1), #3 values only (1,2,3) -> store directly
+    approval_count      NUMBER(1), #3 values only (1,2,3) -> store directly
     threshold_amount    NUMBER,
-    manual_approval     BIT
+    manual_approval     BIT,
+    status       BIT
+    last_update_date  DATE
 )
 
 # ---------------------------------- Infor tables ----------------------------------
 # Business Units (source=Infor)
-CREATE TABLE business_unit (
+CREATE TABLE infor_business_unit (
     id              NUMBER PRIMARY KEY,
     security_group  NVARCHAR(255),
-    name            NVARCHAR(255)
+    name            NVARCHAR(255),
+    status       BIT
+    last_update_date  DATE
 )
 # Cost Centres (source=Infor)
-CREATE TABLE cost_center (
+CREATE TABLE infor_cost_center (
     id           NUMBER PRIMARY KEY,
-    cc           NVARCHAR(255),
+    name         NVARCHAR(255),
     description  NVARCHAR(255),
     status       BIT
+    last_update_date  DATE
 )
 # Currencies (source=Infor)
-CREATE TABLE currency (
+CREATE TABLE infor_currency (
     currency     NVARCHAR(255) PRIMARY KEY,
-    name         NVARCHAR(255)
+    name         NVARCHAR(255),
+    status       BIT
+    last_update_date  DATE
 )
 # Exchange Rates (source=Infor)
-CREATE TABLE exchange_rate (
+CREATE TABLE infor_exchange_rate (
     source_currency       NVARCHAR(255),
     target_currency       NVARCHAR(255),
-    rate                  FLOAT,
+    plan_rate             FLOAT,
+    status       BIT,
+    last_update_date  DATE
     PRIMARY KEY (source, target)  # Composite PK - using both source and target currency
 )
 
@@ -71,8 +86,8 @@ CREATE TABLE exchange_rate (
 
 # Tables for Signer approval
 CREATE TABLE signer (
-    gad_id NVARCHAR(255) PRIMARY KEY, (->user_profile.gad_id)
-    bu_id NUMBER FK (->business_unit.id)
+    gad_id NVARCHAR(255) PRIMARY KEY, (->wd_user_profile.gad_id)
+    bu_id NUMBER FK (->infor_business_unit.id)
     pickup_cheque BIT,
     temp BIT,
     temp_start_date DATE,
@@ -82,10 +97,10 @@ CREATE TABLE signer (
 CREATE TABLE signer_limit (
     id      NUMBER PRIMARY KEY,
     gad_id  NVARCHAR(255),  (-> signer.gad_id 1:M signer_limit.gad_id)
-    territory_id  NUMBER FK, (-> territory.id)
-    policy_id     NUMBER FK, (-> policy.id)
+    territory_id  NUMBER FK, (-> wd_territory.id)
+    policy_id     NUMBER FK, (-> gdas_policy.id)
     limit_amount  NUMBER,
-    approval_cc_id   NUMBER FK, (-> cost_center.id)
+    approval_cc_id   NUMBER FK, (-> infor_cost_center.id)
     exception     BIT,
     temp          BIT,
     temp_start_date DATE,
@@ -100,53 +115,68 @@ CREATE TABLE signer_limit (
 =========================================================
 
 # Tables for Active DAD Request
-CREATE TABLE signer_req (
+CREATE TABLE req_signer (
     id          NUMBER PRIMARY KEY,
     req_date    DATE,
-    submitter   NVARCHAR(255) FK, (-> user_profile.gad_id),
-    gad_id NVARCHAR(255), (->user_profile.gad_id)
-    bu_id NUMBER FK (->business_unit.id)
-    approver_avp_gad_id NVARCHAR(255),
-    approver_avp_result BIT NULLABLE, # NULL=pending approval,0=reject,1=approve
-    approver_avp_reason NVARCHAR(255), 
-    approver_tsa_gad_id NVARCHAR(255),
-    approver_tsa_result BIT NULLABLE, # NULL=pending approval,0=reject,1=approve
-    approver_tsa_reason NVARCHAR(255),
+    submitter   NVARCHAR(255) FK, (-> wd_user_profile.gad_id),
+    gad_id NVARCHAR(255), (->wd_user_profile.gad_id)
+    bu_id NUMBER FK (->infor_business_unit.id)
+    approver1_gad_id NVARCHAR(255),
+    approver1_result BIT NULLABLE, # NULL=pending approval,0=reject,1=approve
+    approver1_note NVARCHAR(255), 
+    approver2_gad_id NVARCHAR(255),
+    approver2_result BIT NULLABLE, # NULL=pending approval,0=reject,1=approve
+    approver2_note NVARCHAR(255),
 
-    # storing pickup_cheque, temp, temp_start_date, temp_end_date, status signer data in json format when submit the request
-    source_data     NVARCHAR(MAX),       
+    # old signer values (snapshot at time of request submission)
+    old_pickup_cheque BIT,
+    old_temp BIT,
+    old_temp_start_date DATE,
+    old_temp_end_date DATE,
+    old_status BIT,
 
-    # below fields format is the same as signer, but only save the new values
-    pickup_cheque BIT,
-    temp BIT,
-    temp_start_date DATE,
-    temp_end_date DATE,
-    status      BIT     # NULL=pending approval,0=reject,1=approve
+    # new requested signer values
+    new_pickup_cheque BIT,
+    new_temp BIT,
+    new_temp_start_date DATE,
+    new_temp_end_date DATE,
+    new_status      BIT     # NULL=pending approval,0=reject,1=approve
     status_reason   NVARCHAR(255)
 )
 
-CREATE TABLE signer_limit_req (
+CREATE TABLE req_signer_limit (
     id            NUMBER PRIMARY KEY,
-    signer_req_id NUMBER, (-> signer_req.id 1:M signer_limit_req.signer_req_id)
-    action        NVARCHAR(255), # 3 values only (Change/Add/Remove) -> store directly
-    source_id     NUMBER FK, (-> signer_limit.id, NULL for action=Add)
+    req_signer_id NUMBER, (-> req_signer.id 1:M req_signer_limit.req_signer_id)
+    action        NVARCHAR(255), # 4 values only (Change/Add/Remove/Unchange) -> store directly
+    signer_limit_id   NUMBER FK, (-> signer_limit.id. For Change/Remove/Unchange only, else NULL)
 
-    # storing the source_id row data in json format when submit the request
-    source_data   NVARCHAR(MAX)  
+    # old signer_limit values (snapshot at time of request submission). For Change/Remove/Unchange only, else NULL
+    old_territory_id  NUMBER FK, (-> wd_territory.id)
+    old_policy_id     NUMBER FK, (-> gdas_policy.id)
+    old_limit_amount  NUMBER,
+    old_approval_cc_id   NUMBER FK, (-> infor_cost_center.id)
+    old_exception     BIT,
+    old_temp          BIT,
+    old_temp_start_date DATE,
+    old_temp_end_date   DATE,
+    old_business_rationale     BIT,
+    old_business_control       BIT,
+    old_account_restriction    NVARCHAR(100),
+    old_currency    NVARCHAR(10),
 
-    # below fields format is the same as signer_limit, but only save the new values for the source_id row. For Add/Remove action they should be NULL
-    territory_id  NUMBER FK, (-> territory.id)
-    policy_id     NUMBER FK, (-> policy.id)
-    limit_amount  NUMBER,
-    approval_cc_id   NUMBER FK, (-> cost_center.id)
-    exception     BIT,
-    temp          BIT,
-    temp_start_date DATE,
-    temp_end_date   DATE,
-    business_rationale     BIT,
-    business_control       BIT,
-    account_restriction    NVARCHAR(100),
-    currency    NVARCHAR(10)
+    # new requested signer_limit values. For Change/Add only, else NULL
+    new_territory_id  NUMBER FK, (-> wd_territory.id)
+    new_policy_id     NUMBER FK, (-> gdas_policy.id)
+    new_limit_amount  NUMBER,
+    new_approval_cc_id   NUMBER FK, (-> infor_cost_center.id)
+    new_exception     BIT,
+    new_temp          BIT,
+    new_temp_start_date DATE,
+    new_temp_end_date   DATE,
+    new_business_rationale     BIT,
+    new_business_control       BIT,
+    new_account_restriction    NVARCHAR(100),
+    new_currency    NVARCHAR(10)
 )
 
 =========================================================
@@ -154,30 +184,12 @@ CREATE TABLE signer_limit_req (
 
 # Table for DAD User Access
 CREATE TABLE user_access (
-    gad_id      NVARCHAR(255) PRIMARY KEY, (-> user_profile.gad_id)
+    gad_id      NVARCHAR(255) PRIMARY KEY, (-> wd_user_profile.gad_id)
     access      NVARCHAR(255)
 )
 
 =========================================================
 =========================================================
-
-# Table for Audit/History - dadreq
-CREATE TABLE audit_dadreq (
-    id          NUMBER PRIMARY KEY,
-    gad_id      NVARCHAR(255),
-    req_date    DATE,
-    submitter   NVARCHAR(255),
-    status      NVARCHAR(255), # 3 values only (Complete/Reject/Cancel) -> store directly
-    reason      NVARCHAR(MAX), 
-    profile_old NVARCHAR(MAX), # save the old data in json format
-    profile_new NVARCHAR(MAX), # save the new data in json format
-    limit_old   NVARCHAR(MAX), # save the old data in json format
-    limit_new   NVARCHAR(MAX)  # save the new data in json format
-    audit_date  DATE
-)
-CREATE INDEX idx_audit_dadreq_gad_id ON audit_dadreq(gad_id);
-CREATE INDEX idx_audit_dadreq_status ON audit_dadreq(status);
-CREATE INDEX idx_audit_dadreq_date ON audit_dadreq(audit_date);
 
 # Table for Audit/History - all other tables
 CREATE TABLE audit_change (

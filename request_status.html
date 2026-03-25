@@ -21,7 +21,6 @@
             <span class="action-bar-label">Actions:</span>
             <button onclick="doSearch()">Search</button>
             <button onclick="location.reload()">Refresh</button>
-            <button onclick="doExport()">Export</button>
             <button onclick="window.print()">Print</button>
         </div>
 
@@ -166,12 +165,9 @@
         }
 
         function handleRowClick(dadReqId) {
-            window.location = 'signer_details.html?reqid=' + encodeURIComponent(dadReqId);
+            window.location = 'signer_details.html?action=view_request&id=' + dadReqId.replace(/\D/g, '');
         }
 
-        function doExport() {
-            alert('Export triggered – connect to backend API.');
-        }
     </script>
 
     <style>
@@ -207,37 +203,37 @@ Request Status = Dropdown (Y/N)</pre>
         <div style="background:#fff;border-radius:8px;padding:28px 32px;max-width:620px;width:90%;max-height:80vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,0.25);position:relative;">
             <button onclick="document.getElementById('devNoteS2Modal').style.display='none'" style="position:absolute;top:10px;right:14px;background:none;border:none;font-size:1.3rem;cursor:pointer;color:#888;">&times;</button>
             <h3 style="margin:0 0 14px;color:#6a1b9a;">DEV Note – Results</h3>
-            <h4 style="margin:0 0 8px;color:#6a1b9a;font-size:0.85rem;">Fields mapping (key=signer_req.id):</h4>
-            <pre style="background:#f3e5f5;color:#4a148c;padding:14px;border-radius:6px;font-size:0.75rem;line-height:1.6;margin:0 0 16px;white-space:pre-wrap;">Request ID = signer_req.id
-Date Submitted = signer_req.req_date
-Submitted By = signer_req.submitter
-Submitted For = signer_req.gad_id
-Approve (AVP+) = signer_req.approver_avp_result (NULL=Pending, 0=Rejected, 1=Approved)
-Approve (TSA) = signer_req.approver_tsa_result (NULL=Pending, 0=Rejected, 1=Approved)
-Request Status = signer_req.status (NULL=Pending, 0=Rejected, 1=Approved)
+            <h4 style="margin:0 0 8px;color:#6a1b9a;font-size:0.85rem;">Fields mapping (key=req_signer.id):</h4>
+            <pre style="background:#f3e5f5;color:#4a148c;padding:14px;border-radius:6px;font-size:0.75rem;line-height:1.6;margin:0 0 16px;white-space:pre-wrap;">Request ID = req_signer.id
+Date Submitted = req_signer.req_date
+Submitted By = req_signer.submitter
+Submitted For = req_signer.gad_id
+Approve (AVP+) = req_signer.approver1_result (NULL=Pending, 0=Rejected, 1=Approved)
+Approve (TSA) = req_signer.approver2_result (NULL=Pending, 0=Rejected, 1=Approved)
+Request Status = req_signer.new_status (NULL=Pending, 0=Rejected, 1=Approved)
 
 Approval:
-AVP Approver = signer_req.approver_avp_gad_id
-AVP Result = signer_req.approver_avp_result (NULL=Pending, 0=Reject, 1=Approve)
-AVP Reason = signer_req.approver_avp_reason
-TSA Approver = signer_req.approver_tsa_gad_id
-TSA Result = signer_req.approver_tsa_result (NULL=Pending, 0=Reject, 1=Approve)
-TSA Reason = signer_req.approver_tsa_reason
-Status Reason = signer_req.status_reason</pre>
+AVP Approver = req_signer.approver1_gad_id
+AVP Result = req_signer.approver1_result (NULL=Pending, 0=Reject, 1=Approve)
+AVP Note = req_signer.approver1_note
+TSA Approver = req_signer.approver2_gad_id
+TSA Result = req_signer.approver2_result (NULL=Pending, 0=Reject, 1=Approve)
+TSA Note = req_signer.approver2_note
+Status Reason = req_signer.status_reason</pre>
             <h4 style="margin:0 0 8px;color:#6a1b9a;font-size:0.85rem;">Inbound:</h4>
             <pre style="background:#f3e5f5;color:#4a148c;padding:14px;border-radius:6px;font-size:0.75rem;line-height:1.6;margin:0;white-space:pre-wrap;">Workday + AD (gad_id)
-- user_profile
-- territory
-- job
+- wd_user_profile
+- wd_territory
+- wd_job_level
 
 GDAS
-- policy
+- gdas_policy
 
 Infor
-- business_unit
-- cost_center
-- currency
-- exchange_rate
+- infor_business_unit
+- infor_cost_center
+- infor_currency
+- infor_exchange_rate
 
 DAD Request
 - signer

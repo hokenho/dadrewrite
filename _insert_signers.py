@@ -9,13 +9,13 @@ c.execute('DELETE FROM signer')
 c.execute('DELETE FROM signer_limit')
 
 # Get lookup data
-bu_ids = [r[0] for r in c.execute('SELECT id FROM business_unit').fetchall()]
-terr_ids = [r[0] for r in c.execute('SELECT id FROM territory').fetchall()]
-policy_ids = [r[0] for r in c.execute('SELECT id FROM policy').fetchall()]
-cc_ids = [r[0] for r in c.execute('SELECT id FROM cost_center').fetchall()]
+bu_ids = [r[0] for r in c.execute('SELECT id FROM infor_business_unit').fetchall()]
+terr_ids = [r[0] for r in c.execute('SELECT id FROM wd_territory').fetchall()]
+policy_ids = [r[0] for r in c.execute('SELECT id FROM gdas_policy').fetchall()]
+cc_ids = [r[0] for r in c.execute('SELECT id FROM infor_cost_center').fetchall()]
 
-# Get existing user gad_ids from user_profile
-gad_ids = [r[0] for r in c.execute('SELECT gad_id FROM user_profile').fetchall()]
+# Get existing user gad_ids from wd_user_profile
+gad_ids = [r[0] for r in c.execute('SELECT gad_id FROM wd_user_profile').fetchall()]
 
 # Generate additional dummy users to reach 50 signers
 extra_names = [
@@ -36,7 +36,7 @@ extra_names = [
     ('donna.li', 'Donna', 'Li'), ('frank.garcia', 'Frank', 'Garcia'),
 ]
 
-# Insert extra users into user_profile
+# Insert extra users into wd_user_profile
 emp_base = 20000001
 for i, (local, fn, ln) in enumerate(extra_names):
     gad = local + '@manulife.com'
@@ -44,7 +44,7 @@ for i, (local, fn, ln) in enumerate(extra_names):
         cc_id = random.choice(cc_ids)
         job_id = random.randint(1, 10)
         terr_id = random.choice(terr_ids)
-        c.execute('INSERT INTO user_profile (gad_id, employee_id, last_name, first_name, signer_cc_id, job_level_id, territory_id) VALUES (?,?,?,?,?,?,?)',
+        c.execute('INSERT INTO wd_user_profile (gad_id, employee_id, last_name, first_name, signer_cost_center_id, job_level_id, territory_id) VALUES (?,?,?,?,?,?,?)',
                   (gad, emp_base + i, ln, fn, cc_id, job_id, terr_id))
         gad_ids.append(gad)
 
@@ -107,10 +107,10 @@ conn.commit()
 
 signer_cnt = c.execute('SELECT count(*) FROM signer').fetchone()[0]
 limit_cnt = c.execute('SELECT count(*) FROM signer_limit').fetchone()[0]
-profile_cnt = c.execute('SELECT count(*) FROM user_profile').fetchone()[0]
+profile_cnt = c.execute('SELECT count(*) FROM wd_user_profile').fetchone()[0]
 print(f'signer: {signer_cnt} rows')
 print(f'signer_limit: {limit_cnt} rows')
-print(f'user_profile: {profile_cnt} rows')
+print(f'wd_user_profile: {profile_cnt} rows')
 
 conn.close()
 print('Done')

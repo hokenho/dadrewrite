@@ -6,6 +6,11 @@
     <title>DAD - Policies Categories</title>
     <link rel="stylesheet" href="css/style.css">
     <script src="js/sql-js/sql-wasm.js"></script>
+    <style>
+        .status-badge{display:inline-block;padding:2px 10px;border-radius:12px;font-size:.78rem;font-weight:600}
+        .status-active{background:#dcfce7;color:#166534}
+        .status-inactive{background:#fee2e2;color:#991b1b}
+    </style>
 </head>
 <body>
     <div class="container">
@@ -20,7 +25,6 @@
             <span class="action-bar-label">Actions:</span>
             <button onclick="doSearch()">Search</button>
             <button onclick="location.reload()">Refresh</button>
-            <button onclick="doExport()">Export</button>
             <button onclick="window.print()">Print</button>
             <a href="audit_table_policy.html" class="action-bar-link">View Audit Log</a>
         </div>
@@ -70,6 +74,18 @@
                         <option value="N">N</option>
                     </select>
                 </div>
+                <div class="filter-field">
+                    <label for="fLastUpdate">Last Update Date</label>
+                    <input type="date" id="fLastUpdate">
+                </div>
+                <div class="filter-field">
+                    <label for="fStatus">Status</label>
+                    <select id="fStatus">
+                        <option value="">-- All --</option>
+                        <option value="Active">Active</option>
+                        <option value="Inactive">Inactive</option>
+                    </select>
+                </div>
             </div>
             <div class="filter-actions">
                 <button class="btn btn-primary" onclick="filterTable()">Apply Filter</button>
@@ -80,6 +96,7 @@
         <!-- Section 2: Results Table -->
         <div class="panel panel--blue">
             <div class="panel-title" style="position:relative;">Policies Categories
+                <button style="margin-left:10px; font-size:0.75rem; padding:2px 10px;" onclick="exportTable('resultsTable','policies_categories')">Export all data</button>
                 <button onclick="document.getElementById('devNoteModal').style.display='flex'" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);padding:2px 10px;font-size:0.72rem;font-weight:600;color:#fff;background:#6a1b9a;border:none;border-radius:4px;cursor:pointer;">DEV Note</button>
             </div>
             <div class="data-table-wrapper">
@@ -93,6 +110,8 @@
                             <th>No. of Approvals</th>
                             <th>Threshold Amount</th>
                             <th>Manual Approval Required</th>
+                            <th>Last Update Date</th>
+                            <th>Status</th>
                         </tr>
                     </thead>
                     <tbody id="resultsBody">
@@ -103,16 +122,18 @@
     </div>
 
     <script>
-        // Load policy data from db/data.db
+        // Load gdas_policy data from db/data.db
         (async function() {
             var SQL = await initSqlJs({ locateFile: function() { return 'js/sql-js/sql-wasm.wasm'; } });
             var buf = await fetch('db/data.db').then(function(r) { return r.arrayBuffer(); });
             var db = new SQL.Database(new Uint8Array(buf));
-            var results = db.exec('SELECT country, category, description, system, approval_no, threshold_amount, manual_approval FROM policy ORDER BY id');
+            var results = db.exec('SELECT country_code, category, description, system, approval_count, threshold_amount, manual_approval, last_update_date, status FROM gdas_policy ORDER BY id');
             var tbody = document.getElementById('resultsBody');
             if (results.length > 0) {
                 results[0].values.forEach(function(row) {
                     var tr = document.createElement('tr');
+                    var statusText = row[8] ? 'Active' : 'Inactive';
+                    var statusClass = row[8] ? 'status-active' : 'status-inactive';
                     tr.innerHTML =
                         '<td>' + row[0] + '</td>' +
                         '<td>' + row[1] + '</td>' +
@@ -120,7 +141,9 @@
                         '<td>' + row[3] + '</td>' +
                         '<td>' + row[4] + '</td>' +
                         '<td>' + Number(row[5]).toLocaleString() + '</td>' +
-                        '<td class="text-center">' + (row[6] ? 'Y' : 'N') + '</td>';
+                        '<td class="text-center">' + (row[6] ? 'Y' : 'N') + '</td>' +
+                        '<td>' + (row[7] || '') + '</td>' +
+                        '<td><span class="status-badge ' + statusClass + '">' + statusText + '</span></td>';
                     tbody.appendChild(tr);
                 });
             }
@@ -140,6 +163,8 @@
             var numApproval = document.getElementById('fNumApprovals').value.trim();
             var threshold   = document.getElementById('fThreshold').value.trim();
             var manualAppr  = document.getElementById('fManualApproval').value.toLowerCase();
+            var dt          = document.getElementById('fLastUpdate').value;
+            var stat        = document.getElementById('fStatus').value;
 
             document.querySelectorAll('#resultsBody tr').forEach(function(row) {
                 var cells = row.querySelectorAll('td');
@@ -157,7 +182,9 @@
                          && (!systemType || rSystemType.includes(systemType))
                          && (!numApproval || rNumAppr === numApproval)
                          && (!threshold  || Number(rThreshold) <= Number(threshold))
-                         && (!manualAppr || rManual === manualAppr);
+                         && (!manualAppr || rManual === manualAppr)
+                         && (!dt         || cells[7].textContent.trim() === dt)
+                         && (!stat       || cells[8].textContent.trim() === stat);
 
                 row.style.display = match ? '' : 'none';
             });
@@ -168,42 +195,62 @@
                 document.getElementById(id).value = '';
             });
             document.getElementById('fManualApproval').value = '';
+            document.getElementById('fLastUpdate').value = '';
+            document.getElementById('fStatus').value = '';
             document.querySelectorAll('#resultsBody tr').forEach(function(row) {
                 row.style.display = '';
             });
         }
-
-        function doExport() {
-            alert('Export triggered – connect to backend API.');
+        function exportTable(tableId, filename) {
+            var table = document.getElementById(tableId);
+            var csv = [];
+            var headers = [];
+            table.querySelectorAll('thead th').forEach(function(th) { headers.push('"' + th.textContent.trim() + '"'); });
+            csv.push(headers.join(','));
+            table.querySelectorAll('tbody tr').forEach(function(tr) {
+                var rowData = [];
+                tr.querySelectorAll('td').forEach(function(td) {
+                    rowData.push('"' + td.textContent.trim().replace(/"/g, '""') + '"');
+                });
+                csv.push(rowData.join(','));
+            });
+            var blob = new Blob([csv.join('\n')], { type: 'text/csv;charset=utf-8;' });
+            var link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = filename + '.csv';
+            link.click();
+            URL.revokeObjectURL(link.href);
         }
     </script>
 
     <!-- DEV Note Modal: Policies Categories -->
     <div id="devNoteModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:2000;align-items:center;justify-content:center;" onclick="if(event.target===this)this.style.display='none'">
         <div style="background:#fff;width:700px;max-height:85%;border-radius:8px;padding:24px;box-shadow:0 4px 12px rgba(0,0,0,0.15);overflow-y:auto;">
-            <h3 style="margin:0 0 12px 0;color:#6a1b9a;">DEV Note – Policies Categories (table=policy)</h3>
+            <h3 style="margin:0 0 12px 0;color:#6a1b9a;">DEV Note – Policies Categories (table=gdas_policy)</h3>
             <h4 style="margin:0 0 6px 0;color:#6a1b9a;">Fields Mapping:</h4>
-            <pre style="background:#f3e5f5;padding:12px;border-radius:6px;font-size:0.82rem;white-space:pre;overflow-x:auto;">Countries                 = policy.country
-Policy Category           = policy.category
-Description               = policy.description
-System Type               = policy.system
-No. of Approvals          = policy.approval_no
-Threshold Amount          = policy.threshold_amount
-Manual Approval Required  = policy.manual_approval</pre>
+            <pre style="background:#f3e5f5;padding:12px;border-radius:6px;font-size:0.82rem;white-space:pre;overflow-x:auto;">Countries                 = gdas_policy.country_code
+Policy Category           = gdas_policy.category
+Description               = gdas_policy.description
+System Type               = gdas_policy.system
+No. of Approvals          = gdas_policy.approval_count
+Threshold Amount          = gdas_policy.threshold_amount
+Manual Approval Required  = gdas_policy.manual_approval
+Last Update Date          = gdas_policy.last_update_date
+Status                    = gdas_policy.status</pre>
             <h4 style="margin:12px 0 6px 0;color:#6a1b9a;">Inbound:</h4>
             <pre style="background:#f3e5f5;padding:12px;border-radius:6px;font-size:0.82rem;white-space:pre;overflow-x:auto;">Workday + AD (gad_id)
-- user_profile
-- territory
-- job
+- wd_user_profile
+- wd_territory
+- wd_job_level
 
 GDAS
-- policy
+- gdas_policy
 
 Infor
-- business_unit
-- cost_center
-- currency
-- exchange_rate
+- infor_business_unit
+- infor_cost_center
+- infor_currency
+- infor_exchange_rate
 
 DAD Request
 - signer

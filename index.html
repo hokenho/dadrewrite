@@ -15,7 +15,7 @@
         <div class="grid">
 
             <!-- Signer Authorization -->
-            <div class="section section--auth">
+            <div class="section section--auth" id="grpSignerAuth">
                 <div class="section-title">Signer Authorization</div>
                 <div class="menu-list">
                     <a class="menu-item" href="signer.html">
@@ -27,7 +27,7 @@
             </div>
 
             <!-- Signer Onboarding -->
-            <div class="section section--onboard">
+            <div class="section section--onboard" id="grpSignerOnboard">
                 <div class="section-title">Signer Onboarding (Public)</div>
                 <div class="menu-list">
                     <a class="menu-item" href="request_signer.html">
@@ -40,7 +40,7 @@
                         <span class="menu-item-text">Signer Request Status</span>
                         <span class="menu-item-arrow">›</span>
                     </a>
-                    <a class="menu-item" href="req_approval_avp.html">
+                    <a class="menu-item" href="req_approval.html?mode=approver1">
                         <svg class="menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
                         <span class="menu-item-text">Signer Request Approval (AVP+)</span>
                         <span class="menu-item-arrow">›</span>
@@ -49,7 +49,7 @@
             </div>
 
             <!-- Tables Administration (wide) -->
-            <div class="section section--wide section--tables">
+            <div class="section section--wide section--tables" id="grpTablesAdmin">
                 <div class="section-title">Tables Administration</div>
                 <div class="menu-list menu-grid">
                     <a class="menu-item" href="table_policy.html">
@@ -91,7 +91,7 @@
             </div>
 
             <!-- Reports and Extracts -->
-            <div class="section section--reports">
+            <div class="section section--reports" id="grpReports">
                 <div class="section-title">Reports and Extracts</div>
                 <div class="menu-list">
                     <a class="menu-item" href="report.html">
@@ -103,22 +103,27 @@
             </div>
 
             <!-- Utilities -->
-            <div class="section section--utilities">
+            <div class="section section--utilities" id="grpUtilities">
                 <div class="section-title">Utilities (TSA only)</div>
                 <div class="menu-list">
-                    <a class="menu-item" href="upload.html">
-                        <svg class="menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>
-                        <span class="menu-item-text">Upload Tool</span>
-                        <span class="menu-item-arrow">›</span>
-                    </a>
                     <a class="menu-item" href="dashboard.html">
                         <svg class="menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
                         <span class="menu-item-text">Dashboard</span>
                         <span class="menu-item-arrow">›</span>
                     </a>
-                    <a class="menu-item" href="user.html">
+                    <a class="menu-item" href="req_approval.html?mode=approver2">
+                        <svg class="menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                        <span class="menu-item-text">Signer Request Approval (TSA)</span>
+                        <span class="menu-item-arrow">›</span>
+                    </a>
+                    <a class="menu-item" href="user_access.html">
                         <svg class="menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                         <span class="menu-item-text">User Access</span>
+                        <span class="menu-item-arrow">›</span>
+                    </a>
+                    <a class="menu-item" href="upload.html">
+                        <svg class="menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>
+                        <span class="menu-item-text">Upload Tool</span>
                         <span class="menu-item-arrow">›</span>
                     </a>
                 </div>
@@ -127,6 +132,20 @@
         </div><!-- /grid -->
     </div>
 
+    <script>
+    (function() {
+        var mode = new URLSearchParams(window.location.search).get('mode');
+        var groups = ['grpSignerAuth', 'grpSignerOnboard', 'grpTablesAdmin', 'grpReports', 'grpUtilities'];
+        if (mode === 'public_user') {
+            groups.forEach(function(id) {
+                if (id !== 'grpSignerOnboard') document.getElementById(id).style.display = 'none';
+            });
+        } else if (mode === 'dad_user') {
+            document.getElementById('grpUtilities').style.display = 'none';
+        }
+        // no param or mode=tsa: show all
+    })();
+    </script>
     <script src="js/navbar.js"></script>
 </body>
 </html>

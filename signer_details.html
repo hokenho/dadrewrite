@@ -5,6 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DAD - Signer Details</title>
     <link rel="stylesheet" href="css/style.css">
+    <style>
+        .status-badge{display:inline-block;padding:2px 10px;border-radius:12px;font-size:.78rem;font-weight:600}
+        .status-open{background:#dbeafe;color:#1e40af}
+        .status-complete{background:#dcfce7;color:#166534}
+        .status-reject{background:#fee2e2;color:#991b1b}
+        .status-cancel{background:#f3f4f6;color:#4b5563}
+    </style>
 </head>
 <body>
     <div class="container">
@@ -18,7 +25,6 @@
             <span id="viewActions" style="display:contents;">
                 <a id="btnUpdate" href="#">Request Update</a>
                 <button onclick="location.reload()">Refresh</button>
-                <button onclick="doExport()">Export</button>
                 <button onclick="window.print()">Print</button>
                 <a id="btnAudit" href="#">View Audit Log</a>
             </span>
@@ -28,10 +34,12 @@
             </span>
             <span id="dadreqActions" style="display:none;">
                 <button onclick="location.reload()">Refresh</button>
-                <button onclick="doExport()">Export</button>
                 <button onclick="window.print()">Print</button>
             </span>
         </div>
+
+        <!-- Mode Header -->
+        <div id="modeHeader" style="padding:6px 14px;font-size:0.88rem;font-weight:700;color:#fff;background:#fb8c00;border-radius:4px;margin-bottom:6px;display:inline-block;"></div>
 
         <!-- DAD Change Request Panel (hidden by default, shown in DADREQ mode) -->
         <div class="panel panel--blue" id="dadreqPanel" style="display:none;">
@@ -49,12 +57,12 @@
                 <tr><th>Request Status</th><td id="dadreqStatus"></td></tr>
                 <tr id="dadreqReasonRow" style="display:none;"><th>Reason</th><td id="dadreqReason"></td></tr>
                 <tr><th>Status Reason</th><td id="dadreqStatusReason"></td></tr>
-                <tr><th>AVP Approver</th><td id="dadreqAvpGad"></td></tr>
-                <tr><th>AVP Result</th><td id="dadreqAvpResult"></td></tr>
-                <tr><th>AVP Reason</th><td id="dadreqAvpReason"></td></tr>
-                <tr><th>TSA Approver</th><td id="dadreqTsaGad"></td></tr>
-                <tr><th>TSA Result</th><td id="dadreqTsaResult"></td></tr>
-                <tr><th>TSA Reason</th><td id="dadreqTsaReason"></td></tr>
+                <tr><th>Approver 1 (AVP+)</th><td id="dadreqAvpGad"></td></tr>
+                <tr><th>Approval 1 (AVP+)</th><td id="dadreqAvpResult"></td></tr>
+                <tr><th>Approval 1 Note (AVP+)</th><td id="dadreqAvpReason"></td></tr>
+                <tr><th>Approver 2 (TSA)</th><td id="dadreqTsaGad"></td></tr>
+                <tr><th>Approval 2 (TSA)</th><td id="dadreqTsaResult"></td></tr>
+                <tr><th>Approval 2 Note (TSA)</th><td id="dadreqTsaReason"></td></tr>
             </table>
         </div>
 
@@ -160,14 +168,15 @@
     <script>
         // Read URL params
         var params = new URLSearchParams(window.location.search);
+        var action = params.get('action') || 'view_signer';  // new_signer, view_signer, update_signer, view_request, approval1, approval2
         var upn = params.get('upn') || '';
-        var action = params.get('action') || '';
-        var reqid = params.get('reqid') || '';
-        var isApprovalMode = params.get('approval') === 'true';
-        var approvalMode = params.get('mode') || '';  // 'approval_avp' or 'approval_tsa'
-        var isDADREQMode = reqid && reqid.toUpperCase().indexOf('DADREQ') !== -1;
+        var reqid = params.get('id') || '';
+        var modeLabels = { 'new_signer': 'New Signer', 'view_signer': 'View Signer', 'update_signer': 'Update Signer', 'view_request': 'View Request', 'approval1': 'Approver 1 (AVP+)', 'approval2': 'Approver 2 (TSA)' };
+        document.addEventListener('DOMContentLoaded', function() { document.getElementById('modeHeader').textContent = 'Mode: ' + (modeLabels[action] || action); });
+        var isDADREQMode = (action === 'view_request' || action === 'approval1' || action === 'approval2');
+        var isApprovalMode = (action === 'approval1' || action === 'approval2');
         var isEditMode = false;
-        var isNewSigner = false;
+        var isNewSigner = (action === 'new_signer');
         var buNames = [];
         var originalData = [];
 
@@ -179,53 +188,52 @@
                 var db = new SQL.Database(new Uint8Array(buf));
 
                 // Load BU names for dropdown
-                var buRes = db.exec("SELECT name FROM business_unit ORDER BY name");
+                var buRes = db.exec("SELECT name FROM infor_business_unit ORDER BY name");
                 if (buRes.length) buRes[0].values.forEach(function(v) { buNames.push(v[0]); });
 
                 if (isDADREQMode) {
-                    var reqNum = parseInt(reqid.replace(/\D/g, ''));
+                    var reqNum = parseInt(reqid);
                     var reqRes = db.exec(
                         "SELECT id, req_date, submitter, gad_id, bu_id, " +
-                        "approver_avp_gad_id, approver_avp_result, approver_avp_reason, " +
-                        "approver_tsa_gad_id, approver_tsa_result, approver_tsa_reason, " +
-                        "source_data, pickup_cheque, temp, temp_start_date, temp_end_date, status, status_reason " +
-                        "FROM signer_req WHERE id = ?", [reqNum]
+                        "approver1_gad_id, approver1_result, approver1_note, " +
+                        "approver2_gad_id, approver2_result, approver2_note, " +
+                        "old_pickup_cheque, old_temp, old_temp_start_date, old_temp_end_date, old_status, " +
+                        "new_pickup_cheque, new_temp, new_temp_start_date, new_temp_end_date, new_status, status_reason " +
+                        "FROM req_signer WHERE id = ?", [reqNum]
                     );
                     if (reqRes.length && reqRes[0].values.length) {
                         var req = reqRes[0].values[0];
                         var gadId = req[3];
                         var statusLabels = { 1: 'Active', 0: 'Inactive' };
-                        var statusColors2 = { 1: '#2e7d32', 0: '#c62828' };
+                        var statusClasses2 = { 1: 'status-complete', 0: 'status-reject' };
                         var reqStatusLabels = { 1: 'Approved', 0: 'Rejected' };
-                        var reqStatusColors = { 'Approved': '#2e7d32', 'Rejected': '#c62828', 'Pending': '#2a5a8a' };
+                        var reqStatusClasses = { 'Approved': 'status-complete', 'Rejected': 'status-reject', 'Pending': 'status-open' };
 
                         // DAD Change Request panel
-                        document.getElementById('dadreqId').textContent = reqid.toUpperCase();
+                        document.getElementById('dadreqId').textContent = 'DADREQ' + reqid;
                         document.getElementById('dadreqDate').textContent = req[1] || '';
                         document.getElementById('dadreqRequester').textContent = req[2] || '';
                         document.getElementById('dadreqStatus').innerHTML =
-                            '<span style="display:inline-block;padding:2px 10px;border-radius:12px;font-size:0.78rem;font-weight:600;color:#fff;background:' +
-                            (reqStatusColors[reqStatusLabels[req[16]] || 'Pending'] || '#555') + ';">' + (reqStatusLabels[req[16]] || 'Pending') + '</span>';
-                        window._dadreqDbData = { requestStatus: reqStatusLabels[req[16]] || 'Pending', requester: req[2] };
+                            '<span class="status-badge ' +
+                            (reqStatusClasses[reqStatusLabels[req[20]] || 'Pending'] || 'status-open') + '">' + (reqStatusLabels[req[20]] || 'Pending') + '</span>';
+                        window._dadreqDbData = { requestStatus: reqStatusLabels[req[20]] || 'Pending', requester: req[2] };
 
                         // Approval fields
                         var approvalResultLabels = { 1: 'Approved', 0: 'Rejected' };
-                        document.getElementById('dadreqStatusReason').textContent = req[17] || '\u2014';
+                        document.getElementById('dadreqStatusReason').textContent = req[21] || '\u2014';
                         document.getElementById('dadreqAvpGad').textContent = req[5] || '\u2014';
                         var avpLabel = approvalResultLabels[req[6]] || 'Pending';
-                        var avpColor = reqStatusColors[avpLabel] || '#555';
                         document.getElementById('dadreqAvpResult').innerHTML =
-                            '<span style="display:inline-block;padding:2px 10px;border-radius:12px;font-size:0.78rem;font-weight:600;color:#fff;background:' + avpColor + ';">' + avpLabel + '</span>';
+                            '<span class="status-badge ' + (reqStatusClasses[avpLabel] || 'status-open') + '">' + avpLabel + '</span>';
                         document.getElementById('dadreqAvpReason').textContent = req[7] || '\u2014';
                         document.getElementById('dadreqTsaGad').textContent = req[8] || '\u2014';
                         var tsaLabel = approvalResultLabels[req[9]] || 'Pending';
-                        var tsaColor = reqStatusColors[tsaLabel] || '#555';
                         document.getElementById('dadreqTsaResult').innerHTML =
-                            '<span style="display:inline-block;padding:2px 10px;border-radius:12px;font-size:0.78rem;font-weight:600;color:#fff;background:' + tsaColor + ';">' + tsaLabel + '</span>';
+                            '<span class="status-badge ' + (reqStatusClasses[tsaLabel] || 'status-open') + '">' + tsaLabel + '</span>';
                         document.getElementById('dadreqTsaReason').textContent = req[10] || '\u2014';
 
-                        // Make AVP Result/Reason editable in approval_avp mode
-                        if (approvalMode === 'approval_avp') {
+                        // Make Approval 1 Result/Note editable in approval1 mode
+                        if (action === 'approval1') {
                             var avpResultTd = document.getElementById('dadreqAvpResult');
                             avpResultTd.innerHTML =
                                 '<select id="avpResultSelect" style="padding:4px;width:auto;">' +
@@ -235,16 +243,48 @@
                                 '</select>';
                             var avpReasonTd = document.getElementById('dadreqAvpReason');
                             avpReasonTd.innerHTML =
-                                '<input type="text" id="avpReasonInput" value="' + (req[7] || '') + '" placeholder="Enter reason" style="padding:4px;width:80%;">';
+                                '<input type="text" id="avpReasonInput" value="' + (req[7] || '') + '" placeholder="Enter note" style="padding:4px;width:80%;">';
+                            var origAvpResult = req[6];
+                            var origAvpReason = req[7] || '';
+                            document.getElementById('avpResultSelect').addEventListener('change', function() {
+                                var cur = this.value === '' ? null : parseInt(this.value);
+                                this.style.backgroundColor = (cur !== origAvpResult) ? '#fff9c4' : '';
+                            });
+                            document.getElementById('avpReasonInput').addEventListener('input', function() {
+                                this.style.backgroundColor = (this.value !== origAvpReason) ? '#fff9c4' : '';
+                            });
+                        }
+
+                        // Make Approval 2 Result/Note editable in approval2 mode
+                        if (action === 'approval2') {
+                            var tsaResultTd = document.getElementById('dadreqTsaResult');
+                            tsaResultTd.innerHTML =
+                                '<select id="tsaResultSelect" style="padding:4px;width:auto;">' +
+                                '<option value=""' + (req[9] == null ? ' selected' : '') + '>Pending</option>' +
+                                '<option value="1"' + (req[9] === 1 ? ' selected' : '') + '>Approved</option>' +
+                                '<option value="0"' + (req[9] === 0 ? ' selected' : '') + '>Rejected</option>' +
+                                '</select>';
+                            var tsaReasonTd = document.getElementById('dadreqTsaReason');
+                            tsaReasonTd.innerHTML =
+                                '<input type="text" id="tsaReasonInput" value="' + (req[10] || '') + '" placeholder="Enter note" style="padding:4px;width:80%;">';
+                            var origTsaResult = req[9];
+                            var origTsaReason = req[10] || '';
+                            document.getElementById('tsaResultSelect').addEventListener('change', function() {
+                                var cur = this.value === '' ? null : parseInt(this.value);
+                                this.style.backgroundColor = (cur !== origTsaResult) ? '#fff9c4' : '';
+                            });
+                            document.getElementById('tsaReasonInput').addEventListener('input', function() {
+                                this.style.backgroundColor = (this.value !== origTsaReason) ? '#fff9c4' : '';
+                            });
                         }
 
                         // Signer Profile
                         var profRes = db.exec(
                             "SELECT u.last_name, u.first_name, u.employee_id, " +
-                            "b.name AS bu_name, u.signer_cc, j.job_grade, j.job_title " +
-                            "FROM user_profile u " +
-                            "LEFT JOIN business_unit b ON b.id = ? " +
-                            "LEFT JOIN job j ON u.job_level_id = j.id " +
+                            "b.name AS bu_name, u.signer_cost_center, j.job_grade, j.job_title " +
+                            "FROM wd_user_profile u " +
+                            "LEFT JOIN infor_business_unit b ON b.id = ? " +
+                            "LEFT JOIN wd_job_level j ON u.job_level_id = j.id " +
                             "WHERE u.gad_id = ?", [req[4], gadId]
                         );
                         if (profRes.length && profRes[0].values.length) {
@@ -257,19 +297,20 @@
                             document.getElementById('profJobGrade').textContent = p[5] || '';
                             document.getElementById('profJobTitle').textContent = p[6] || '';
                             document.getElementById('profEmpNo').textContent = p[2] || '';
-                            document.getElementById('profPickup').textContent = req[12] ? 'Y' : 'N';
-                            document.getElementById('profTemp').textContent = req[13] ? 'Y' : 'N';
-                            document.getElementById('profTempStart').textContent = req[14] || '\u2014';
-                            document.getElementById('profTempEnd').textContent = req[15] || '\u2014';
+                            document.getElementById('profPickup').textContent = req[16] ? 'Y' : 'N';
+                            document.getElementById('profTemp').textContent = req[17] ? 'Y' : 'N';
+                            document.getElementById('profTempStart').textContent = req[18] || '\u2014';
+                            document.getElementById('profTempEnd').textContent = req[19] || '\u2014';
                             document.getElementById('profStatus').innerHTML =
-                                '<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:0.75rem;color:#fff;background:' +
-                                (statusColors2[req[16]] || '#757575') + ';">' + (statusLabels[req[16]] || '') + '</span>';
+                                '<span class="status-badge ' +
+                                (statusClasses2[req[20]] || '') + '">' + (statusLabels[req[20]] || '') + '</span>';
 
-                            // Compare new values with source_data (old values) for editable fields
-                            var srcProfile = req[11] ? JSON.parse(req[11]) : null;
-                            if (srcProfile) {
-                                var oldPickup = srcProfile.pickup_cheque ? 'Y' : 'N';
-                                var newPickup = req[12] ? 'Y' : 'N';
+                            // Compare new values with old values for editable fields
+                            // req[11]=old_pickup_cheque, req[12]=old_temp, req[13]=old_temp_start_date, req[14]=old_temp_end_date, req[15]=old_status
+                            // req[16]=new_pickup_cheque, req[17]=new_temp, req[18]=new_temp_start_date, req[19]=new_temp_end_date, req[20]=new_status
+                            if (req[11] != null) {
+                                var oldPickup = req[11] ? 'Y' : 'N';
+                                var newPickup = req[16] ? 'Y' : 'N';
                                 if (oldPickup !== newPickup) {
                                     var td = document.getElementById('profPickup');
                                     td.style.backgroundColor = '#ffff00';
@@ -278,8 +319,8 @@
                                         '<span style="font-weight:bold;">' + newPickup + '</span>';
                                 }
 
-                                var oldExpireTemp = srcProfile.temp ? 'Y' : 'N';
-                                var newExpireTemp = req[13] ? 'Y' : 'N';
+                                var oldExpireTemp = req[12] ? 'Y' : 'N';
+                                var newExpireTemp = req[17] ? 'Y' : 'N';
                                 if (oldExpireTemp !== newExpireTemp) {
                                     var td = document.getElementById('profTemp');
                                     td.style.backgroundColor = '#ffff00';
@@ -288,8 +329,8 @@
                                         '<span style="font-weight:bold;">' + newExpireTemp + '</span>';
                                 }
 
-                                var oldTempStart = srcProfile.temp_start_date || '\u2014';
-                                var newTempStart = req[14] || '\u2014';
+                                var oldTempStart = req[13] || '\u2014';
+                                var newTempStart = req[18] || '\u2014';
                                 if (oldTempStart !== newTempStart) {
                                     var td = document.getElementById('profTempStart');
                                     td.style.backgroundColor = '#ffff00';
@@ -298,8 +339,8 @@
                                         '<span style="font-weight:bold;">' + newTempStart + '</span>';
                                 }
 
-                                var oldTempEnd = srcProfile.temp_end_date || '\u2014';
-                                var newTempEnd = req[15] || '\u2014';
+                                var oldTempEnd = req[14] || '\u2014';
+                                var newTempEnd = req[19] || '\u2014';
                                 if (oldTempEnd !== newTempEnd) {
                                     var td = document.getElementById('profTempEnd');
                                     td.style.backgroundColor = '#ffff00';
@@ -308,17 +349,17 @@
                                         '<span style="font-weight:bold;">' + newTempEnd + '</span>';
                                 }
 
-                                var oldStatus = statusLabels[srcProfile.status] || '';
-                                var newStatus = statusLabels[req[16]] || '';
+                                var oldStatus = statusLabels[req[15]] || '';
+                                var newStatus = statusLabels[req[20]] || '';
                                 if (oldStatus !== newStatus) {
-                                    var oldColor = statusColors2[srcProfile.status] || '#757575';
-                                    var newColor = statusColors2[req[16]] || '#757575';
+                                    var oldClass = statusClasses2[req[15]] || '';
+                                    var newClass = statusClasses2[req[20]] || '';
                                     var td = document.getElementById('profStatus');
                                     td.style.backgroundColor = '#ffff00';
                                     td.innerHTML =
-                                        '<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:0.75rem;color:#fff;background:' + oldColor + ';">' + oldStatus + '</span>' +
+                                        '<span class="status-badge ' + oldClass + '">' + oldStatus + '</span>' +
                                         ' <span style="color:#999;margin:0 4px;">&#8594;</span>' +
-                                        '<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:0.75rem;color:#fff;background:' + newColor + ';">' + newStatus + '</span>';
+                                        '<span class="status-badge ' + newClass + '">' + newStatus + '</span>';
                                 }
                             }
                         }
@@ -326,23 +367,26 @@
 
                         // Lookup maps
                         var terrMap = {}, ccMap = {}, polMap = {};
-                        var tr2 = db.exec("SELECT id, country_code FROM territory");
+                        var tr2 = db.exec("SELECT id, country_code FROM wd_territory");
                         if (tr2.length) tr2[0].values.forEach(function(v) { terrMap[v[0]] = v[1]; });
-                        var cc2 = db.exec("SELECT id, cc FROM cost_center");
+                        var cc2 = db.exec("SELECT id, name FROM infor_cost_center");
                         if (cc2.length) cc2[0].values.forEach(function(v) { ccMap[v[0]] = v[1]; });
-                        var po2 = db.exec("SELECT id, category, system FROM policy");
+                        var po2 = db.exec("SELECT id, category, system FROM gdas_policy");
                         if (po2.length) po2[0].values.forEach(function(v) { polMap[v[0]] = { cat: v[1], sys: v[2] }; });
 
+                        // resolveSource: convert old_* column values (array) to display values
+                        // sd = [old_territory_id, old_policy_id, old_limit_amount, old_approval_cc_id, old_exception, old_temp,
+                        //       old_temp_start_date, old_temp_end_date, old_business_rationale, old_business_control, old_account_restriction, old_currency]
                         function resolveSource(sd) {
-                            var sp = polMap[sd.policy_id] || {};
+                            var sp = polMap[sd[1]] || {};
                             return [
-                                terrMap[sd.territory_id] || '', sp.cat || '',
-                                sd.limit_amount != null ? Number(sd.limit_amount).toLocaleString() : '',
-                                sd.currency || '', ccMap[sd.approval_cc_id] || '',
-                                sd.exception ? 'Y' : 'N', sd.temp ? 'Y' : 'N',
-                                sd.temp_start_date || '\u2014', sd.temp_end_date || '\u2014',
-                                sd.business_rationale ? 'Y' : 'N', sd.business_control ? 'Y' : 'N',
-                                sp.sys || '', sd.account_restriction || ''
+                                terrMap[sd[0]] || '', sp.cat || '',
+                                sd[2] != null ? Number(sd[2]).toLocaleString() : '',
+                                sd[11] || '', ccMap[sd[3]] || '',
+                                sd[4] ? 'Y' : 'N', sd[5] ? 'Y' : 'N',
+                                sd[6] || '\u2014', sd[7] || '\u2014',
+                                sd[8] ? 'Y' : 'N', sd[9] ? 'Y' : 'N',
+                                sp.sys || '', sd[10] || ''
                             ];
                         }
 
@@ -374,28 +418,31 @@
                         }
 
                         var lrRes = db.exec(
-                            "SELECT lr.action, lr.source_data, lr.territory_id, lr.policy_id, lr.limit_amount, " +
-                            "lr.currency, lr.approval_cc_id, lr.exception, lr.temp, lr.temp_start_date, lr.temp_end_date, lr.business_rationale, " +
-                            "lr.business_control, lr.account_restriction " +
-                            "FROM signer_limit_req lr WHERE lr.signer_req_id = ? ORDER BY lr.id", [reqNum]
+                            "SELECT lr.action, " +
+                            "lr.old_territory_id, lr.old_policy_id, lr.old_limit_amount, lr.old_approval_cc_id, lr.old_exception, lr.old_temp, " +
+                            "lr.old_temp_start_date, lr.old_temp_end_date, lr.old_business_rationale, lr.old_business_control, lr.old_account_restriction, lr.old_currency, " +
+                            "lr.new_territory_id, lr.new_policy_id, lr.new_limit_amount, lr.new_approval_cc_id, lr.new_exception, lr.new_temp, " +
+                            "lr.new_temp_start_date, lr.new_temp_end_date, lr.new_business_rationale, lr.new_business_control, lr.new_account_restriction, lr.new_currency " +
+                            "FROM req_signer_limit lr WHERE lr.req_signer_id = ? ORDER BY lr.id", [reqNum]
                         );
                         var tbody = document.getElementById('limitsBody');
                         if (lrRes.length) {
                             lrRes[0].values.forEach(function(lr) {
                                 var act = lr[0];
-                                var srcData = lr[1] ? JSON.parse(lr[1]) : null;
-                                var np = polMap[lr[3]] || {};
+                                // lr[1..12] = old_* columns, lr[13..24] = new_* columns
+                                var oldCols = lr.slice(1, 13);   // old_territory_id..old_currency
+                                var np = polMap[lr[14]] || {};   // new_policy_id
                                 var newVals = [
-                                    terrMap[lr[2]] || '', np.cat || '',
-                                    lr[4] != null ? Number(lr[4]).toLocaleString() : '',
-                                    lr[5] || '', ccMap[lr[6]] || '',
-                                    lr[7] ? 'Y' : 'N', lr[8] ? 'Y' : 'N',
-                                    lr[9] || '\u2014', lr[10] || '\u2014',
-                                    lr[11] ? 'Y' : 'N', lr[12] ? 'Y' : 'N',
-                                    np.sys || '', lr[13] || ''
+                                    terrMap[lr[13]] || '', np.cat || '',
+                                    lr[15] != null ? Number(lr[15]).toLocaleString() : '',
+                                    lr[24] || '', ccMap[lr[16]] || '',
+                                    lr[17] ? 'Y' : 'N', lr[18] ? 'Y' : 'N',
+                                    lr[19] || '\u2014', lr[20] || '\u2014',
+                                    lr[21] ? 'Y' : 'N', lr[22] ? 'Y' : 'N',
+                                    np.sys || '', lr[23] || ''
                                 ];
-                                if (act === 'Change' && srcData) {
-                                    var sv = resolveSource(srcData);
+                                if (act === 'Change' && oldCols[0] != null) {
+                                    var sv = resolveSource(oldCols);
                                     var btr = makeLimRow(sv);
                                     btr.style.cssText = 'border-top:3px solid #555;border-left:3px solid #555;border-right:3px solid #555;';
                                     btr.insertBefore(makeCtTd('Change (Before)', '#2e86c1'), btr.firstChild);
@@ -406,8 +453,8 @@
                                     atr.style.cssText = 'border-bottom:3px solid #555;border-left:3px solid #555;border-right:3px solid #555;';
                                     atr.insertBefore(makeCtTd('Change (After)', '#2e86c1'), atr.firstChild);
                                     tbody.appendChild(atr);
-                                } else if (act === 'Remove' && srcData) {
-                                    var sv = resolveSource(srcData);
+                                } else if (act === 'Remove' && oldCols[0] != null) {
+                                    var sv = resolveSource(oldCols);
                                     var rtr = makeLimRow(sv, function(td) { td.style.textDecoration = 'line-through'; td.style.color = '#c0392b'; });
                                     rtr.style.cssText = 'background:#ffe6e6;border:3px solid #555;';
                                     rtr.insertBefore(makeCtTd('Removal', '#c0392b'), rtr.firstChild);
@@ -417,6 +464,12 @@
                                     ntr.style.cssText = 'border:3px solid #555;';
                                     ntr.insertBefore(makeCtTd('Additional', '#8e44ad'), ntr.firstChild);
                                     tbody.appendChild(ntr);
+                                } else if (act === 'Unchange' && oldCols[0] != null) {
+                                    var sv = resolveSource(oldCols);
+                                    var utr = makeLimRow(sv);
+                                    utr.style.cssText = 'background:#e6ffe6;border:3px solid #555;';
+                                    utr.insertBefore(makeCtTd('No Change', '#27ae60'), utr.firstChild);
+                                    tbody.appendChild(utr);
                                 }
                             });
                         }
@@ -429,16 +482,17 @@
                     "SELECT s.gad_id, s.status, s.pickup_cheque, s.temp, s.temp_start_date, s.temp_end_date, " +
                     "u.last_name, u.first_name, u.employee_id, " +
                     "b.name AS bu_name, " +
-                    "u.signer_cc, " +
+                    "u.signer_cost_center, " +
                     "j.job_grade, j.job_title " +
                     "FROM signer s " +
-                    "LEFT JOIN user_profile u ON s.gad_id = u.gad_id " +
-                    "LEFT JOIN business_unit b ON s.bu_id = b.id " +
-                    "LEFT JOIN job j ON u.job_level_id = j.id " +
+                    "LEFT JOIN wd_user_profile u ON s.gad_id = u.gad_id " +
+                    "LEFT JOIN infor_business_unit b ON s.bu_id = b.id " +
+                    "LEFT JOIN wd_job_level j ON u.job_level_id = j.id " +
                     "WHERE s.gad_id = ?", [upn]
                 );
 
                 var statusColors = { 1: '#2e7d32', 0: '#c62828' };
+                var statusClasses = { 1: 'status-complete', 0: 'status-reject' };
                 var statusLabels = { 1: 'Active', 0: 'Inactive' };
                 if (profRes.length && profRes[0].values.length) {
                     var r = profRes[0].values[0];
@@ -455,16 +509,16 @@
                     document.getElementById('profTempStart').textContent = r[4] || '—';
                     document.getElementById('profTempEnd').textContent = r[5] || '—';
                     document.getElementById('profStatus').innerHTML =
-                        '<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:0.75rem;color:#fff;background:' +
-                        (statusColors[r[1]] || '#757575') + ';">' + (statusLabels[r[1]] || '') + '</span>';
+                        '<span class="status-badge ' +
+                        (statusClasses[r[1]] || '') + '">' + (statusLabels[r[1]] || '') + '</span>';
                 } else {
-                    // New signer: load basic info from user_profile
+                    // New signer: load basic info from wd_user_profile
                     isNewSigner = true;
                     var upRes = db.exec(
                         "SELECT u.gad_id, u.last_name, u.first_name, u.employee_id, " +
-                        "u.signer_cc, j.job_grade, j.job_title " +
-                        "FROM user_profile u " +
-                        "LEFT JOIN job j ON u.job_level_id = j.id " +
+                        "u.signer_cost_center, j.job_grade, j.job_title " +
+                        "FROM wd_user_profile u " +
+                        "LEFT JOIN wd_job_level j ON u.job_level_id = j.id " +
                         "WHERE u.gad_id = ?", [upn]
                     );
                     if (upRes.length && upRes[0].values.length) {
@@ -482,20 +536,20 @@
                         document.getElementById('profTempStart').textContent = '—';
                         document.getElementById('profTempEnd').textContent = '—';
                         document.getElementById('profStatus').innerHTML =
-                            '<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:0.75rem;color:#fff;background:' +
-                            (statusColors[0] || '#757575') + ';">' + (statusLabels[0] || '') + '</span>';
+                            '<span class="status-badge ' +
+                            (statusClasses[0] || '') + '">' + (statusLabels[0] || '') + '</span>';
                     }
                 }
 
                 // Table 2: Signing Limit Authorizations (1:M via gad_id)
                 var limRes = db.exec(
                     "SELECT t.country_code, p.category, sl.limit_amount, sl.currency, " +
-                    "cc.cc, sl.exception, sl.temp, sl.temp_start_date, sl.temp_end_date, sl.business_rationale, sl.business_control, " +
+                    "cc.name, sl.exception, sl.temp, sl.temp_start_date, sl.temp_end_date, sl.business_rationale, sl.business_control, " +
                     "p.system, sl.account_restriction " +
                     "FROM signer_limit sl " +
-                    "LEFT JOIN territory t ON sl.territory_id = t.id " +
-                    "LEFT JOIN policy p ON sl.policy_id = p.id " +
-                    "LEFT JOIN cost_center cc ON sl.approval_cc_id = cc.id " +
+                    "LEFT JOIN wd_territory t ON sl.territory_id = t.id " +
+                    "LEFT JOIN gdas_policy p ON sl.policy_id = p.id " +
+                    "LEFT JOIN infor_cost_center cc ON sl.approval_cc_id = cc.id " +
                     "WHERE sl.gad_id = ? ORDER BY sl.id", [upn]
                 );
 
@@ -529,8 +583,8 @@
                     });
                 }
 
-                // Trigger edit mode after data loaded if action=update
-                if (action === 'update') {
+                // Trigger edit mode for new/update signer
+                if (action === 'new_signer' || action === 'update_signer') {
                     enterEditMode();
                 }
                 } // end else if (upn)
@@ -577,11 +631,13 @@
             document.getElementById('btnAudit').href = 'audit_signer.html?upn=' + encodeURIComponent(upn);
         }
 
-        // Request Update toggle
+        // Request Update → navigate to update/new URL
         document.getElementById('btnUpdate').addEventListener('click', function(e) {
             e.preventDefault();
-            if (!isEditMode) {
-                enterEditMode();
+            if (isNewSigner) {
+                window.location = 'signer_details.html?action=new_signer&upn=' + encodeURIComponent(upn);
+            } else {
+                window.location = 'signer_details.html?action=update_signer&upn=' + encodeURIComponent(upn);
             }
         });
 
@@ -961,11 +1017,6 @@
             }
         }
 
-        function doExport() {
-            // Placeholder: export logic
-            alert('Export triggered for ' + (upn || 'unknown user'));
-        }
-
         // Simulate current logged-in user
         var currentUser = 'alice.smith@manulife.com';
 
@@ -976,14 +1027,14 @@
             document.getElementById('dadreqActions').style.display = 'contents';
             document.getElementById('dadreqPanel').style.display = '';
 
-            var changes = window._dadreqDbData || dadreqChanges[reqid.toUpperCase()] || { requestStatus: 'Open', requester: 'unknown', reason: '' };
+            var changes = window._dadreqDbData || dadreqChanges['DADREQ' + reqid] || { requestStatus: 'Open', requester: 'unknown', reason: '' };
 
             if (!window._DADREQ_RENDERED) {
-                document.getElementById('dadreqId').textContent = reqid.toUpperCase();
+                document.getElementById('dadreqId').textContent = 'DADREQ' + reqid;
                 document.getElementById('dadreqRequester').textContent = changes.requester || 'unknown';
-                var statusColors = { Open: '#2a5a8a', Complete: '#2e7d32', Reject: '#c62828', Cancel: '#757575' };
-                var color = statusColors[changes.requestStatus] || '#555';
-                document.getElementById('dadreqStatus').innerHTML = '<span style="display:inline-block;padding:2px 10px;border-radius:12px;font-size:0.78rem;font-weight:600;color:#fff;background:' + color + ';">' + changes.requestStatus + '</span>';
+                var statusClassMap = { Open: 'status-open', Complete: 'status-complete', Reject: 'status-reject', Cancel: 'status-cancel' };
+                var cls = statusClassMap[changes.requestStatus] || 'status-open';
+                document.getElementById('dadreqStatus').innerHTML = '<span class="status-badge ' + cls + '">' + changes.requestStatus + '</span>';
             }
 
             if ((changes.requestStatus === 'Reject' || changes.requestStatus === 'Cancel') && changes.reason) {
@@ -1208,6 +1259,13 @@
                         });
 
                         tbody.appendChild(newTr);
+                    } else if (change.type === 'nochange') {
+                        var origRow = origRows[change.rowIndex];
+                        if (!origRow) return;
+                        origRow.style.backgroundColor = '#e6ffe6';
+                        origRow.style.border = '3px solid #555';
+                        origRow.insertBefore(makeChangeTypeTd('No Change', '#27ae60', 1), origRow.firstChild);
+                        touchedIndexes.add(change.rowIndex);
                     }
                 });
             }
@@ -1218,39 +1276,44 @@
     <!-- DEV Note Modal: DAD Change Request -->
     <div id="devNoteDadreqModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:2000;align-items:center;justify-content:center;" onclick="if(event.target===this)this.style.display='none'">
         <div style="background:#fff;width:600px;max-height:80%;border-radius:8px;padding:24px;box-shadow:0 4px 12px rgba(0,0,0,0.15);overflow-y:auto;">
-            <h3 style="margin:0 0 12px 0;color:#6a1b9a;">DEV Note – DAD Change Request (key=signer_req.id)</h3>
+            <h3 style="margin:0 0 12px 0;color:#6a1b9a;">DEV Note – DAD Change Request (key=req_signer.id)</h3>
             <h4 style="margin:0 0 6px 0;color:#6a1b9a;">Fields Mapping:</h4>
-            <pre style="background:#f3e5f5;padding:12px;border-radius:6px;font-size:0.82rem;white-space:pre-wrap;">Request ID        = from url parameter (reqid=DADREQ100005)
-Request Date      = signer_req.req_date
-Requester         = signer_req.submitter
-Request Status    = signer_req.status (NULL=Pending, 0=Rejected, 1=Approved)
+            <pre style="background:#f3e5f5;padding:12px;border-radius:6px;font-size:0.82rem;white-space:pre-wrap;">Request ID        = from url parameter (id=100005 → displays DADREQ100005)
+Request Date      = req_signer.req_date
+Requester         = req_signer.submitter
+Request Status    = req_signer.new_status (NULL=Pending, 0=Rejected, 1=Approved)
 
 Approval:
-AVP Approver      = signer_req.approver_avp_gad_id
-AVP Result        = signer_req.approver_avp_result (NULL=Pending, 0=Reject, 1=Approve)
-AVP Reason        = signer_req.approver_avp_reason
-TSA Approver      = signer_req.approver_tsa_gad_id
-TSA Result        = signer_req.approver_tsa_result (NULL=Pending, 0=Reject, 1=Approve)
-TSA Reason        = signer_req.approver_tsa_reason
-Status Reason     = signer_req.status_reason
+Approver 1 (AVP+)     = req_signer.approver1_gad_id
+Approval 1 (AVP+)     = req_signer.approver1_result (NULL=Pending, 0=Reject, 1=Approve)
+Approval 1 Note (AVP+) = req_signer.approver1_note
+Approver 2 (TSA)      = req_signer.approver2_gad_id
+Approval 2 (TSA)      = req_signer.approver2_result (NULL=Pending, 0=Reject, 1=Approve)
+Approval 2 Note (TSA) = req_signer.approver2_note
+Status Reason     = req_signer.status_reason
 
-Approval Modes (URL param: mode=):
-  approval_avp → AVP Result (dropdown) + AVP Reason (text) editable
-  approval_tsa → (future) TSA Result + TSA Reason editable</pre>
+URL: signer_details.html?action=&lt;mode&gt;&amp;upn=&lt;gad_id&gt;&amp;id=&lt;req_signer.id&gt;
+
+  1. action=new_signer    → New Signer (auto-edit, upn=&lt;gad_id&gt;)
+  2. action=view_signer   → View Signer (read-only, upn=&lt;gad_id&gt;)
+  3. action=update_signer → Update Signer (auto-edit, upn=&lt;gad_id&gt;)
+  4. action=view_request  → View Request (read-only, id=&lt;number&gt;)
+  5. action=approval1     → Approver 1 AVP+ (editable approval fields, id=&lt;number&gt;)
+  6. action=approval2     → Approver 2 TSA (editable approval fields, id=&lt;number&gt;)</pre>
             <h4 style="margin:12px 0 6px 0;color:#6a1b9a;">Inbound:</h4>
             <pre style="background:#f3e5f5;padding:12px;border-radius:6px;font-size:0.82rem;white-space:pre-wrap;">Workday + AD (gad_id)
-- user_profile
-- territory
-- job
+- wd_user_profile
+- wd_territory
+- wd_job_level
 
 GDAS
-- policy
+- gdas_policy
 
 Infor
-- business_unit
-- cost_center
-- currency
-- exchange_rate
+- infor_business_unit
+- infor_cost_center
+- infor_currency
+- infor_exchange_rate
 
 DAD Request
 - signer
@@ -1263,76 +1326,144 @@ DAD Request
     <div id="devNoteProfileModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:2000;align-items:center;justify-content:center;" onclick="if(event.target===this)this.style.display='none'">
         <div style="background:#fff;width:95%;max-height:85%;border-radius:8px;padding:24px;box-shadow:0 4px 12px rgba(0,0,0,0.15);overflow-y:auto;">
             <h3 style="margin:0 0 12px 0;color:#6a1b9a;">DEV Note – Signer Profile</h3>
+            <h4 style="margin:0 0 6px 0;color:#6a1b9a;">URL: signer_details.html?action=&lt;mode&gt;&amp;upn=&lt;gad_id&gt;&amp;id=&lt;req_signer.id&gt;</h4>
             <div style="display:flex;gap:24px;">
                 <div style="flex:1;">
-                    <h4 style="margin:0 0 6px 0;color:#6a1b9a;">Existing Signer mode (key=signer.gad_id):</h4>
-                    <pre style="background:#f3e5f5;padding:12px;border-radius:6px;font-size:0.82rem;white-space:pre;overflow-x:auto;">GAD ID              = from URL parameter
-Last Name           = signer.gad_id -> user_profile.last_name
-First Name          = signer.gad_id -> user_profile.first_name
-Business Unit       = signer.bu_id -> business_unit.name
-Signers Cost Center = signer.gad_id -> user_profile.signer_cc
-Job Level/Job Grade = signer.gad_id -> user_profile.job_level_id -> job.job_grade
-Job Title           = signer.gad_id -> user_profile.job_level_id -> job.job_title
-Employee No.        = signer.gad_id -> user_profile.employee_id
+                    <h4 style="margin:0 0 6px 0;color:#6a1b9a;">1. action=new_signer (New Signer)</h4>
+                    <pre style="background:#f3e5f5;padding:12px;border-radius:6px;font-size:0.82rem;white-space:pre;overflow-x:auto;">gad_id NOT in signer table. Auto enters edit mode.
+Lookup from wd_user_profile directly.
+
+GAD ID              = from URL param (upn)
+Last Name           = wd_user_profile.last_name
+First Name          = wd_user_profile.first_name
+Business Unit       = dropdown (infor_business_unit.name)
+Signers Cost Center = wd_user_profile.signer_cost_center
+Job Level/Job Grade = wd_user_profile.job_level_id -> wd_job_level.job_grade
+Job Title           = wd_user_profile.job_level_id -> wd_job_level.job_title
+Employee No.        = wd_user_profile.employee_id
+Pickup Cheques      = Y/N (editable)
+Temporary           = Y/N (editable)
+Temp Start Date     = Date Picker (editable)
+Temp End Date       = Date Picker (editable)
+Status              = Active/Inactive (editable)</pre>
+                </div>
+                <div style="flex:1;">
+                    <h4 style="margin:0 0 6px 0;color:#6a1b9a;">2. action=view_signer (View Signer)</h4>
+                    <pre style="background:#f3e5f5;padding:12px;border-radius:6px;font-size:0.82rem;white-space:pre;overflow-x:auto;">gad_id in signer table. Read-only view.
+
+GAD ID              = from URL param (upn)
+Last Name           = signer.gad_id -> wd_user_profile.last_name
+First Name          = signer.gad_id -> wd_user_profile.first_name
+Business Unit       = signer.bu_id -> infor_business_unit.name
+Signers Cost Center = signer.gad_id -> wd_user_profile.signer_cost_center
+Job Level/Job Grade = signer.gad_id -> wd_user_profile.job_level_id -> wd_job_level.job_grade
+Job Title           = signer.gad_id -> wd_user_profile.job_level_id -> wd_job_level.job_title
+Employee No.        = signer.gad_id -> wd_user_profile.employee_id
 Pickup Cheques      = signer.pickup_cheque
 Temporary           = signer.temp
-Temporary Start Date     = signer.temp_start_date
-Temporary End Date       = signer.temp_end_date
+Temp Start Date     = signer.temp_start_date
+Temp End Date       = signer.temp_end_date
 Status              = signer.status</pre>
                 </div>
                 <div style="flex:1;">
-                    <h4 style="margin:0 0 6px 0;color:#6a1b9a;">New Signer mode (gad_id NOT in signer table):</h4>
-                    <pre style="background:#f3e5f5;padding:12px;border-radius:6px;font-size:0.82rem;white-space:pre;overflow-x:auto;">Use user_profile directly when signer record does not exist.
-GAD ID              = from URL parameter
-Last Name           = user_profile.last_name
-First Name          = user_profile.first_name
-Business Unit       = business_unit.name
-Signers Cost Center = user_profile.signer_cc
-Job Level/Job Grade = user_profile.job_level_id -> job.job_grade
-Job Title           = user_profile.job_level_id -> job.job_title
-Employee No.        = user_profile.employee_id
-Pickup Cheques      = Y/N
-Temporary           = Y/N
-Temporary Start Date     = Date Picker
-Temporary End Date       = Date Picker
-Status              = Active/Inactive</pre>
+                    <h4 style="margin:0 0 6px 0;color:#6a1b9a;">3. action=update_signer (Update Signer)</h4>
+                    <pre style="background:#f3e5f5;padding:12px;border-radius:6px;font-size:0.82rem;white-space:pre;overflow-x:auto;">Same data source as view_signer. Auto enters edit mode.
+
+GAD ID              = from URL param (upn)
+Last Name           = signer.gad_id -> wd_user_profile.last_name
+First Name          = signer.gad_id -> wd_user_profile.first_name
+Business Unit       = dropdown (infor_business_unit.name)
+Signers Cost Center = signer.gad_id -> wd_user_profile.signer_cost_center
+Job Level/Job Grade = signer.gad_id -> wd_user_profile.job_level_id -> wd_job_level.job_grade
+Job Title           = signer.gad_id -> wd_user_profile.job_level_id -> wd_job_level.job_title
+Employee No.        = signer.gad_id -> wd_user_profile.employee_id
+Pickup Cheques      = signer.pickup_cheque (editable)
+Temporary           = signer.temp (editable)
+Temp Start Date     = signer.temp_start_date (editable)
+Temp End Date       = signer.temp_end_date (editable)
+Status              = signer.status (editable)</pre>
+                </div>
+            </div>
+            <div style="display:flex;gap:24px;margin-top:12px;">
+                <div style="flex:1;">
+                    <h4 style="margin:0 0 6px 0;color:#6a1b9a;">4. action=view_request (View Request)</h4>
+                    <pre style="background:#f3e5f5;padding:12px;border-radius:6px;font-size:0.82rem;white-space:pre;overflow-x:auto;">Read-only view of a DAD change request (key=req_signer.id).
+
+- Editable fields from req_signer:
+Old values:
+  Pickup Cheques      = req_signer.old_pickup_cheque
+  Temporary           = req_signer.old_temp
+  Temp Start Date     = req_signer.old_temp_start_date
+  Temp End Date       = req_signer.old_temp_end_date
+  Status              = req_signer.old_status
+New values:
+  GAD ID              = req_signer.gad_id
+  Pickup Cheques      = req_signer.new_pickup_cheque
+  Temporary           = req_signer.new_temp
+  Temp Start Date     = req_signer.new_temp_start_date
+  Temp End Date       = req_signer.new_temp_end_date
+  Status              = req_signer.new_status
+
+- Lookup fields (by gad_id):
+Last Name           = wd_user_profile.last_name
+First Name          = wd_user_profile.first_name
+Business Unit       = req_signer.bu_id -> infor_business_unit.name
+Signers Cost Center = wd_user_profile.signer_cost_center
+Job Level/Job Grade = wd_user_profile.job_level_id -> wd_job_level.job_grade
+Job Title           = wd_user_profile.job_level_id -> wd_job_level.job_title
+Employee No.        = wd_user_profile.employee_id</pre>
                 </div>
                 <div style="flex:1;">
-                    <h4 style="margin:0 0 6px 0;color:#6a1b9a;">DADREQ mode (key=signer_req.gad_id):</h4>
-                    <pre style="background:#f3e5f5;padding:12px;border-radius:6px;font-size:0.82rem;white-space:pre;overflow-x:auto;">- Editable fields (pickup_cheque, temp, temp_start_date, temp_end_date, status)
-Old data = signer_req.source_data (in JSON format)
-New data:
-  GAD ID              = signer_req.gad_id
-  Pickup Cheques      = signer_req.pickup_cheque
-  Temporary           = signer_req.temp
-  Temporary Start Date     = signer_req.temp_start_date
-  Temporary End Date       = signer_req.temp_end_date
-  Status              = signer_req.status
+                    <h4 style="margin:0 0 6px 0;color:#6a1b9a;">5. action=approval1 (Approver 1 AVP+)</h4>
+                    <pre style="background:#f3e5f5;padding:12px;border-radius:6px;font-size:0.82rem;white-space:pre;overflow-x:auto;">Same as view_request + approval fields editable.
 
-- Uneditable fields (lookup by gad_id):
-Last Name           = signer_req.gad_id -> user_profile.last_name
-First Name          = signer_req.gad_id -> user_profile.first_name
-Business Unit       = signer_req.bu_id -> business_unit.name
-Signers Cost Center = signer_req.gad_id -> user_profile.signer_cc
-Job Level/Job Grade = signer_req.gad_id -> user_profile.job_level_id -> job.job_grade
-Job Title           = signer_req.gad_id -> user_profile.job_level_id -> job.job_title
-Employee No.        = signer_req.gad_id -> user_profile.employee_id</pre>
+- Same profile fields as view_request (read-only)
+
+- Editable approval fields:
+Approval 1 (AVP+)       = req_signer.approver1_result (select: Pending/Approved/Rejected)
+Approval 1 Note (AVP+) = req_signer.approver1_note (text input)
+
+- Read-only approval fields:
+Approver 1 (AVP+)       = req_signer.approver1_gad_id
+Approver 2 (TSA)         = req_signer.approver2_gad_id
+Approval 2 (TSA)         = req_signer.approver2_result
+Approval 2 Note (TSA)  = req_signer.approver2_note</pre>
                 </div>
+                <div style="flex:1;"></div>
+            </div>
+            <div style="display:flex;gap:24px;margin-top:12px;">
+                <div style="flex:1;">
+                    <h4 style="margin:0 0 6px 0;color:#6a1b9a;">6. action=approval2 (Approver 2 TSA)</h4>
+                    <pre style="background:#f3e5f5;padding:12px;border-radius:6px;font-size:0.82rem;white-space:pre;overflow-x:auto;">Same as view_request + approval fields editable.
+
+- Same profile fields as view_request (read-only)
+
+- Editable approval fields:
+Approval 2 (TSA)         = req_signer.approver2_result (select: Pending/Approved/Rejected)
+Approval 2 Note (TSA)  = req_signer.approver2_note (text input)
+
+- Read-only approval fields:
+Approver 1 (AVP+)       = req_signer.approver1_gad_id
+Approval 1 (AVP+)       = req_signer.approver1_result
+Approval 1 Note (AVP+) = req_signer.approver1_note
+Approver 2 (TSA)         = req_signer.approver2_gad_id</pre>
+                </div>
+                <div style="flex:1;"></div>
             </div>
             <h4 style="margin:12px 0 6px 0;color:#6a1b9a;">Inbound:</h4>
             <pre style="background:#f3e5f5;padding:12px;border-radius:6px;font-size:0.82rem;white-space:pre;overflow-x:auto;">Workday + AD (gad_id)
-- user_profile
-- territory
-- job
+- wd_user_profile
+- wd_territory
+- wd_job_level
 
 GDAS
-- policy
+- gdas_policy
 
 Infor
-- business_unit
-- cost_center
-- currency
-- exchange_rate
+- infor_business_unit
+- infor_cost_center
+- infor_currency
+- infor_exchange_rate
 
 DAD Request
 - signer
@@ -1348,54 +1479,67 @@ DAD Request
             <div style="display:flex;gap:24px;">
                 <div style="flex:1;">
                     <h4 style="margin:0 0 6px 0;color:#6a1b9a;">Signer mode (1:M joining signer.gad_id=signer_limit.gad_id):</h4>
-                    <pre style="background:#f3e5f5;padding:12px;border-radius:6px;font-size:0.82rem;white-space:pre;overflow-x:auto;">Countries (Territories) = signer_limit.territory_id -> territory.country_code
-Policy Category         = signer_limit.policy_id -> policy.category
+                    <pre style="background:#f3e5f5;padding:12px;border-radius:6px;font-size:0.82rem;white-space:pre;overflow-x:auto;">Countries (Territories) = signer_limit.territory_id -> wd_territory.country_code
+Policy Category         = signer_limit.policy_id -> gdas_policy.category
 Limit Amounts           = signer_limit.limit_amount
 Currency                = signer_limit.currency
-Approval Cost Center    = signer_limit.approval_cc_id -> cost_center.cc
+Approval Cost Center    = signer_limit.approval_cc_id -> infor_cost_center.name
 Exception               = signer_limit.exception
 Temporary               = signer_limit.temp
 Temporary Start Date    = signer_limit.temp_start_date
 Temporary End Date      = signer_limit.temp_end_date
 Business Rationale      = signer_limit.business_rationale
 Business Controls       = signer_limit.business_control
-System                  = signer_limit.policy_id -> policy.system
+System                  = signer_limit.policy_id -> gdas_policy.system
 Accounts Restriction    = signer_limit.account_restriction</pre>
                 </div>
                 <div style="flex:1;">
-                    <h4 style="margin:0 0 6px 0;color:#6a1b9a;">DADREQ mode (1:M joining signer_req.id=signer_limit_req.signer_req_id):</h4>
-                    <pre style="background:#f3e5f5;padding:12px;border-radius:6px;font-size:0.82rem;white-space:pre;overflow-x:auto;">Change Type             = signer_limit_req.action
-Old data                = signer_limit_req.source_data (in JSON format)
-New data:
-Countries (Territories) = signer_limit_req.territory_id -> territory.country_code
-Policy Category         = signer_limit_req.policy_id -> policy.category
-Limit Amounts           = signer_limit_req.limit_amount
-Currency                = signer_limit_req.currency
-Approval Cost Center    = signer_limit_req.approval_cc_id -> cost_center.cc
-Exception               = signer_limit_req.exception
-Temporary               = signer_limit_req.temp
-Temporary Start Date    = signer_limit_req.temp_start_date
-Temporary End Date      = signer_limit_req.temp_end_date
-Business Rationale      = signer_limit_req.business_rationale
-Business Controls       = signer_limit_req.business_control
-System                  = signer_limit_req.policy_id -> policy.system
-Accounts Restriction    = signer_limit_req.account_restriction</pre>
+                    <h4 style="margin:0 0 6px 0;color:#6a1b9a;">DADREQ mode (1:M joining req_signer.id=req_signer_limit.req_signer_id):</h4>
+                    <pre style="background:#f3e5f5;padding:12px;border-radius:6px;font-size:0.82rem;white-space:pre;overflow-x:auto;">Change Type             = req_signer_limit.action (Change/Add/Remove/Unchange)
+Old data (for Change/Remove/Unchange only, else NULL):
+Countries (Territories) = req_signer_limit.old_territory_id -> wd_territory.country_code
+Policy Category         = req_signer_limit.old_policy_id -> gdas_policy.category
+Limit Amounts           = req_signer_limit.old_limit_amount
+Currency                = req_signer_limit.old_currency
+Approval Cost Center    = req_signer_limit.old_approval_cc_id -> infor_cost_center.name
+Exception               = req_signer_limit.old_exception
+Temporary               = req_signer_limit.old_temp
+Temporary Start Date    = req_signer_limit.old_temp_start_date
+Temporary End Date      = req_signer_limit.old_temp_end_date
+Business Rationale      = req_signer_limit.old_business_rationale
+Business Controls       = req_signer_limit.old_business_control
+System                  = req_signer_limit.old_policy_id -> gdas_policy.system
+Accounts Restriction    = req_signer_limit.old_account_restriction
+New data (for Change/Add only, else NULL):
+Countries (Territories) = req_signer_limit.new_territory_id -> wd_territory.country_code
+Policy Category         = req_signer_limit.new_policy_id -> gdas_policy.category
+Limit Amounts           = req_signer_limit.new_limit_amount
+Currency                = req_signer_limit.new_currency
+Approval Cost Center    = req_signer_limit.new_approval_cc_id -> infor_cost_center.name
+Exception               = req_signer_limit.new_exception
+Temporary               = req_signer_limit.new_temp
+Temporary Start Date    = req_signer_limit.new_temp_start_date
+Temporary End Date      = req_signer_limit.new_temp_end_date
+Business Rationale      = req_signer_limit.new_business_rationale
+Business Controls       = req_signer_limit.new_business_control
+System                  = req_signer_limit.new_policy_id -> gdas_policy.system
+Accounts Restriction    = req_signer_limit.new_account_restriction</pre>
                 </div>
             </div>
             <h4 style="margin:12px 0 6px 0;color:#6a1b9a;">Inbound:</h4>
             <pre style="background:#f3e5f5;padding:12px;border-radius:6px;font-size:0.82rem;white-space:pre;overflow-x:auto;">Workday + AD (gad_id)
-- user_profile
-- territory
-- job
+- wd_user_profile
+- wd_territory
+- wd_job_level
 
 GDAS
-- policy
+- gdas_policy
 
 Infor
-- business_unit
-- cost_center
-- currency
-- exchange_rate
+- infor_business_unit
+- infor_cost_center
+- infor_currency
+- infor_exchange_rate
 
 DAD Request
 - signer

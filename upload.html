@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DAD - Upload Tool</title>
     <link rel="stylesheet" href="css/style.css">
+    <script src="js/sql-js/sql-wasm.js"></script>
     <style>
         .upload-items { display: flex; flex-direction: column; gap: 16px; }
         .upload-item { border: 1px solid #c5d4e8; border-radius: 6px; background: #fff; }
@@ -37,51 +38,41 @@
             <div class="panel-title">Upload Tool</div>
             <div class="upload-items">
 
-                <!-- Item 1: Download all Signer Data -->
+                <!-- Download all Signer Data -->
                 <div class="upload-item">
-                    <div class="upload-item-header">1. Download All Signer Data</div>
+                    <div class="upload-item-header">Download All Signer Data</div>
                     <div class="upload-item-body">
-                        <button class="btn btn-primary" onclick="downloadCSV('all_signer_data', allSignerCols)">Download All Signer Data</button>
+                        <button class="btn btn-primary" onclick="downloadAllSignerData()">Download All Signer Data</button>
                     </div>
                 </div>
 
-                <!-- Item 2: Disable/Enable Signers -->
+                <!-- Upload Box: Update Signer Profile + Update Signer Limit -->
                 <div class="upload-item">
-                    <div class="upload-item-header">2. Disable / Enable Signers</div>
-                    <div class="upload-item-body">
-                        <button class="btn" onclick="downloadCSV('disable_enable_signers', disableEnableCols)">Download Template File</button>
-                        <span class="upload-group"><button class="btn btn-primary" onclick="handleUpload('upload2')">Upload Changes</button><input type="file" id="upload2" accept=".csv,.xlsx"></span>
-                        <span class="upload-status" id="status2"></span>
-                    </div>
-                </div>
+                    <div class="upload-item-header">Upload Changes</div>
+                    <div style="padding:12px 16px; display:flex; flex-direction:column; gap:14px;">
 
-                <!-- Item 3: Update Signer Data -->
-                <div class="upload-item">
-                    <div class="upload-item-header">3. Update Signer Data</div>
-                    <div class="upload-item-body">
-                        <button class="btn" onclick="downloadCSV('update_signer', updateApprovalCols)">Download Template File</button>
-                        <span class="upload-group"><button class="btn btn-primary" onclick="handleUpload('upload3')">Upload Changes</button><input type="file" id="upload3" accept=".csv,.xlsx"></span>
-                        <span class="upload-status" id="status3"></span>
-                    </div>
-                </div>
+                        <div>
+                            <div style="font-weight:600; font-size:0.85rem; color:#2a5a8a; margin-bottom:6px;">Update Signer Profile</div>
+                            <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+                                <button class="btn" onclick="downloadSignerProfile()">Download Template File</button>
+                                <span class="upload-group"><button class="btn btn-primary" onclick="handleUpload('uploadProfile')">Upload Changes</button><input type="file" id="uploadProfile" accept=".csv,.xlsx"></span>
+                                <span class="upload-status" id="statusProfile"></span>
+                            </div>
+                        </div>
 
-                <!-- Item 4: Add Signer Data -->
-                <div class="upload-item">
-                    <div class="upload-item-header">4. Add Signer Data</div>
-                    <div class="upload-item-body">
-                        <button class="btn" onclick="downloadCSV('add_signer', addApprovalCols)">Download Template File</button>
-                        <span class="upload-group"><button class="btn btn-primary" onclick="handleUpload('upload4')">Upload Changes</button><input type="file" id="upload4" accept=".csv,.xlsx"></span>
-                        <span class="upload-status" id="status4"></span>
-                    </div>
-                </div>
+                        <div>
+                            <div style="font-weight:600; font-size:0.85rem; color:#2a5a8a; margin-bottom:6px;">Update Signer Limit</div>
+                            <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+                                <button class="btn" onclick="downloadSignerLimit()">Download Template File</button>
+                                <span class="upload-group"><button class="btn btn-primary" onclick="handleUpload('uploadLimit')">Upload Changes</button><input type="file" id="uploadLimit" accept=".csv,.xlsx"></span>
+                                <span class="upload-status" id="statusLimit"></span>
+                            </div>
+                        </div>
 
-                <!-- Item 5: Delete Signer Data -->
-                <div class="upload-item">
-                    <div class="upload-item-header">5. Delete Signer Data</div>
-                    <div class="upload-item-body">
-                        <button class="btn" onclick="downloadCSV('delete_signer', deleteApprovalCols)">Download Template File</button>
-                        <span class="upload-group"><button class="btn btn-primary" onclick="handleUpload('upload5')">Upload Changes</button><input type="file" id="upload5" accept=".csv,.xlsx"></span>
-                        <span class="upload-status" id="status5"></span>
+                        <div style="border-top:1px solid #c5d4e8; padding-top:12px; display:flex; align-items:center; gap:12px;">
+                            <button id="btnSubmitUpload" class="btn btn-primary" style="font-size:0.85rem; padding:8px 28px;" onclick="submitUpload()">Submit</button>
+                            <span id="submitMsg" style="display:none; font-size:0.85rem; font-weight:600; color:#2e7d32;">Submitted successfully, pending for review.</span>
+                        </div>
                     </div>
                 </div>
 
@@ -90,11 +81,116 @@
     </div>
 
     <script>
-        var allSignerCols = ['GAD ID','Approval ID','Countries (Territories)','Policy Category','Limit Amounts','Currency','Approval Cost Center','Exception','Temporary','Business Rationale','Business Controls','System','Accounts Restriction'];
-        var disableEnableCols = ['Action (Enable/Disable)','GAD ID'];
-        var updateApprovalCols = ['Approval ID','Countries (Territories)','Policy Category','Limit Amounts','Currency','Approval Cost Center','Exception','Temporary','Business Rationale','Business Controls','System','Accounts Restriction'];
-        var addApprovalCols = ['GAD ID','Countries (Territories)','Policy Category','Limit Amounts','Currency','Approval Cost Center','Exception','Temporary','Business Rationale','Business Controls','System','Accounts Restriction'];
-        var deleteApprovalCols = ['GAD ID','Approval ID'];
+        async function downloadSignerLimit() {
+            var SQL = await initSqlJs({ locateFile: function(f) { return 'js/sql-js/' + f; } });
+            var buf = await fetch('db/data.db').then(function(r) { return r.arrayBuffer(); });
+            var db = new SQL.Database(new Uint8Array(buf));
+
+            var headers = ['Action (UPDATE/DELETE/ADD)','Approval ID (key)','GAD ID','Countries (Territories)','Policy Category','Limit Amounts','Currency','Approval Cost Center','Exception','Temporary','Temporary Start Date','Temporary End Date','Business Rationale','Business Controls','Accounts Restriction'];
+            var csvRows = [headers.map(function(h) { return '"' + h + '"'; }).join(',')];
+
+            // 3 dummy template rows
+            csvRows.push('"UPDATE","9999","template@please_delete","NA","EXP","50000","CAD","1010","N","N","","","N","N",""');
+            csvRows.push('"DELETE","9998","template2@please_delete","US","PAC","100000","USD","2020","Y","Y","20260131","20260220","Y","Y","GL1234"');
+            csvRows.push('"ADD","","template3@please_delete","HK","EXT","25000","HKD","3030","N","N","","","N","N",""');
+
+            function fmtDate(d) {
+                if (!d) return '';
+                return String(d).replace(/-/g, '');
+            }
+
+            var res = db.exec(
+                "SELECT sl.id, sl.gad_id, " +
+                "COALESCE(t.country_code, '') AS country_code, " +
+                "COALESCE(p.category, '') AS category, " +
+                "sl.limit_amount, sl.currency, " +
+                "COALESCE(cc.name, '') AS cc_name, " +
+                "sl.exception, sl.temp, sl.temp_start_date, sl.temp_end_date, " +
+                "sl.business_rationale, sl.business_control, sl.account_restriction " +
+                "FROM signer_limit sl " +
+                "LEFT JOIN wd_territory t ON sl.territory_id = t.id " +
+                "LEFT JOIN gdas_policy p ON sl.policy_id = p.id " +
+                "LEFT JOIN infor_cost_center cc ON sl.approval_cc_id = cc.id " +
+                "ORDER BY sl.gad_id, sl.id"
+            );
+            if (res.length) {
+                res[0].values.forEach(function(row) {
+                    csvRows.push(
+                        '"",' +
+                        '"' + (row[0] || '') + '",' +
+                        '"' + (row[1] || '') + '",' +
+                        '"' + (row[2] || '') + '",' +
+                        '"' + (row[3] || '') + '",' +
+                        '"' + (row[4] != null ? row[4] : '') + '",' +
+                        '"' + (row[5] || '') + '",' +
+                        '"' + (row[6] || '') + '",' +
+                        '"' + (row[7] ? 'Y' : 'N') + '",' +
+                        '"' + (row[8] ? 'Y' : 'N') + '",' +
+                        '"' + fmtDate(row[9]) + '",' +
+                        '"' + fmtDate(row[10]) + '",' +
+                        '"' + (row[11] ? 'Y' : 'N') + '",' +
+                        '"' + (row[12] ? 'Y' : 'N') + '",' +
+                        '"' + (row[13] || '') + '"'
+                    );
+                });
+            }
+
+            var blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+            var link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'update_signer_limit.csv';
+            link.click();
+            URL.revokeObjectURL(link.href);
+            db.close();
+        }
+
+        async function downloadSignerProfile() {
+            var SQL = await initSqlJs({ locateFile: function(f) { return 'js/sql-js/' + f; } });
+            var buf = await fetch('db/data.db').then(function(r) { return r.arrayBuffer(); });
+            var db = new SQL.Database(new Uint8Array(buf));
+
+            var headers = ['Action (UPDATE/DELETE/ADD)','GAD ID (key)','Business Unit','Pickup Cheques','Temporary','Temporary Start Date','Temporary End Date'];
+            var csvRows = [headers.map(function(h) { return '"' + h + '"'; }).join(',')];
+
+            // 3 dummy template rows
+            csvRows.push('"UPDATE","template@please_delete","CDN HR","Y","N","",""');
+            csvRows.push('"DELETE","template2@please_delete","Cdn Manulife Bank","N","Y","20260131","20260220"');
+            csvRows.push('"ADD","template3@please_delete","CDN IS","N","N","",""');
+
+            function fmtDate(d) {
+                if (!d) return '';
+                return String(d).replace(/-/g, '');
+            }
+
+            var res = db.exec(
+                "SELECT s.gad_id, COALESCE(bu.name, '') AS bu_name, " +
+                "s.pickup_cheque, s.temp, s.temp_start_date, s.temp_end_date " +
+                "FROM signer s " +
+                "LEFT JOIN infor_business_unit bu ON s.bu_id = bu.id " +
+                "ORDER BY s.gad_id"
+            );
+            if (res.length) {
+                res[0].values.forEach(function(row) {
+                    csvRows.push(
+                        '"",' +
+                        '"' + (row[0] || '') + '",' +
+                        '"' + (row[1] || '') + '",' +
+                        '"' + (row[2] ? 'Y' : 'N') + '",' +
+                        '"' + (row[3] ? 'Y' : 'N') + '",' +
+                        '"' + fmtDate(row[4]) + '",' +
+                        '"' + fmtDate(row[5]) + '"'
+                    );
+                });
+            }
+
+            var blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+            var link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'update_signer_profile.csv';
+            link.click();
+            URL.revokeObjectURL(link.href);
+            db.close();
+        }
 
         function downloadCSV(filename, columns) {
             var csv = columns.map(function(c) { return '"' + c + '"'; }).join(',');
@@ -106,6 +202,67 @@
             URL.revokeObjectURL(link.href);
         }
 
+        async function downloadAllSignerData() {
+            var SQL = await initSqlJs({ locateFile: function(f) { return 'js/sql-js/' + f; } });
+            var buf = await fetch('db/data.db').then(function(r) { return r.arrayBuffer(); });
+            var db = new SQL.Database(new Uint8Array(buf));
+
+            var res = db.exec(
+                "SELECT s.gad_id, u.employee_id, u.last_name, u.first_name, u.signer_cost_center, " +
+                "j.job_grade, j.job_title, j.limit_amount_max, " +
+                "bu.name, " +
+                "s.pickup_cheque, s.temp, s.temp_start_date, s.temp_end_date, s.status, " +
+                "sl.id, " +
+                "t.country_code, t.territory, " +
+                "p.country_code AS policy_country, p.category, p.description, p.system, p.approval_count, p.threshold_amount, p.manual_approval, " +
+                "sl.limit_amount, sl.currency, " +
+                "cc.name, " +
+                "sl.exception, sl.temp, sl.temp_start_date, sl.temp_end_date, " +
+                "sl.business_rationale, sl.business_control, sl.account_restriction " +
+                "FROM signer_limit sl " +
+                "LEFT JOIN signer s ON sl.gad_id = s.gad_id " +
+                "LEFT JOIN wd_user_profile u ON s.gad_id = u.gad_id " +
+                "LEFT JOIN wd_job_level j ON u.job_level_id = j.id " +
+                "LEFT JOIN infor_business_unit bu ON s.bu_id = bu.id " +
+                "LEFT JOIN wd_territory t ON sl.territory_id = t.id " +
+                "LEFT JOIN gdas_policy p ON sl.policy_id = p.id " +
+                "LEFT JOIN infor_cost_center cc ON sl.approval_cc_id = cc.id"
+            );
+
+            var headers = [
+                'GAD ID','Employee No.','Last Name','First Name','Signers Cost Center',
+                'Job Level / Job Grade','Job Title','Job Level Limit Amount',
+                'Business Unit',
+                'Pickup Cheques','Temporary','Temporary Start Date','Temporary End Date','Status',
+                'Approval ID',
+                'Countries','Territory',
+                'Policy Country','Policy Category','Policy Description','System','No. of Approvals','Threshold Amount','Manual Approval',
+                'Limit Amounts','Currency',
+                'Approval Cost Center',
+                'Exception','Limit Temporary','Limit Temporary Start Date','Limit Temporary End Date',
+                'Business Rationale','Business Controls','Accounts Restriction'
+            ];
+            var csvRows = [headers.map(function(h) { return '"' + h + '"'; }).join(',')];
+
+            if (res.length) {
+                res[0].values.forEach(function(row) {
+                    csvRows.push(row.map(function(val) {
+                        if (val === null || val === undefined) return '';
+                        var s = String(val).replace(/"/g, '""');
+                        return '"' + s + '"';
+                    }).join(','));
+                });
+            }
+
+            var blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+            var link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'all_signer_data.csv';
+            link.click();
+            URL.revokeObjectURL(link.href);
+            db.close();
+        }
+
         function handleUpload(inputId) {
             var input = document.getElementById(inputId);
             var statusId = 'status' + inputId.replace('upload', '');
@@ -115,8 +272,14 @@
                 statusEl.style.color = '#d32f2f';
                 return;
             }
-            statusEl.textContent = 'File "' + input.files[0].name + '" uploaded successfully. (Demo only)';
+            statusEl.textContent = 'File "' + input.files[0].name + '" loaded.';
             statusEl.style.color = '#2e7d32';
+        }
+
+        function submitUpload() {
+            if (!confirm('Are you sure you want to submit the uploaded changes for review?')) return;
+            document.getElementById('btnSubmitUpload').style.display = 'none';
+            document.getElementById('submitMsg').style.display = 'inline';
         }
     </script>
 </body>

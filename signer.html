@@ -6,6 +6,13 @@
     <title>DAD - Signer Authorization</title>
     <link rel="stylesheet" href="css/style.css">
     <script src="js/sql-js/sql-wasm.js"></script>
+    <style>
+        .status-badge{display:inline-block;padding:2px 10px;border-radius:12px;font-size:.78rem;font-weight:600}
+        .status-open{background:#dbeafe;color:#1e40af}
+        .status-complete{background:#dcfce7;color:#166534}
+        .status-reject{background:#fee2e2;color:#991b1b}
+        .status-cancel{background:#f3f4f6;color:#4b5563}
+    </style>
 </head>
 <body>
     <div class="container">
@@ -17,7 +24,6 @@
         <div class="action-bar action-bar--blue">
             <span class="action-bar-label">Actions:</span>
             <button onclick="location.reload()">Refresh</button>
-            <button onclick="doExport()">Export</button>
             <button onclick="window.print()">Print</button>
         </div>
 
@@ -30,6 +36,14 @@
                 <div class="filter-field">
                     <label for="gadId">GAD ID</label>
                     <input type="text" id="gadId" placeholder="e.g. user@domain.com">
+                </div>
+                <div class="filter-field">
+                    <label for="status">Status</label>
+                    <select id="status">
+                        <option value="">All</option>
+                        <option value="1">Active</option>
+                        <option value="0">Inactive</option>
+                    </select>
                 </div>
                 <div class="filter-field">
                     <label for="empNo">Employee No.</label>
@@ -110,7 +124,7 @@
 
         <!-- Results Table -->
         <div class="panel panel--blue">
-            <div class="panel-title" style="position:relative;">Results
+            <div class="panel-title" style="position:relative;">Results (TOP 50)
                 <button onclick="document.getElementById('devNoteModal').style.display='flex'" style="position:absolute;right:0;top:50%;transform:translateY(-50%);background:#6a1b9a;color:#fff;border:none;padding:4px 14px;border-radius:4px;font-size:0.78rem;cursor:pointer;">DEV Note</button>
             </div>
             <div class="data-table-wrapper">
@@ -161,11 +175,11 @@
                     sel.appendChild(o);
                 });
             }
-            populateSelect('bu', 'SELECT DISTINCT name FROM business_unit ORDER BY name');
-            populateSelect('currency', 'SELECT DISTINCT currency FROM currency ORDER BY currency');
-            populateSelect('costCentre', 'SELECT DISTINCT cc FROM cost_center ORDER BY cc');
-            populateSelect('policyCategory', 'SELECT DISTINCT category FROM policy ORDER BY category');
-            populateSelect('system', 'SELECT DISTINCT system FROM policy ORDER BY system');
+            populateSelect('bu', 'SELECT DISTINCT name FROM infor_business_unit ORDER BY name');
+            populateSelect('currency', 'SELECT DISTINCT currency FROM infor_currency ORDER BY currency');
+            populateSelect('costCentre', 'SELECT DISTINCT name FROM infor_cost_center ORDER BY name');
+            populateSelect('policyCategory', 'SELECT DISTINCT category FROM gdas_policy ORDER BY category');
+            populateSelect('system', 'SELECT DISTINCT system FROM gdas_policy ORDER BY system');
 
             var res = DB.exec(
                 "SELECT s.gad_id, s.status, s.pickup_cheque, s.temp, s.temp_start_date, s.temp_end_date, " +
@@ -173,14 +187,14 @@
                 "b.name AS bu_name, " +
                 "sl.limit_amount, sl.currency, sl.exception, sl.approval_cc_id, sl.policy_id, " +
                 "p.category, p.system, " +
-                "cc.cc " +
+                "cc.name " +
                 "FROM signer s " +
-                "LEFT JOIN user_profile u ON s.gad_id = u.gad_id " +
-                "LEFT JOIN business_unit b ON s.bu_id = b.id " +
+                "LEFT JOIN wd_user_profile u ON s.gad_id = u.gad_id " +
+                "LEFT JOIN infor_business_unit b ON s.bu_id = b.id " +
                 "LEFT JOIN signer_limit sl ON sl.gad_id = s.gad_id " +
-                "LEFT JOIN policy p ON sl.policy_id = p.id " +
-                "LEFT JOIN cost_center cc ON sl.approval_cc_id = cc.id " +
-                "ORDER BY u.last_name, u.first_name"
+                "LEFT JOIN gdas_policy p ON sl.policy_id = p.id " +
+                "LEFT JOIN infor_cost_center cc ON sl.approval_cc_id = cc.id " +
+                "ORDER BY s.gad_id LIMIT 50"
             );
 
             if (res.length) {
@@ -202,16 +216,16 @@
         function renderRows(rows) {
             var tbody = document.getElementById('resultsBody');
             tbody.innerHTML = '';
-            var statusColors = { 1: '#2e7d32', 0: '#c62828' };
+            var statusClasses = { 1: 'status-complete', 0: 'status-reject' };
             var statusLabels = { 1: 'Active', 0: 'Inactive' };
             rows.forEach(function(r) {
                 var tr = document.createElement('tr');
                 tr.style.cursor = 'pointer';
-                tr.onclick = function() { window.location = 'signer_details.html?upn=' + encodeURIComponent(r.gadId); };
+                tr.onclick = function() { window.location = 'signer_details.html?action=view_signer&upn=' + encodeURIComponent(r.gadId); };
                 var amt = r.limitAmount != null ? Number(r.limitAmount).toLocaleString() : '';
                 tr.innerHTML =
                     '<td>' + r.gadId + '</td>' +
-                    '<td><span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:0.75rem;color:#fff;background:' + (statusColors[r.status] || '#757575') + ';">' + (statusLabels[r.status] || '') + '</span></td>' +
+                    '<td><span class="status-badge ' + (statusClasses[r.status] || '') + '">' + (statusLabels[r.status] || '') + '</span></td>' +
                     '<td>' + r.employeeId + '</td>' +
                     '<td>' + r.firstName + '</td>' +
                     '<td>' + r.lastName + '</td>' +
@@ -232,7 +246,7 @@
 
         // Map filter element IDs to result table column indices (0-based)
         var FILTER_COL_MAP = {
-            gadId: 0, empNo: 2, firstName: 3, lastName: 4, bu: 5,
+            gadId: 0, status: 1, empNo: 2, firstName: 3, lastName: 4, bu: 5,
             currency: 6, limitAmt: 7, costCentre: 8, policyCategory: 9,
             system: 10, chequePickUp: 11, exception: 12, tempDelegation: 13, tempStart: 14, tempEnd: 15
         };
@@ -256,10 +270,11 @@
         }
 
         function doSearch() {
-            var gadIdVal = document.getElementById('gadId').value.trim().toLowerCase();
+            var gadIdVal = document.getElementById('gadId').value.trim();
+            var status = document.getElementById('status').value;
             var empNo = document.getElementById('empNo').value.trim();
-            var firstName = document.getElementById('firstName').value.trim().toLowerCase();
-            var lastName = document.getElementById('lastName').value.trim().toLowerCase();
+            var firstName = document.getElementById('firstName').value.trim();
+            var lastName = document.getElementById('lastName').value.trim();
             var bu = document.getElementById('bu').value;
             var cur = document.getElementById('currency').value;
             var limitAmt = document.getElementById('limitAmt').value.trim();
@@ -270,28 +285,63 @@
             var exc = document.getElementById('exception').value;
             var temp = document.getElementById('tempDelegation').value;
 
-            var filtered = ALL_ROWS.filter(function(r) {
-                if (gadIdVal && r.gadId.toLowerCase().indexOf(gadIdVal) === -1) return false;
-                if (empNo && String(r.employeeId) !== empNo) return false;
-                if (firstName && r.firstName.toLowerCase().indexOf(firstName) === -1) return false;
-                if (lastName && r.lastName.toLowerCase().indexOf(lastName) === -1) return false;
-                if (bu && r.buName !== bu) return false;
-                if (cur && r.currency !== cur) return false;
-                if (limitAmt && r.limitAmount != Number(limitAmt)) return false;
-                if (cc && r.cc !== cc) return false;
-                if (cat && r.category !== cat) return false;
-                if (sys && r.system !== sys) return false;
-                if (chq && (r.pickupCheque ? 'Y' : 'N') !== chq) return false;
-                if (exc && (r.exception ? 'Y' : 'N') !== exc) return false;
-                if (temp && (r.temp ? 'Y' : 'N') !== temp) return false;
-                return true;
-            });
-            renderRows(filtered);
-            highlightColumns();
-        }
+            if (!gadIdVal && status === '' && !empNo && !firstName && !lastName && !bu && !cur && !limitAmt && !cc && !cat && !sys && !chq && !exc && !temp) {
+                renderRows(ALL_ROWS);
+                highlightColumns();
+                return;
+            }
 
-        function doExport() {
-            alert('Export triggered – connect to backend to generate file.');
+            var sql =
+                "SELECT s.gad_id, s.status, s.pickup_cheque, s.temp, s.temp_start_date, s.temp_end_date, " +
+                "u.employee_id, u.first_name, u.last_name, " +
+                "b.name AS bu_name, " +
+                "sl.limit_amount, sl.currency, sl.exception, sl.approval_cc_id, sl.policy_id, " +
+                "p.category, p.system, " +
+                "cc.name " +
+                "FROM signer s " +
+                "LEFT JOIN wd_user_profile u ON s.gad_id = u.gad_id " +
+                "LEFT JOIN infor_business_unit b ON s.bu_id = b.id " +
+                "LEFT JOIN signer_limit sl ON sl.gad_id = s.gad_id " +
+                "LEFT JOIN gdas_policy p ON sl.policy_id = p.id " +
+                "LEFT JOIN infor_cost_center cc ON sl.approval_cc_id = cc.id";
+            var wheres = [];
+            var params = [];
+
+            if (gadIdVal) { wheres.push("LOWER(s.gad_id) LIKE ?"); params.push('%' + gadIdVal.toLowerCase() + '%'); }
+            if (status !== '') { wheres.push("s.status = ?"); params.push(Number(status)); }
+            if (empNo) { wheres.push("u.employee_id = ?"); params.push(Number(empNo)); }
+            if (firstName) { wheres.push("LOWER(u.first_name) LIKE ?"); params.push('%' + firstName.toLowerCase() + '%'); }
+            if (lastName) { wheres.push("LOWER(u.last_name) LIKE ?"); params.push('%' + lastName.toLowerCase() + '%'); }
+            if (bu) { wheres.push("b.name = ?"); params.push(bu); }
+            if (cur) { wheres.push("sl.currency = ?"); params.push(cur); }
+            if (limitAmt) { wheres.push("sl.limit_amount = ?"); params.push(Number(limitAmt)); }
+            if (cc) { wheres.push("cc.name = ?"); params.push(cc); }
+            if (cat) { wheres.push("p.category = ?"); params.push(cat); }
+            if (sys) { wheres.push("p.system = ?"); params.push(sys); }
+            if (chq) { wheres.push("s.pickup_cheque = ?"); params.push(chq === 'Y' ? 1 : 0); }
+            if (exc) { wheres.push("sl.exception = ?"); params.push(exc === 'Y' ? 1 : 0); }
+            if (temp) { wheres.push("s.temp = ?"); params.push(temp === 'Y' ? 1 : 0); }
+
+            if (wheres.length) sql += " WHERE " + wheres.join(" AND ");
+            sql += " ORDER BY s.gad_id LIMIT 50";
+
+            var res = DB.exec(sql, params);
+            var rows = [];
+            if (res.length) {
+                rows = res[0].values.map(function(r) {
+                    return {
+                        gadId: r[0] || '', status: r[1], pickupCheque: r[2],
+                        temp: r[3], tempStartDate: r[4] || '', tempEndDate: r[5] || '',
+                        employeeId: r[6] || '',
+                        firstName: r[7] || '', lastName: r[8] || '',
+                        buName: r[9] || '', limitAmount: r[10],
+                        currency: r[11] || '', exception: r[12],
+                        cc: r[17] || '', category: r[15] || '', system: r[16] || ''
+                    };
+                });
+            }
+            renderRows(rows);
+            highlightColumns();
         }
 
         function clearFilters() {
@@ -316,32 +366,32 @@
             <h3 style="margin:0 0 14px;color:#6a1b9a;">DEV Note – Search Filters</h3>
             <h4 style="margin:0 0 8px;color:#6a1b9a;font-size:0.85rem;">Fields mapping (key=signer.gad_id):</h4>
             <pre style="background:#f3e5f5;color:#4a148c;padding:14px;border-radius:6px;font-size:0.75rem;line-height:1.6;margin:0 0 16px;white-space:pre-wrap;">GAD ID = free text input
-Employee No. = Distinct user_profile.employee_id
+Employee No. = Distinct wd_user_profile.employee_id
 First Name = free text input
 Last name = free text input
-Business Unit = Distinct business_unit.name
-Currency = Distinct currency.currency
+Business Unit = Distinct infor_business_unit.name
+Currency = Distinct infor_currency.currency
 Limit Amounts = free number input
-Approval Cost Centre = Distinct cost_center.cc
-Policy Category = Distinct policy.category
-System = Distinct policy.system
+Approval Cost Centre = Distinct infor_cost_center.name
+Policy Category = Distinct gdas_policy.category
+System = Distinct gdas_policy.system
 Cheque Pick Up = Dropdown (Y/N)
 Exception = Dropdown (Y/N)
 Temporary = Dropdown (Y/N)</pre>
             <h4 style="margin:0 0 8px;color:#6a1b9a;font-size:0.85rem;">Inbound:</h4>
             <pre style="background:#f3e5f5;color:#4a148c;padding:14px;border-radius:6px;font-size:0.75rem;line-height:1.6;margin:0;white-space:pre-wrap;">Workday + AD (gad_id)
-- user_profile
-- territory
-- job
+- wd_user_profile
+- wd_territory
+- wd_job_level
 
 GDAS
-- policy
+- gdas_policy
 
 Infor
-- business_unit
-- cost_center
-- currency
-- exchange_rate
+- infor_business_unit
+- infor_cost_center
+- infor_currency
+- infor_exchange_rate
 
 DAD Request
 - signer
@@ -357,15 +407,15 @@ DAD Request
             <h4 style="margin:0 0 8px;color:#6a1b9a;font-size:0.85rem;">Fields mapping (key=signer.gad_id):</h4>
             <pre style="background:#f3e5f5;color:#4a148c;padding:14px;border-radius:6px;font-size:0.75rem;line-height:1.6;margin:0 0 16px;white-space:pre-wrap;">GAD ID = signer.gad_id
 Status = signer.status
-Employee No. = signer.gad_id -> user_profile.employee_id
-Last Name = signer.gad_id -> user_profile.last_name
-First Name = signer.gad_id -> user_profile.first_name
-Business Unit = signer.bu_id -> business_unit.name
+Employee No. = signer.gad_id -> wd_user_profile.employee_id
+Last Name = signer.gad_id -> wd_user_profile.last_name
+First Name = signer.gad_id -> wd_user_profile.first_name
+Business Unit = signer.bu_id -> infor_business_unit.name
 Currency = signer_limit.currency
 Limit Amounts = signer_limit.limit_amount
-Approval Cost Centre = signer_limit.approval_cc_id -> cost_center.cc
-Policy Category = signer_limit.policy_id -> policy.category
-System = signer_limit.policy_id -> policy.system
+Approval Cost Centre = signer_limit.approval_cc_id -> infor_cost_center.name
+Policy Category = signer_limit.policy_id -> gdas_policy.category
+System = signer_limit.policy_id -> gdas_policy.system
 Cheque Pick Up = signer.pickup_cheque
 Exception = signer_limit.exception
 Temporary = signer.temp
@@ -373,18 +423,18 @@ Temporary Start Date = signer.temp_start_date
 Temporary End Date = signer.temp_end_date</pre>
             <h4 style="margin:0 0 8px;color:#6a1b9a;font-size:0.85rem;">Inbound:</h4>
             <pre style="background:#f3e5f5;color:#4a148c;padding:14px;border-radius:6px;font-size:0.75rem;line-height:1.6;margin:0;white-space:pre-wrap;">Workday + AD (gad_id)
-- user_profile
-- territory
-- job
+- wd_user_profile
+- wd_territory
+- wd_job_level
 
 GDAS
-- policy
+- gdas_policy
 
 Infor
-- business_unit
-- cost_center
-- currency
-- exchange_rate
+- infor_business_unit
+- infor_cost_center
+- infor_currency
+- infor_exchange_rate
 
 DAD Request
 - signer

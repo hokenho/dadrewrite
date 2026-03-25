@@ -164,7 +164,7 @@
         }
 
         function handleRowClick(dadReqId) {
-            window.location = 'signer_details.html?action=approval_avp&id=' + dadReqId.replace(/\D/g, '');
+            window.location = 'signer_details.html?action=approval1&id=' + dadReqId.replace(/\D/g, '');
         }
 
         function doExport() {
@@ -210,11 +210,11 @@ Request Status = Dropdown (Y/N)</pre>
 Date Submitted = req_signer.req_date
 Submitted By = req_signer.submitter
 Submitted For = req_signer.gad_id
-Approve (AVP+) = req_signer.approver_avp_result (NULL=Pending, 0=Rejected, 1=Approved)
+Approve (AVP+) = req_signer.approver1_result (NULL=Pending, 0=Rejected, 1=Approved)
 Request Status = req_signer.status (NULL=Pending, 0=Rejected, 1=Approved)
 
-Row click → signer_details.html?action=approval_avp&id={id}
-Opens in approval mode with AVP Result and AVP Reason editable.</pre>
+Row click → signer_details.html?action=approval1&id={id}
+Opens in approval mode with Approval 1 Result and Approval 1 Reason editable.</pre>
             <h4 style="margin:0 0 8px;color:#6a1b9a;font-size:0.85rem;">Inbound:</h4>
             <pre style="background:#f3e5f5;color:#4a148c;padding:14px;border-radius:6px;font-size:0.75rem;line-height:1.6;margin:0;white-space:pre-wrap;">DAD Request
 - req_signer

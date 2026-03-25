@@ -5,6 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DAD - User Access</title>
     <link rel="stylesheet" href="css/style.css">
+    <style>
+        .status-badge{display:inline-block;padding:2px 10px;border-radius:12px;font-size:.78rem;font-weight:600}
+        .status-open{background:#dbeafe;color:#1e40af}
+        .status-complete{background:#dcfce7;color:#166534}
+        .status-reject{background:#fee2e2;color:#991b1b}
+        .status-cancel{background:#f3f4f6;color:#4b5563}
+    </style>
 </head>
 <body>
     <div class="container">
@@ -49,7 +56,7 @@
         <!-- Section 2: Results -->
         <div class="panel panel--blue" style="position:relative;">
             <div id="toast" style="display:none; position:absolute; top:10px; right:14px; padding:8px 18px; border-radius:6px; font-size:0.82rem; font-weight:600; color:#fff; background:#2e7d32; z-index:100;"></div>
-            <div class="panel-title" style="position:relative;">Results
+            <div class="panel-title" style="position:relative;">Results (TOP 50)
                 <button onclick="document.getElementById('devNoteResultsModal').style.display='flex'" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);padding:2px 10px;font-size:0.72rem;font-weight:600;color:#fff;background:#6a1b9a;border:none;border-radius:4px;cursor:pointer;">DEV Note</button>
             </div>
             <p style="margin: 0 0 15px 0; font-style: italic; color: #555;">Click the row to request change</p>
@@ -82,18 +89,18 @@ Last Name  = free text input
 Access     = Distinct user_access.access + 'No Access'</pre>
             <h4 style="margin:12px 0 6px 0;color:#6a1b9a;">Inbound:</h4>
             <pre style="background:#f3e5f5;padding:12px;border-radius:6px;font-size:0.82rem;white-space:pre;overflow-x:auto;">Workday + AD (gad_id)
-- user_profile
-- territory
-- job
+- wd_user_profile
+- wd_territory
+- wd_job_level
 
 GDAS
-- policy
+- gdas_policy
 
 Infor
-- business_unit
-- cost_center
-- currency
-- exchange_rate
+- infor_business_unit
+- infor_cost_center
+- infor_currency
+- infor_exchange_rate
 
 DAD Request
 - signer
@@ -106,27 +113,27 @@ DAD Request
     <div id="devNoteResultsModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:2000;align-items:center;justify-content:center;" onclick="if(event.target===this)this.style.display='none'">
         <div style="background:#fff;width:700px;max-height:85%;border-radius:8px;padding:24px;box-shadow:0 4px 12px rgba(0,0,0,0.15);overflow-y:auto;">
             <h3 style="margin:0 0 12px 0;color:#6a1b9a;">DEV Note – Results</h3>
-            <h4 style="margin:0 0 6px 0;color:#6a1b9a;">Fields Mapping (key=user_profile.gad_id):</h4>
-            <pre style="background:#f3e5f5;padding:12px;border-radius:6px;font-size:0.82rem;white-space:pre;overflow-x:auto;">GAD ID       = COALESCE(user_profile.gad_id, user_access.gad_id)
-First Name   = user_profile.first_name (empty if not in user_profile)
-Last Name    = user_profile.last_name (empty if not in user_profile)
-Workday User = Y if gad_id exists in user_profile, else N
+            <h4 style="margin:0 0 6px 0;color:#6a1b9a;">Fields Mapping (key=wd_user_profile.gad_id):</h4>
+            <pre style="background:#f3e5f5;padding:12px;border-radius:6px;font-size:0.82rem;white-space:pre;overflow-x:auto;">GAD ID       = COALESCE(wd_user_profile.gad_id, user_access.gad_id)
+First Name   = wd_user_profile.first_name (empty if not in wd_user_profile)
+Last Name    = wd_user_profile.last_name (empty if not in wd_user_profile)
+Workday User = Y if gad_id exists in wd_user_profile, else N
 DAD User     = Y if gad_id exists in user_access, else N
 Access       = user_access.access ('No Access' if not in user_access)</pre>
             <h4 style="margin:12px 0 6px 0;color:#6a1b9a;">Inbound:</h4>
             <pre style="background:#f3e5f5;padding:12px;border-radius:6px;font-size:0.82rem;white-space:pre;overflow-x:auto;">Workday + AD (gad_id)
-- user_profile
-- territory
-- job
+- wd_user_profile
+- wd_territory
+- wd_job_level
 
 GDAS
-- policy
+- gdas_policy
 
 Infor
-- business_unit
-- cost_center
-- currency
-- exchange_rate
+- infor_business_unit
+- infor_cost_center
+- infor_currency
+- infor_exchange_rate
 
 DAD Request
 - signer
@@ -162,18 +169,19 @@ DAD Request
     </div>
 
     <script>
-        // Load user data from db/data.db -> user_access + user_profile tables
+        // Load user data from db/data.db -> user_access + wd_user_profile tables
         var users = [];
         var selectedIndex = -1;
+        var DB;
 
         initSqlJs({
             locateFile: function(file) { return 'js/sql-js/' + file; }
         }).then(function(SQL) {
             return fetch('db/data.db').then(function(r) { return r.arrayBuffer(); }).then(function(buf) {
-                var db = new SQL.Database(new Uint8Array(buf));
-                var results = db.exec('SELECT COALESCE(up.gad_id, ua.gad_id) AS gad_id, COALESCE(up.first_name, \'\') AS first_name, COALESCE(up.last_name, \'\') AS last_name, CASE WHEN up.gad_id IS NOT NULL THEN \'Y\' ELSE \'N\' END AS workday_user, CASE WHEN ua.gad_id IS NOT NULL THEN \'Y\' ELSE \'N\' END AS dad_user, COALESCE(ua.access, \'No Access\') AS access FROM user_profile up LEFT JOIN user_access ua ON up.gad_id = ua.gad_id UNION SELECT ua.gad_id, \'\', \'\', \'N\', \'Y\', ua.access FROM user_access ua WHERE ua.gad_id NOT IN (SELECT gad_id FROM user_profile) ORDER BY access, last_name, first_name');
+                DB = new SQL.Database(new Uint8Array(buf));
+                var results = DB.exec('SELECT COALESCE(up.gad_id, ua.gad_id) AS gad_id, COALESCE(up.first_name, \'\') AS first_name, COALESCE(up.last_name, \'\') AS last_name, CASE WHEN up.gad_id IS NOT NULL THEN \'Y\' ELSE \'N\' END AS workday_user, CASE WHEN ua.gad_id IS NOT NULL THEN \'Y\' ELSE \'N\' END AS dad_user, COALESCE(ua.access, \'No Access\') AS access FROM wd_user_profile up LEFT JOIN user_access ua ON up.gad_id = ua.gad_id UNION SELECT ua.gad_id, \'\', \'\', \'N\', \'Y\', ua.access FROM user_access ua WHERE ua.gad_id NOT IN (SELECT gad_id FROM wd_user_profile) ORDER BY gad_id LIMIT 50');
                 // Populate Access filter dropdown
-                var accessRes = db.exec('SELECT DISTINCT access FROM user_access ORDER BY access');
+                var accessRes = DB.exec('SELECT DISTINCT access FROM user_access ORDER BY access');
                 var sel = document.getElementById('accessFilter');
                 if (accessRes.length) {
                     accessRes[0].values.forEach(function(v) {
@@ -185,7 +193,6 @@ DAD Request
                 var noAccessOpt = document.createElement('option');
                 noAccessOpt.textContent = noAccessOpt.value = 'No Access';
                 sel.appendChild(noAccessOpt);
-                db.close();
                 if (results.length) {
                     results[0].values.forEach(function(r) {
                         users.push({ gadId: r[0], fn: r[1], ln: r[2], workday: r[3], dadUser: r[4], access: r[5] });
@@ -195,7 +202,7 @@ DAD Request
             });
         });
 
-        var accessColors = { 'DAD User': '#2e7d32', 'TSA': '#b8860b', 'No Access': '#c62828' };
+        var accessClasses = { 'DAD User': 'status-complete', 'TSA': 'status-open', 'No Access': 'status-reject' };
 
         function renderTable(list) {
             var rows = list || users;
@@ -206,14 +213,14 @@ DAD Request
                 var tr = document.createElement('tr');
                 tr.style.cursor = 'pointer';
                 tr.setAttribute('onclick', 'openModal(' + idx + ')');
-                var color = accessColors[u.access] || '#555';
+                var cls = accessClasses[u.access] || 'status-cancel';
                 tr.innerHTML =
                     '<td>' + u.gadId + '</td>' +
                     '<td>' + u.fn + '</td>' +
                     '<td>' + u.ln + '</td>' +
                     '<td' + (u.workday === 'N' ? ' style="background:#ffcdd2;"' : '') + '>' + u.workday + '</td>' +
                     '<td' + (u.dadUser === 'N' ? ' style="background:#ffcdd2;"' : '') + '>' + u.dadUser + '</td>' +
-                    '<td><span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:0.75rem;color:#fff;background:' + color + ';">' + u.access + '</span></td>';
+                    '<td><span class="status-badge ' + cls + '">' + u.access + '</span></td>';
                 tbody.appendChild(tr);
             });
         }
@@ -264,18 +271,45 @@ DAD Request
         }
 
         function doSearch() {
-            var gadIdVal = document.getElementById('gadId').value.trim().toLowerCase();
-            var firstName = document.getElementById('firstName').value.trim().toLowerCase();
-            var lastName = document.getElementById('lastName').value.trim().toLowerCase();
+            var gadIdVal = document.getElementById('gadId').value.trim();
+            var firstName = document.getElementById('firstName').value.trim();
+            var lastName = document.getElementById('lastName').value.trim();
             var accessVal = document.getElementById('accessFilter').value;
 
-            var filtered = users.filter(function(u) {
-                if (gadIdVal && u.gadId.toLowerCase().indexOf(gadIdVal) === -1) return false;
-                if (firstName && u.fn.toLowerCase().indexOf(firstName) === -1) return false;
-                if (lastName && u.ln.toLowerCase().indexOf(lastName) === -1) return false;
-                if (accessVal && u.access !== accessVal) return false;
-                return true;
-            });
+            if (!gadIdVal && !firstName && !lastName && !accessVal) {
+                renderTable();
+                highlightColumns();
+                return;
+            }
+
+            var baseSql =
+                "SELECT * FROM (" +
+                "SELECT COALESCE(up.gad_id, ua.gad_id) AS gad_id, COALESCE(up.first_name, '') AS first_name, COALESCE(up.last_name, '') AS last_name, " +
+                "CASE WHEN up.gad_id IS NOT NULL THEN 'Y' ELSE 'N' END AS workday_user, " +
+                "CASE WHEN ua.gad_id IS NOT NULL THEN 'Y' ELSE 'N' END AS dad_user, " +
+                "COALESCE(ua.access, 'No Access') AS access " +
+                "FROM wd_user_profile up LEFT JOIN user_access ua ON up.gad_id = ua.gad_id " +
+                "UNION SELECT ua.gad_id, '', '', 'N', 'Y', ua.access " +
+                "FROM user_access ua WHERE ua.gad_id NOT IN (SELECT gad_id FROM wd_user_profile)" +
+                ")";
+            var wheres = [];
+            var params = [];
+
+            if (gadIdVal) { wheres.push("LOWER(gad_id) LIKE ?"); params.push('%' + gadIdVal.toLowerCase() + '%'); }
+            if (firstName) { wheres.push("LOWER(first_name) LIKE ?"); params.push('%' + firstName.toLowerCase() + '%'); }
+            if (lastName) { wheres.push("LOWER(last_name) LIKE ?"); params.push('%' + lastName.toLowerCase() + '%'); }
+            if (accessVal) { wheres.push("access = ?"); params.push(accessVal); }
+
+            if (wheres.length) baseSql += " WHERE " + wheres.join(" AND ");
+            baseSql += " ORDER BY gad_id LIMIT 50";
+
+            var res = DB.exec(baseSql, params);
+            var filtered = [];
+            if (res.length) {
+                res[0].values.forEach(function(r) {
+                    filtered.push({ gadId: r[0], fn: r[1], ln: r[2], workday: r[3], dadUser: r[4], access: r[5] });
+                });
+            }
             renderTable(filtered);
             highlightColumns();
         }

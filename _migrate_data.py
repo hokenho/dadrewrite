@@ -12,7 +12,7 @@ c.execute('INSERT INTO user_access (id, access) SELECT gad_id, access FROM user_
 print(f'user_access: migrated {c.rowcount} rows')
 
 # ============================================================
-# 2. Create user_profile entries for all unique users
+# 2. Create wd_user_profile entries for all unique users
 # ============================================================
 # Collect names from user_access_temp
 ua_names = {}
@@ -42,13 +42,13 @@ for r in c.execute('SELECT submitter, submittedFor FROM dadreq'):
 for r in c.execute('SELECT gad_id FROM user_access_temp'):
     users.add(r[0])
 
-c.execute('DELETE FROM user_profile')
+c.execute('DELETE FROM wd_user_profile')
 emp_id = 10000001
 for i, gad_id in enumerate(sorted(users)):
     first, last = all_names.get(gad_id, ('Unknown', 'User'))
-    c.execute('INSERT INTO user_profile (gad_id, employee_id, last_name, first_name) VALUES (?,?,?,?)',
+    c.execute('INSERT INTO wd_user_profile (gad_id, employee_id, last_name, first_name) VALUES (?,?,?,?)',
               (gad_id, emp_id + i, last, first))
-print(f'user_profile: inserted {len(users)} rows')
+print(f'wd_user_profile: inserted {len(users)} rows')
 
 # ============================================================
 # 3. Add dadreq_id column to dadreq_limit_open (for 1:many link)
@@ -70,12 +70,12 @@ open_rows = c.execute(
 
 # Territory code -> id lookup
 terr_map = {}
-for r in c.execute('SELECT id, country_code FROM territory'):
+for r in c.execute('SELECT id, country_code FROM wd_territory'):
     terr_map[r[1]] = r[0]
 
 # Cost center cc -> id lookup
 cc_map = {}
-for r in c.execute('SELECT id, cc FROM cost_center'):
+for r in c.execute('SELECT id, cc FROM infor_cost_center'):
     cc_map[r[1]] = r[0]
 
 limit_id = 1
@@ -92,9 +92,9 @@ for row in open_rows:
     for lim in limits_json:
         action_map = {'update': 'Change', 'delete': 'Remove', 'new': 'Add'}
         action = action_map.get(lim.get('type', ''), lim.get('type', ''))
-        source_id = lim.get('rowIndex')
+        signer_limit_id = lim.get('rowIndex')
 
-        # Parse newData if present: [territory, policy_cat, amount, currency, cc, exc, temp, br, bc, system, acct]
+        # Parse newData if present: [wd_territory, policy_cat, amount, currency, cc, exc, temp, br, bc, system, acct]
         nd = lim.get('newData', [])
         territory_id = terr_map.get(nd[0]) if len(nd) > 0 else None
         limit_amount = float(nd[2].replace(',', '')) if len(nd) > 2 and nd[2] else None
@@ -105,33 +105,15 @@ for row in open_rows:
         biz_control = 1 if (len(nd) > 8 and nd[8] == 'Y') else 0
 
         c.execute('''INSERT INTO dadreq_limit_open
-            (id, action, source_id, territory_id, policy_id, limit_amount, approval_cc_id,
+            (id, action, signer_limit_id, territory_id, policy_id, limit_amount, approval_cc_id,
              exception, temporary, business_rationale, business_control, system_id, account_restriction, dadreq_id)
             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
-            (limit_id, action, source_id, territory_id, None, limit_amount, approval_cc_id,
+            (limit_id, action, signer_limit_id, territory_id, None, limit_amount, approval_cc_id,
              exception, temporary, biz_rationale, biz_control, None, None, req_id_num))
         limit_id += 1
 
 print(f'dadreq_open: inserted {len(open_rows)} rows')
 print(f'dadreq_limit_open: inserted {limit_id - 1} rows')
-
-# ============================================================
-# 5. Migrate dadreq (Complete/Reject/Cancel) -> audit_dadreq
-# ============================================================
-c.execute('DELETE FROM audit_dadreq')
-
-closed_rows = c.execute(
-    "SELECT reqId, date, submitter, submittedFor, status, reason, profile, limits FROM dadreq WHERE status != 'Open'"
-).fetchall()
-
-for i, row in enumerate(closed_rows):
-    req_id = row[0]
-    data_new = json.dumps({'profile': json.loads(row[6] or '{}'), 'limits': json.loads(row[7] or '[]')})
-    c.execute('''INSERT INTO audit_dadreq (id, gad_id, req_date, submitter, status, reason, data_old, data_new, audit_date)
-                 VALUES (?,?,?,?,?,?,?,?,?)''',
-              (i + 1, row[3], row[1], row[2], row[4], row[5], None, data_new, row[1]))
-
-print(f'audit_dadreq: inserted {len(closed_rows)} rows')
 
 conn.commit()
 
@@ -139,7 +121,7 @@ conn.commit()
 # Verify
 # ============================================================
 print('\n=== Verification ===')
-for tbl in ['user_profile', 'user_access', 'dadreq_open', 'dadreq_limit_open', 'audit_dadreq']:
+for tbl in ['wd_user_profile', 'user_access', 'dadreq_open', 'dadreq_limit_open']:
     cnt = c.execute(f'SELECT count(*) FROM [{tbl}]').fetchone()[0]
     print(f'  {tbl}: {cnt} rows')
 

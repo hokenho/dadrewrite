@@ -13,6 +13,11 @@
         .dash-table th { font-size: 0.6rem; white-space: normal; }
         .dash-table td { padding: 4px 5px; white-space: nowrap; min-width: 25px; }
         .dash-table { font-size: 0.7rem; word-break: break-word; width: 100%; }
+        .status-badge{display:inline-block;padding:2px 10px;border-radius:12px;font-size:.78rem;font-weight:600}
+        .status-open{background:#dbeafe;color:#1e40af}
+        .status-complete{background:#dcfce7;color:#166534}
+        .status-reject{background:#fee2e2;color:#991b1b}
+        .status-cancel{background:#f3f4f6;color:#4b5563}
         @media print {
             @page { size: landscape; margin: 5mm; }
             body { background: #fff !important; }
@@ -51,11 +56,11 @@
                 <div class="kpi-label">Requests Submitted</div>
             </div>
             <div class="kpi-card">
-                <div class="kpi-value">900</div>
+                <div class="kpi-value" id="kpiReqApproved">—</div>
                 <div class="kpi-label">Requests Approved</div>
             </div>
             <div class="kpi-card">
-                <div class="kpi-value">300</div>
+                <div class="kpi-value">-1</div>
                 <div class="kpi-label">Signers with Updated Job Level</div>
             </div>
             <div class="kpi-card">
@@ -63,7 +68,7 @@
                 <div class="kpi-label">Inactive Signers</div>
             </div>
             <div class="kpi-card">
-                <div class="kpi-value">200</div>
+                <div class="kpi-value">-1</div>
                 <div class="kpi-label">Cost Centres Inactivated / Recycled</div>
             </div>
         </div>
@@ -89,8 +94,8 @@
                             <th style="background:#c8e6c9;">Date Submitted</th>
                             <th>Submitted By</th>
                             <th>Submitted For</th>
-                            <th>Approve (AVP+)</th>
-                            <th>Approve (TSA)</th>
+                            <th>Approval (AVP+)</th>
+                            <th>Approval (TSA)</th>
                             <th>Request Status</th>
                         </tr>
                     </thead>
@@ -101,7 +106,7 @@
 
         <!-- Table 2: Temporary Delegated Signers -->
         <div class="panel panel--blue">
-            <div class="panel-title" style="position:relative;">Temporary Delegated Signers Set to Expire (Top 30) <button style="margin-left:10px; font-size:0.75rem; padding:2px 10px;" onclick="exportTable('tempTable','temp_delegated_signers')">Export all data</button>
+            <div class="panel-title" style="position:relative;">Temporary Delegated Signers Set to Expire (TOP 50) <button style="margin-left:10px; font-size:0.75rem; padding:2px 10px;" onclick="exportTable('tempTable','temp_delegated_signers')">Export all data</button>
                 <button onclick="document.getElementById('devNoteTempModal').style.display='flex'" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);padding:2px 10px;font-size:0.72rem;font-weight:600;color:#fff;background:#6a1b9a;border:none;border-radius:4px;cursor:pointer;">DEV Note</button>
             </div>
             <div class="data-table-wrapper" style="max-height:660px;overflow-y:auto;">
@@ -123,7 +128,7 @@
 
         <!-- Table 3: Signers with Exception -->
         <div class="panel panel--blue">
-            <div class="panel-title" style="position:relative;">Signers with Exception (Top 30) <button style="margin-left:10px; font-size:0.75rem; padding:2px 10px;" onclick="exportTable('exceptionTable','signers_with_exception')">Export all data</button>
+            <div class="panel-title" style="position:relative;">Signers with Exception (TOP 50) <button style="margin-left:10px; font-size:0.75rem; padding:2px 10px;" onclick="exportTable('exceptionTable','signers_with_exception')">Export all data</button>
                 <button onclick="document.getElementById('devNoteExcModal').style.display='flex'" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);padding:2px 10px;font-size:0.72rem;font-weight:600;color:#fff;background:#6a1b9a;border:none;border-radius:4px;cursor:pointer;">DEV Note</button>
             </div>
             <div class="data-table-wrapper" style="max-height:660px;overflow-y:auto;">
@@ -151,8 +156,11 @@
             var buf = await fetch('db/data.db').then(function(r) { return r.arrayBuffer(); });
             var db = new SQL.Database(new Uint8Array(buf));
 
-            var reqRes = db.exec("SELECT COUNT(*) FROM signer_req");
+            var reqRes = db.exec("SELECT COUNT(*) FROM req_signer");
             if (reqRes.length) document.getElementById('kpiReqSubmitted').textContent = reqRes[0].values[0][0].toLocaleString();
+
+            var approvedRes = db.exec("SELECT COUNT(*) FROM req_signer WHERE new_status = 1");
+            if (approvedRes.length) document.getElementById('kpiReqApproved').textContent = approvedRes[0].values[0][0].toLocaleString();
 
             var inactRes = db.exec("SELECT COUNT(*) FROM signer WHERE status = 0");
             if (inactRes.length) document.getElementById('kpiInactiveSigners').textContent = inactRes[0].values[0][0].toLocaleString();
@@ -164,27 +172,25 @@
         window.DADREQ_READY.then(function() {
             var list = window.DADREQ_LIST || [];
             var tbody = document.getElementById('requestBody');
-            var statusColors = { Pending: '#2a5a8a', Approved: '#2e7d32', Rejected: '#c62828', Complete: '#2e7d32', Reject: '#c62828', Cancel: '#757575' };
+            var statusClasses = { Pending: 'status-open', Approved: 'status-complete', Rejected: 'status-reject', Complete: 'status-complete', Reject: 'status-reject', Cancel: 'status-cancel' };
 
             list.forEach(function(item) {
                 var tr = document.createElement('tr');
                 tr.style.cursor = 'pointer';
-                tr.setAttribute('onclick', "window.location='signer_details.html?reqid=" + item.reqId + "&approval=true'");
-                var avpColor = statusColors[item.avpResult] || '#757575';
-                var tsaColor = statusColors[item.tsaResult] || '#757575';
+                tr.setAttribute('onclick', "window.location='signer_details.html?action=view_request&id=" + item.id + "'");
                 tr.innerHTML =
                     '<td>' + item.reqId + '</td>' +
                     '<td style="background:#e8f5e9;">' + item.date + '</td>' +
                     '<td>' + item.submitter + '</td>' +
                     '<td>' + item.submittedFor + '</td>' +
-                    '<td><span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:0.75rem;color:#fff;background:' + avpColor + ';">' + (item.avpResult || 'Pending') + '</span></td>' +
-                    '<td><span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:0.75rem;color:#fff;background:' + tsaColor + ';">' + (item.tsaResult || 'Pending') + '</span></td>' +
-                    '<td><span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:0.75rem;color:#fff;background:' + statusColors[item.status] + ';">' + item.status + '</span></td>';
+                    '<td><span class="status-badge ' + (statusClasses[item.avpResult] || 'status-open') + '">' + (item.avpResult || 'Pending') + '</span></td>' +
+                    '<td><span class="status-badge ' + (statusClasses[item.tsaResult] || 'status-open') + '">' + (item.tsaResult || 'Pending') + '</span></td>' +
+                    '<td><span class="status-badge ' + (statusClasses[item.status] || 'status-open') + '">' + item.status + '</span></td>';
                 tbody.appendChild(tr);
             });
         });
 
-        // Table 2: Temporary = Y, top 30 (from db)
+        // Table 2: Temporary = Y, top 50 (from db)
         (async function() {
             var SQL = await initSqlJs({ locateFile: function(f) { return 'js/sql-js/' + f; } });
             var buf = await fetch('db/data.db').then(function(r) { return r.arrayBuffer(); });
@@ -196,30 +202,30 @@
                 "b.name, " +
                 "sl.limit_amount, sl.currency, sl.exception, sl.approval_cc_id, sl.policy_id, " +
                 "p.category, p.system, " +
-                "cc.cc " +
+                "cc.name " +
                 "FROM signer s " +
-                "LEFT JOIN user_profile u ON s.gad_id = u.gad_id " +
-                "LEFT JOIN business_unit b ON s.bu_id = b.id " +
+                "LEFT JOIN wd_user_profile u ON s.gad_id = u.gad_id " +
+                "LEFT JOIN infor_business_unit b ON s.bu_id = b.id " +
                 "LEFT JOIN signer_limit sl ON sl.gad_id = s.gad_id " +
-                "LEFT JOIN policy p ON sl.policy_id = p.id " +
-                "LEFT JOIN cost_center cc ON sl.approval_cc_id = cc.id " +
+                "LEFT JOIN gdas_policy p ON sl.policy_id = p.id " +
+                "LEFT JOIN infor_cost_center cc ON sl.approval_cc_id = cc.id " +
                 "WHERE s.temp = 1 " +
                 "ORDER BY u.last_name, u.first_name " +
                 "LIMIT 30"
             );
 
-            var statusColors = { 1: '#2e7d32', 0: '#c62828' };
+            var statusClasses = { 1: 'status-complete', 0: 'status-reject' };
             var statusLabels = { 1: 'Active', 0: 'Inactive' };
             if (res.length) {
                 var tbody = document.getElementById('tempBody');
                 res[0].values.forEach(function(r) {
                     var tr = document.createElement('tr');
                     tr.style.cursor = 'pointer';
-                    tr.onclick = function() { window.location = 'signer_details.html?upn=' + encodeURIComponent(r[0]); };
+                    tr.onclick = function() { window.location = 'signer_details.html?action=view_signer&upn=' + encodeURIComponent(r[0]); };
                     var amt = r[10] != null ? Number(r[10]).toLocaleString() : '';
                     tr.innerHTML =
                         '<td>' + (r[0] || '') + '</td>' +
-                        '<td><span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:0.75rem;color:#fff;background:' + (statusColors[r[1]] || '#757575') + ';">' + (statusLabels[r[1]] || '') + '</span></td>' +
+                        '<td><span class="status-badge ' + (statusClasses[r[1]] || '') + '">' + (statusLabels[r[1]] || '') + '</span></td>' +
                         '<td>' + (r[6] || '') + '</td>' +
                         '<td>' + (r[7] || '') + '</td>' +
                         '<td>' + (r[8] || '') + '</td>' +
@@ -252,30 +258,30 @@
                 "b.name, " +
                 "sl.limit_amount, sl.currency, sl.exception, sl.approval_cc_id, sl.policy_id, " +
                 "p.category, p.system, " +
-                "cc.cc " +
+                "cc.name " +
                 "FROM signer s " +
-                "LEFT JOIN user_profile u ON s.gad_id = u.gad_id " +
-                "LEFT JOIN business_unit b ON s.bu_id = b.id " +
+                "LEFT JOIN wd_user_profile u ON s.gad_id = u.gad_id " +
+                "LEFT JOIN infor_business_unit b ON s.bu_id = b.id " +
                 "LEFT JOIN signer_limit sl ON sl.gad_id = s.gad_id " +
-                "LEFT JOIN policy p ON sl.policy_id = p.id " +
-                "LEFT JOIN cost_center cc ON sl.approval_cc_id = cc.id " +
+                "LEFT JOIN gdas_policy p ON sl.policy_id = p.id " +
+                "LEFT JOIN infor_cost_center cc ON sl.approval_cc_id = cc.id " +
                 "WHERE sl.exception = 1 " +
-                "ORDER BY u.last_name, u.first_name " +
-                "LIMIT 30"
+                "ORDER BY s.gad_id " +
+                "LIMIT 50"
             );
 
-            var statusColors = { 1: '#2e7d32', 0: '#c62828' };
+            var statusClasses = { 1: 'status-complete', 0: 'status-reject' };
             var statusLabels = { 1: 'Active', 0: 'Inactive' };
             if (res.length) {
                 var tbody = document.getElementById('exceptionBody');
                 res[0].values.forEach(function(r) {
                     var tr = document.createElement('tr');
                     tr.style.cursor = 'pointer';
-                    tr.onclick = function() { window.location = 'signer_details.html?upn=' + encodeURIComponent(r[0]); };
+                    tr.onclick = function() { window.location = 'signer_details.html?action=view_signer&upn=' + encodeURIComponent(r[0]); };
                     var amt = r[10] != null ? Number(r[10]).toLocaleString() : '';
                     tr.innerHTML =
                         '<td>' + (r[0] || '') + '</td>' +
-                        '<td><span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:0.75rem;color:#fff;background:' + (statusColors[r[1]] || '#757575') + ';">' + (statusLabels[r[1]] || '') + '</span></td>' +
+                        '<td><span class="status-badge ' + (statusClasses[r[1]] || '') + '">' + (statusLabels[r[1]] || '') + '</span></td>' +
                         '<td>' + (r[6] || '') + '</td>' +
                         '<td>' + (r[7] || '') + '</td>' +
                         '<td>' + (r[8] || '') + '</td>' +
@@ -333,38 +339,38 @@
     <!-- DEV Note Modal: Request Status -->
     <div id="devNoteReqModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:2000;align-items:center;justify-content:center;" onclick="if(event.target===this)this.style.display='none'">
         <div style="background:#fff;width:700px;max-height:85%;border-radius:8px;padding:24px;box-shadow:0 4px 12px rgba(0,0,0,0.15);overflow-y:auto;">
-            <h3 style="margin:0 0 12px 0;color:#6a1b9a;">DEV Note – Request Status (Past 90 days) (key=signer_req.id)</h3>
+            <h3 style="margin:0 0 12px 0;color:#6a1b9a;">DEV Note – Request Status (Past 90 days) (key=req_signer.id)</h3>
             <h4 style="margin:0 0 6px 0;color:#6a1b9a;">Fields Mapping:</h4>
-            <pre style="background:#f3e5f5;padding:12px;border-radius:6px;font-size:0.82rem;white-space:pre;overflow-x:auto;">Request ID     = signer_req.id
-Date Submitted = signer_req.req_date
-Submitted By   = signer_req.submitter
-Submitted For  = signer_req.gad_id
-Approve (AVP+) = signer_req.approver_avp_result (NULL=Pending, 0=Rejected, 1=Approved)
-Approve (TSA)  = signer_req.approver_tsa_result (NULL=Pending, 0=Rejected, 1=Approved)
-Request Status = signer_req.status (NULL=Pending, 0=Rejected, 1=Approved)
+            <pre style="background:#f3e5f5;padding:12px;border-radius:6px;font-size:0.82rem;white-space:pre;overflow-x:auto;">Request ID     = req_signer.id
+Date Submitted = req_signer.req_date
+Submitted By   = req_signer.submitter
+Submitted For  = req_signer.gad_id
+Approval (AVP+) = req_signer.approver1_result (NULL=Pending, 0=Rejected, 1=Approved)
+Approval (TSA)  = req_signer.approver2_result (NULL=Pending, 0=Rejected, 1=Approved)
+Request Status = req_signer.new_status (NULL=Pending, 0=Rejected, 1=Approved)
 
 Approval:
-AVP Approver   = signer_req.approver_avp_gad_id
-AVP Result     = signer_req.approver_avp_result (NULL=Pending, 0=Reject, 1=Approve)
-AVP Reason     = signer_req.approver_avp_reason
-TSA Approver   = signer_req.approver_tsa_gad_id
-TSA Result     = signer_req.approver_tsa_result (NULL=Pending, 0=Reject, 1=Approve)
-TSA Reason     = signer_req.approver_tsa_reason
-Status Reason  = signer_req.status_reason</pre>
+AVP Approver   = req_signer.approver1_gad_id
+AVP Result     = req_signer.approver1_result (NULL=Pending, 0=Reject, 1=Approve)
+AVP Note       = req_signer.approver1_note
+TSA Approver   = req_signer.approver2_gad_id
+TSA Result     = req_signer.approver2_result (NULL=Pending, 0=Reject, 1=Approve)
+TSA Note       = req_signer.approver2_note
+Status Reason  = req_signer.status_reason</pre>
             <h4 style="margin:12px 0 6px 0;color:#6a1b9a;">Inbound:</h4>
             <pre style="background:#f3e5f5;padding:12px;border-radius:6px;font-size:0.82rem;white-space:pre;overflow-x:auto;">Workday + AD (gad_id)
-- user_profile
-- territory
-- job
+- wd_user_profile
+- wd_territory
+- wd_job_level
 
 GDAS
-- policy
+- gdas_policy
 
 Infor
-- business_unit
-- cost_center
-- currency
-- exchange_rate
+- infor_business_unit
+- infor_cost_center
+- infor_currency
+- infor_exchange_rate
 
 DAD Request
 - signer
@@ -376,19 +382,19 @@ DAD Request
     <!-- DEV Note Modal: Temporary Delegated Signers -->
     <div id="devNoteTempModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:2000;align-items:center;justify-content:center;" onclick="if(event.target===this)this.style.display='none'">
         <div style="background:#fff;width:95%;max-height:85%;border-radius:8px;padding:24px;box-shadow:0 4px 12px rgba(0,0,0,0.15);overflow-y:auto;">
-            <h3 style="margin:0 0 12px 0;color:#6a1b9a;">DEV Note – Temporary Delegated Signers Set to Expire (Top 30)</h3>
+            <h3 style="margin:0 0 12px 0;color:#6a1b9a;">DEV Note – Temporary Delegated Signers Set to Expire (TOP 50)</h3>
             <h4 style="margin:0 0 6px 0;color:#6a1b9a;">Fields Mapping (key=signer.gad_id, WHERE signer.temp=1):</h4>
             <pre style="background:#f3e5f5;padding:12px;border-radius:6px;font-size:0.82rem;white-space:pre;overflow-x:auto;">GAD ID              = signer.gad_id
 Status              = signer.status
-Employee No.        = signer.gad_id -> user_profile.employee_id
-First Name          = signer.gad_id -> user_profile.first_name
-Last Name           = signer.gad_id -> user_profile.last_name
-Business Unit       = signer.bu_id -> business_unit.name
+Employee No.        = signer.gad_id -> wd_user_profile.employee_id
+First Name          = signer.gad_id -> wd_user_profile.first_name
+Last Name           = signer.gad_id -> wd_user_profile.last_name
+Business Unit       = signer.bu_id -> infor_business_unit.name
 Currency            = signer_limit.currency
 Limit Amounts       = signer_limit.limit_amount
-Approval Cost Centre= signer_limit.approval_cc_id -> cost_center.cc
-Policy Category     = signer_limit.policy_id -> policy.category
-System              = signer_limit.policy_id -> policy.system
+Approval Cost Centre= signer_limit.approval_cc_id -> infor_cost_center.name
+Policy Category     = signer_limit.policy_id -> gdas_policy.category
+System              = signer_limit.policy_id -> gdas_policy.system
 Cheque Pick Up      = signer.pickup_cheque
 Exception           = signer_limit.exception
 Temporary           = signer.temp
@@ -396,18 +402,18 @@ Temporary Start Date= signer.temp_start_date
 Temporary End Date  = signer.temp_end_date</pre>
             <h4 style="margin:12px 0 6px 0;color:#6a1b9a;">Inbound:</h4>
             <pre style="background:#f3e5f5;padding:12px;border-radius:6px;font-size:0.82rem;white-space:pre;overflow-x:auto;">Workday + AD (gad_id)
-- user_profile
-- territory
-- job
+- wd_user_profile
+- wd_territory
+- wd_job_level
 
 GDAS
-- policy
+- gdas_policy
 
 Infor
-- business_unit
-- cost_center
-- currency
-- exchange_rate
+- infor_business_unit
+- infor_cost_center
+- infor_currency
+- infor_exchange_rate
 
 DAD Request
 - signer
@@ -419,19 +425,19 @@ DAD Request
     <!-- DEV Note Modal: Signers with Exception -->
     <div id="devNoteExcModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:2000;align-items:center;justify-content:center;" onclick="if(event.target===this)this.style.display='none'">
         <div style="background:#fff;width:95%;max-height:85%;border-radius:8px;padding:24px;box-shadow:0 4px 12px rgba(0,0,0,0.15);overflow-y:auto;">
-            <h3 style="margin:0 0 12px 0;color:#6a1b9a;">DEV Note – Signers with Exception (Top 30)</h3>
+            <h3 style="margin:0 0 12px 0;color:#6a1b9a;">DEV Note – Signers with Exception (TOP 50)</h3>
             <h4 style="margin:0 0 6px 0;color:#6a1b9a;">Fields Mapping (key=signer.gad_id, WHERE signer_limit.exception=1):</h4>
             <pre style="background:#f3e5f5;padding:12px;border-radius:6px;font-size:0.82rem;white-space:pre;overflow-x:auto;">GAD ID              = signer.gad_id
 Status              = signer.status
-Employee No.        = signer.gad_id -> user_profile.employee_id
-First Name          = signer.gad_id -> user_profile.first_name
-Last Name           = signer.gad_id -> user_profile.last_name
-Business Unit       = signer.bu_id -> business_unit.name
+Employee No.        = signer.gad_id -> wd_user_profile.employee_id
+First Name          = signer.gad_id -> wd_user_profile.first_name
+Last Name           = signer.gad_id -> wd_user_profile.last_name
+Business Unit       = signer.bu_id -> infor_business_unit.name
 Currency            = signer_limit.currency
 Limit Amounts       = signer_limit.limit_amount
-Approval Cost Centre= signer_limit.approval_cc_id -> cost_center.cc
-Policy Category     = signer_limit.policy_id -> policy.category
-System              = signer_limit.policy_id -> policy.system
+Approval Cost Centre= signer_limit.approval_cc_id -> infor_cost_center.name
+Policy Category     = signer_limit.policy_id -> gdas_policy.category
+System              = signer_limit.policy_id -> gdas_policy.system
 Cheque Pick Up      = signer.pickup_cheque
 Exception           = signer_limit.exception
 Temporary           = signer.temp
@@ -439,18 +445,18 @@ Temporary Start Date= signer.temp_start_date
 Temporary End Date  = signer.temp_end_date</pre>
             <h4 style="margin:12px 0 6px 0;color:#6a1b9a;">Inbound:</h4>
             <pre style="background:#f3e5f5;padding:12px;border-radius:6px;font-size:0.82rem;white-space:pre;overflow-x:auto;">Workday + AD (gad_id)
-- user_profile
-- territory
-- job
+- wd_user_profile
+- wd_territory
+- wd_job_level
 
 GDAS
-- policy
+- gdas_policy
 
 Infor
-- business_unit
-- cost_center
-- currency
-- exchange_rate
+- infor_business_unit
+- infor_cost_center
+- infor_currency
+- infor_exchange_rate
 
 DAD Request
 - signer
@@ -463,11 +469,29 @@ DAD Request
     <div id="devNoteKpiModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:2000;align-items:center;justify-content:center;" onclick="if(event.target===this)this.style.display='none'">
         <div style="background:#fff;width:700px;max-height:85%;border-radius:8px;padding:24px;box-shadow:0 4px 12px rgba(0,0,0,0.15);overflow-y:auto;">
             <h3 style="margin:0 0 12px 0;color:#6a1b9a;">DEV Note – KPI Cards</h3>
-            <pre style="background:#f3e5f5;padding:12px;border-radius:6px;font-size:0.82rem;white-space:pre;overflow-x:auto;">Requests Submitted             = SELECT COUNT(*) FROM signer_req
-Requests Approved              = (placeholder – hardcoded 900)
-Signers with Updated Job Level = (placeholder – hardcoded 300)
+            <pre style="background:#f3e5f5;padding:12px;border-radius:6px;font-size:0.82rem;white-space:pre;overflow-x:auto;">Requests Submitted             = SELECT COUNT(*) FROM req_signer
+Requests Approved              = SELECT COUNT(*) FROM req_signer WHERE new_status = 1
+Signers with Updated Job Level = -1 (placeholder – will update later)
 Inactive Signers               = SELECT COUNT(*) FROM signer WHERE status = 0
-Cost Centres Inactivated       = (placeholder – hardcoded 200)</pre>
+Cost Centres Inactivated       = -1 (placeholder – will update later)</pre>
+            <h4 style="margin:12px 0 6px 0;color:#6a1b9a;">Inbound:</h4>
+            <pre style="background:#f3e5f5;padding:12px;border-radius:6px;font-size:0.82rem;white-space:pre;overflow-x:auto;">Workday + AD (gad_id)
+- wd_user_profile
+- wd_territory
+- wd_job_level
+
+GDAS
+- gdas_policy
+
+Infor
+- infor_business_unit
+- infor_cost_center
+- infor_currency
+- infor_exchange_rate
+
+DAD Request
+- signer
+- signer_limit</pre>
             <div style="text-align:right;margin-top:12px;"><button onclick="document.getElementById('devNoteKpiModal').style.display='none'" style="padding:4px 14px;cursor:pointer;">Close</button></div>
         </div>
     </div>
