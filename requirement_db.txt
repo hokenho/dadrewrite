@@ -191,13 +191,289 @@ CREATE TABLE user_access (
 =========================================================
 =========================================================
 
-# Table for Audit/History - all other tables
-CREATE TABLE audit_change (
-    id          NUMBER PRIMARY KEY,
-    audit_table NVARCHAR(50),
-    data_old    NVARCHAR(MAX) # save the old data in json format
-    data_new    NVARCHAR(MAX) # save the new data in json format
-    audit_date  DATE
+# Tables for Audit/History
+# Audited tables: wd_user_profile, wd_job_level, wd_territory, gdas_policy,
+#   infor_business_unit, infor_cost_center, infor_currency, infor_exchange_rate,
+#   user_access, signer, signer_limit
+# NOT audited: req_signer, req_signer_limit (already snapshot old/new values)
+# Rules: INSERT -> old_* = NULL; DELETE -> new_* = NULL; UPDATE -> both populated
+# FKs are expanded to underlying display fields (no FK IDs stored)
+
+# Audit: wd_user_profile (FKs expanded: job_level_id, territory_id)
+CREATE TABLE audit_wd_user_profile (
+    id            NUMBER PRIMARY KEY,
+    record_id     NVARCHAR(255),  # wd_user_profile.gad_id
+    action        NVARCHAR(10),   # INSERT/UPDATE/DELETE
+
+    old_employee_id        NUMBER,
+    old_last_name          NVARCHAR(255),
+    old_first_name         NVARCHAR(255),
+    old_signer_cost_center NVARCHAR(255),
+    old_job_grade          NVARCHAR(255),    # expanded from job_level_id
+    old_job_title          NVARCHAR(MAX),    # expanded from job_level_id
+    old_limit_amount_max   INTEGER,          # expanded from job_level_id
+    old_country_code       NVARCHAR(255),    # expanded from territory_id
+    old_territory          NVARCHAR(255),    # expanded from territory_id
+    old_status             BIT,
+    old_last_update_date   DATE,
+
+    new_employee_id        NUMBER,
+    new_last_name          NVARCHAR(255),
+    new_first_name         NVARCHAR(255),
+    new_signer_cost_center NVARCHAR(255),
+    new_job_grade          NVARCHAR(255),    # expanded from job_level_id
+    new_job_title          NVARCHAR(MAX),    # expanded from job_level_id
+    new_limit_amount_max   INTEGER,          # expanded from job_level_id
+    new_country_code       NVARCHAR(255),    # expanded from territory_id
+    new_territory          NVARCHAR(255),    # expanded from territory_id
+    new_status             BIT,
+    new_last_update_date   DATE,
+
+    change_by     NVARCHAR(255),
+    change_date   DATE
 )
-CREATE INDEX idx_audit_change_table ON audit_change(audit_table);
-CREATE INDEX idx_audit_change_date ON audit_change(audit_date);
+
+# Audit: wd_job_level (no FKs)
+CREATE TABLE audit_wd_job_level (
+    id            NUMBER PRIMARY KEY,
+    record_id     NVARCHAR(255),  # wd_job_level.id
+    action        NVARCHAR(10),   # INSERT/UPDATE/DELETE
+
+    old_job_grade        NVARCHAR(255),
+    old_job_title        NVARCHAR(MAX),
+    old_limit_amount_max INTEGER,
+    old_status           BIT,
+    old_last_update_date DATE,
+
+    new_job_grade        NVARCHAR(255),
+    new_job_title        NVARCHAR(MAX),
+    new_limit_amount_max INTEGER,
+    new_status           BIT,
+    new_last_update_date DATE,
+
+    change_by     NVARCHAR(255),
+    change_date   DATE
+)
+
+# Audit: wd_territory (no FKs)
+CREATE TABLE audit_wd_territory (
+    id            NUMBER PRIMARY KEY,
+    record_id     NVARCHAR(255),  # wd_territory.id
+    action        NVARCHAR(10),   # INSERT/UPDATE/DELETE
+
+    old_country_code     NVARCHAR(255),
+    old_territory        NVARCHAR(255),
+    old_status           BIT,
+    old_last_update_date DATE,
+
+    new_country_code     NVARCHAR(255),
+    new_territory        NVARCHAR(255),
+    new_status           BIT,
+    new_last_update_date DATE,
+
+    change_by     NVARCHAR(255),
+    change_date   DATE
+)
+
+# Audit: gdas_policy (no FKs)
+CREATE TABLE audit_gdas_policy (
+    id            NUMBER PRIMARY KEY,
+    record_id     NVARCHAR(255),  # gdas_policy.id
+    action        NVARCHAR(10),   # INSERT/UPDATE/DELETE
+
+    old_country_code      NVARCHAR(255),
+    old_category          NVARCHAR(255),
+    old_description       NVARCHAR(255),
+    old_system            NVARCHAR(255),
+    old_approval_count    NUMBER(1),
+    old_threshold_amount  NUMBER,
+    old_manual_approval   BIT,
+    old_status            BIT,
+    old_last_update_date  DATE,
+
+    new_country_code      NVARCHAR(255),
+    new_category          NVARCHAR(255),
+    new_description       NVARCHAR(255),
+    new_system            NVARCHAR(255),
+    new_approval_count    NUMBER(1),
+    new_threshold_amount  NUMBER,
+    new_manual_approval   BIT,
+    new_status            BIT,
+    new_last_update_date  DATE,
+
+    change_by     NVARCHAR(255),
+    change_date   DATE
+)
+
+# Audit: infor_business_unit (no FKs)
+CREATE TABLE audit_infor_business_unit (
+    id            NUMBER PRIMARY KEY,
+    record_id     NVARCHAR(255),  # infor_business_unit.id
+    action        NVARCHAR(10),   # INSERT/UPDATE/DELETE
+
+    old_security_group   NVARCHAR(255),
+    old_name             NVARCHAR(255),
+    old_status           BIT,
+    old_last_update_date DATE,
+
+    new_security_group   NVARCHAR(255),
+    new_name             NVARCHAR(255),
+    new_status           BIT,
+    new_last_update_date DATE,
+
+    change_by     NVARCHAR(255),
+    change_date   DATE
+)
+
+# Audit: infor_cost_center (no FKs)
+CREATE TABLE audit_infor_cost_center (
+    id            NUMBER PRIMARY KEY,
+    record_id     NVARCHAR(255),  # infor_cost_center.id
+    action        NVARCHAR(10),   # INSERT/UPDATE/DELETE
+
+    old_name             NVARCHAR(255),
+    old_description      NVARCHAR(255),
+    old_status           BIT,
+    old_last_update_date DATE,
+
+    new_name             NVARCHAR(255),
+    new_description      NVARCHAR(255),
+    new_status           BIT,
+    new_last_update_date DATE,
+
+    change_by     NVARCHAR(255),
+    change_date   DATE
+)
+
+# Audit: infor_currency (no FKs)
+CREATE TABLE audit_infor_currency (
+    id            NUMBER PRIMARY KEY,
+    record_id     NVARCHAR(255),  # infor_currency.currency
+    action        NVARCHAR(10),   # INSERT/UPDATE/DELETE
+
+    old_name             NVARCHAR(255),
+    old_status           BIT,
+    old_last_update_date DATE,
+
+    new_name             NVARCHAR(255),
+    new_status           BIT,
+    new_last_update_date DATE,
+
+    change_by     NVARCHAR(255),
+    change_date   DATE
+)
+
+# Audit: infor_exchange_rate (no FKs, composite PK)
+CREATE TABLE audit_infor_exchange_rate (
+    id            NUMBER PRIMARY KEY,
+    record_id     NVARCHAR(255),  # "source_currency|target_currency"
+    action        NVARCHAR(10),   # INSERT/UPDATE/DELETE
+
+    old_source_currency  NVARCHAR(255),
+    old_target_currency  NVARCHAR(255),
+    old_plan_rate        FLOAT,
+    old_status           BIT,
+    old_last_update_date DATE,
+
+    new_source_currency  NVARCHAR(255),
+    new_target_currency  NVARCHAR(255),
+    new_plan_rate        FLOAT,
+    new_status           BIT,
+    new_last_update_date DATE,
+
+    change_by     NVARCHAR(255),
+    change_date   DATE
+)
+
+# Audit: user_access (no FKs to expand)
+CREATE TABLE audit_user_access (
+    id            NUMBER PRIMARY KEY,
+    record_id     NVARCHAR(255),  # user_access.gad_id
+    action        NVARCHAR(10),   # INSERT/UPDATE/DELETE
+
+    old_access    NVARCHAR(255),
+
+    new_access    NVARCHAR(255),
+
+    change_by     NVARCHAR(255),
+    change_date   DATE
+)
+
+# Audit: signer (FK expanded: bu_id)
+CREATE TABLE audit_signer (
+    id            NUMBER PRIMARY KEY,
+    gad_id        NVARCHAR(255),
+    action        NVARCHAR(10),   # INSERT/UPDATE/DELETE
+
+    old_bu_security_group NVARCHAR(255),  # expanded from bu_id
+    old_bu_name           NVARCHAR(255),  # expanded from bu_id
+    old_pickup_cheque     BIT,
+    old_temp              BIT,
+    old_temp_start_date   DATE,
+    old_temp_end_date     DATE,
+    old_status            BIT,
+
+    new_bu_security_group NVARCHAR(255),  # expanded from bu_id
+    new_bu_name           NVARCHAR(255),  # expanded from bu_id
+    new_pickup_cheque     BIT,
+    new_temp              BIT,
+    new_temp_start_date   DATE,
+    new_temp_end_date     DATE,
+    new_status            BIT,
+
+    change_by     NVARCHAR(255),
+    change_date   DATE
+)
+
+# Audit: signer_limit (FKs expanded: territory_id, policy_id, approval_cc_id)
+CREATE TABLE audit_signer_limit (
+    id            NUMBER PRIMARY KEY,
+    signer_limit_id NVARCHAR(255),  # signer_limit.id (tracks which specific limit row changed)
+    gad_id        NVARCHAR(255),  # signer identifier (does not change, not old/new)
+    action        NVARCHAR(10),   # INSERT/UPDATE/DELETE
+
+    old_country_code            NVARCHAR(255),    # expanded from territory_id
+    old_territory               NVARCHAR(255),    # expanded from territory_id
+    old_policy_country_code     NVARCHAR(255),    # expanded from policy_id
+    old_policy_category         NVARCHAR(255),    # expanded from policy_id
+    old_policy_description      NVARCHAR(255),    # expanded from policy_id
+    old_policy_system           NVARCHAR(255),    # expanded from policy_id
+    old_policy_approval_count   NUMBER(1),        # expanded from policy_id
+    old_policy_threshold_amount NUMBER,           # expanded from policy_id
+    old_policy_manual_approval  BIT,              # expanded from policy_id
+    old_limit_amount            NUMBER,
+    old_cc_name                 NVARCHAR(255),    # expanded from approval_cc_id
+    old_cc_description          NVARCHAR(255),    # expanded from approval_cc_id
+    old_exception               BIT,
+    old_temp                    BIT,
+    old_temp_start_date         DATE,
+    old_temp_end_date           DATE,
+    old_business_rationale      BIT,
+    old_business_control        BIT,
+    old_account_restriction     NVARCHAR(100),
+    old_currency                NVARCHAR(10),
+
+    new_country_code            NVARCHAR(255),    # expanded from territory_id
+    new_territory               NVARCHAR(255),    # expanded from territory_id
+    new_policy_country_code     NVARCHAR(255),    # expanded from policy_id
+    new_policy_category         NVARCHAR(255),    # expanded from policy_id
+    new_policy_description      NVARCHAR(255),    # expanded from policy_id
+    new_policy_system           NVARCHAR(255),    # expanded from policy_id
+    new_policy_approval_count   NUMBER(1),        # expanded from policy_id
+    new_policy_threshold_amount NUMBER,           # expanded from policy_id
+    new_policy_manual_approval  BIT,              # expanded from policy_id
+    new_limit_amount            NUMBER,
+    new_cc_name                 NVARCHAR(255),    # expanded from approval_cc_id
+    new_cc_description          NVARCHAR(255),    # expanded from approval_cc_id
+    new_exception               BIT,
+    new_temp                    BIT,
+    new_temp_start_date         DATE,
+    new_temp_end_date           DATE,
+    new_business_rationale      BIT,
+    new_business_control        BIT,
+    new_account_restriction     NVARCHAR(100),
+    new_currency                NVARCHAR(10),
+
+    change_by     NVARCHAR(255),
+    change_date   DATE
+)

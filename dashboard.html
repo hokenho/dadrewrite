@@ -60,7 +60,7 @@
                 <div class="kpi-label">Requests Approved</div>
             </div>
             <div class="kpi-card">
-                <div class="kpi-value">-1</div>
+                <div class="kpi-value" id="kpiUpdatedJobLevel">—</div>
                 <div class="kpi-label">Signers with Updated Job Level</div>
             </div>
             <div class="kpi-card">
@@ -68,7 +68,7 @@
                 <div class="kpi-label">Inactive Signers</div>
             </div>
             <div class="kpi-card">
-                <div class="kpi-value">-1</div>
+                <div class="kpi-value" id="kpiInactivatedCC">—</div>
                 <div class="kpi-label">Cost Centres Inactivated / Recycled</div>
             </div>
         </div>
@@ -164,6 +164,12 @@
 
             var inactRes = db.exec("SELECT COUNT(*) FROM signer WHERE status = 0");
             if (inactRes.length) document.getElementById('kpiInactiveSigners').textContent = inactRes[0].values[0][0].toLocaleString();
+
+            var jobLevelRes = db.exec("SELECT COUNT(DISTINCT record_id) FROM audit_wd_user_profile WHERE action = 'UPDATE' AND (old_job_grade != new_job_grade OR old_job_title != new_job_title OR old_limit_amount_max != new_limit_amount_max)");
+            if (jobLevelRes.length) document.getElementById('kpiUpdatedJobLevel').textContent = jobLevelRes[0].values[0][0].toLocaleString();
+
+            var inactiveCCRes = db.exec("SELECT COUNT(*) FROM infor_cost_center WHERE status = 0");
+            if (inactiveCCRes.length) document.getElementById('kpiInactivatedCC').textContent = inactiveCCRes[0].values[0][0].toLocaleString();
 
             db.close();
         })();
@@ -330,7 +336,8 @@
             var blob = new Blob([csv.join('\n')], { type: 'text/csv;charset=utf-8;' });
             var link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
-            link.download = filename + '.csv';
+            var now = new Date(); var ts = '_' + now.getFullYear() + String(now.getMonth()+1).padStart(2,'0') + String(now.getDate()).padStart(2,'0') + String(now.getHours()).padStart(2,'0') + String(now.getMinutes()).padStart(2,'0') + String(now.getSeconds()).padStart(2,'0');
+            link.download = filename + ts + '.csv';
             link.click();
             URL.revokeObjectURL(link.href);
         }

@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DAD - Audit Log: Signer Details (TOP 50)</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="js/sql-js/sql-wasm.js"></script>
+    <style>
+        .status-badge{display:inline-block;padding:2px 10px;border-radius:12px;font-size:.78rem;font-weight:600}
+        .status-active{background:#dcfce7;color:#166534}
+        .status-inactive{background:#fee2e2;color:#991b1b}
+        .action-insert{background:#dcfce7;color:#166534}
+        .action-update{background:#fef9c3;color:#854d0e}
+        .action-delete{background:#fee2e2;color:#991b1b}
+        .action-unchange{background:#e8eaf6;color:#283593}
+        .row-before{color:#777;border-top:3px solid #555 !important;border-left:3px solid #555 !important;border-right:3px solid #555 !important;border-bottom:1px dashed #ddd !important;}
+        .row-after{border-bottom:3px solid #555 !important;border-left:3px solid #555 !important;border-right:3px solid #555 !important;}
+        .row-insert{background:#dcfce7 !important;border:3px solid #555 !important;}
+        .row-delete{background:#ffe6e6;border:3px solid #555 !important;}
+        .row-unchange{background:#f5f5f5 !important;}
+        .cell-changed{background-color:#fef9c3 !important;font-weight:bold;}
+        .cell-deleted{text-decoration:line-through;color:#c0392b;}
+        .ct-label{font-weight:bold;font-size:0.78rem;vertical-align:middle;text-align:center;white-space:nowrap;}
+        .summary-row{cursor:pointer;}
+        .summary-row:hover{background-color:#eef3ff !important;}
+        .detail-section{margin-bottom:16px;}
+        .detail-section-title{margin:0 0 8px 0;color:#1565c0;font-size:0.88rem;font-weight:600;}
+        .detail-none{color:#888;font-size:0.85rem;font-style:italic;}
+        .snapshot-modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:2000;align-items:flex-start;justify-content:center;padding-top:30px;}
+        .snapshot-modal-body{background:#fff;width:95%;max-width:1600px;max-height:90vh;border-radius:8px;padding:24px;box-shadow:0 4px 20px rgba(0,0,0,0.25);overflow-y:auto;}
+        .snapshot-modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;border-bottom:2px solid #1565c0;padding-bottom:10px;}
+        .snapshot-modal-header h3{margin:0;color:#1565c0;font-size:1rem;}
+        .snapshot-modal-close{padding:4px 14px;cursor:pointer;font-size:0.9rem;}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="page-header">
+            <h1>Disbursement Authorization Database <span class="subtitle">– Audit Log: Signer Details (TOP 50)</span></h1>
+        </div>
+
+        <script src="js/navbar.js"></script>
+
+        <!-- Action Bar -->
+        <div class="action-bar action-bar--blue">
+            <span class="action-bar-label">Actions:</span>
+            <button onclick="doSearch()">Search</button>
+            <button onclick="location.reload()">Refresh</button>
+            <button onclick="window.print()">Print</button>
+            <a id="btnBack" href="signer_details.html" class="action-bar-link">Back to Signer Details</a>
+        </div>
+
+        <!-- Signer Identity -->
+        <div class="panel panel--blue">
+            <div class="panel-title">Signer</div>
+            <table class="detail-table">
+                <tr><th>GAD ID</th><td id="signerGadId"></td></tr>
+            </table>
+        </div>
+
+        <!-- Section 1: Search Filters -->
+        <div class="panel panel--blue" id="searchPanel" style="display:none;">
+            <div class="panel-title" style="position:relative;">Section 1: Search Audit Log
+                <button onclick="document.getElementById('devNoteSearchModal').style.display='flex'" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);padding:2px 10px;font-size:0.72rem;font-weight:600;color:#fff;background:#6a1b9a;border:none;border-radius:4px;cursor:pointer;">DEV Note</button>
+            </div>
+            <div class="filter-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
+                <div class="filter-field">
+                    <label for="fChangeDate">Change Date</label>
+                    <input type="date" id="fChangeDate">
+                </div>
+                <div class="filter-field">
+                    <label for="fAction">Change Type</label>
+                    <select id="fAction">
+                        <option value="">-- All --</option>
+                        <option value="INSERT">INSERT</option>
+                        <option value="UPDATE">UPDATE</option>
+                        <option value="DELETE">DELETE</option>
+                    </select>
+                </div>
+                <div class="filter-field">
+                    <label for="fChangeBy">Changed By</label>
+                    <input type="text" id="fChangeBy" placeholder="e.g. admin.user">
+                </div>
+            </div>
+            <div class="filter-actions">
+                <button class="btn btn-primary" onclick="filterAll()">Apply Filter</button>
+                <button class="btn btn-secondary" onclick="clearFilters()">Clear</button>
+            </div>
+        </div>
+
+        <!-- Section 2: Audit Summary (click to open popup) -->
+        <div class="panel panel--blue">
+            <div class="panel-title" style="position:relative;">Audit Log: Signer (TOP 50)
+                <button style="margin-left:10px; font-size:0.75rem; padding:2px 10px;" onclick="exportSignerData()">Export All Signer Audit Data</button>
+                <button style="margin-left:4px; font-size:0.75rem; padding:2px 10px;" onclick="exportLimitData()">Export All Limit Audit Data</button>
+                <button onclick="document.getElementById('devNoteResultsModal').style.display='flex'" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);padding:2px 10px;font-size:0.72rem;font-weight:600;color:#fff;background:#6a1b9a;border:none;border-radius:4px;cursor:pointer;">DEV Note</button>
+            </div>
+            <div class="data-table-wrapper">
+                <table class="data-table" id="summaryTable">
+                    <thead>
+                        <tr>
+                            <th>Change Date</th>
+                            <th>Change Type</th>
+                            <th>Changed By</th>
+                        </tr>
+                    </thead>
+                    <tbody id="summaryBody">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Snapshot Popup Modal -->
+        <div id="snapshotModal" class="snapshot-modal" onclick="if(event.target===this)this.style.display='none'">
+            <div class="snapshot-modal-body">
+                <div class="snapshot-modal-header">
+                    <h3 id="snapshotTitle"></h3>
+                    <button class="snapshot-modal-close" onclick="document.getElementById('snapshotModal').style.display='none'">Close</button>
+                </div>
+                <div id="snapshotContent"></div>
+            </div>
+        </div>
+
+        <!-- DEV Note: Search -->
+        <div id="devNoteSearchModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:2000;align-items:center;justify-content:center;" onclick="if(event.target===this)this.style.display='none'">
+            <div style="background:#fff;width:700px;max-height:85%;border-radius:8px;padding:24px;box-shadow:0 4px 12px rgba(0,0,0,0.15);overflow-y:auto;">
+                <h3 style="margin:0 0 12px 0;color:#6a1b9a;">DEV Note – Search Audit Log (tables=audit_signer, audit_signer_limit)</h3>
+                <h4 style="margin:0 0 6px 0;color:#6a1b9a;">Filter Fields:</h4>
+                <pre style="background:#f3e5f5;padding:12px;border-radius:6px;font-size:0.82rem;white-space:pre;overflow-x:auto;">Change Date    = change_date (exact match)
+Change Type    = action (exact match: INSERT/UPDATE/DELETE)
+Changed By     = change_by (LIKE)
+Both tables are always filtered by gad_id from URL ?upn= parameter.</pre>
+                <h4 style="margin:12px 0 6px 0;color:#6a1b9a;">Behavior:</h4>
+                <pre style="background:#f3e5f5;padding:12px;border-radius:6px;font-size:0.82rem;white-space:pre;overflow-x:auto;">Apply Filter re-queries both tables with SQL WHERE clauses, returns TOP 50.
+Clear resets all filters and re-queries TOP 50 unfiltered.
+Enter key triggers filter from any input field.</pre>
+                <div style="text-align:right;margin-top:12px;"><button onclick="document.getElementById('devNoteSearchModal').style.display='none'" style="padding:4px 14px;cursor:pointer;">Close</button></div>
+            </div>
+        </div>
+
+        <!-- DEV Note: Results -->
+        <div id="devNoteResultsModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:2000;align-items:center;justify-content:center;" onclick="if(event.target===this)this.style.display='none'">
+            <div style="background:#fff;width:700px;max-height:85%;border-radius:8px;padding:24px;box-shadow:0 4px 12px rgba(0,0,0,0.15);overflow-y:auto;">
+                <h3 style="margin:0 0 12px 0;color:#6a1b9a;">DEV Note – Audit Log: Signer (tables=audit_signer, audit_signer_limit, signer_limit)</h3>
+                <h4 style="margin:0 0 6px 0;color:#6a1b9a;">Summary Table:</h4>
+                <pre style="background:#f3e5f5;padding:12px;border-radius:6px;font-size:0.82rem;white-space:pre;overflow-x:auto;">Groups audit events by (change_date, change_by) from a UNION of:
+  - audit_signer WHERE gad_id = ?upn
+  - audit_signer_limit WHERE gad_id = ?upn
+Shows TOP 50 groups sorted by change_date DESC.
+Change Type shows all distinct actions in that group.</pre>
+                <h4 style="margin:12px 0 6px 0;color:#6a1b9a;">Click to Open Popup:</h4>
+                <pre style="background:#f3e5f5;padding:12px;border-radius:6px;font-size:0.82rem;white-space:pre;overflow-x:auto;">Clicking a summary row opens a popup modal showing full snapshot:
+
+1. Signer Profile (from audit_signer + signer)
+   Shows Before/After for UPDATE, New for INSERT, Deleted for DELETE.
+   If no profile change at this time: shows current signer data
+   from signer table (JOINed with infor_business_unit) with
+   UNCHANGE badge — full snapshot view.
+
+2. Signing Limit Authorizations (from audit_signer_limit + signer_limit)
+   Shows changed limits with Before/After rows (UPDATE/INSERT/DELETE).
+   Also shows UNCHANGED limits (from current signer_limit table,
+   excluding signer_limit_ids that have audit entries at this time)
+   marked with grey UNCHANGE badge.
+
+   This gives a full snapshot view of all limits at audit time.</pre>
+                <h4 style="margin:12px 0 6px 0;color:#6a1b9a;">Row Styles (in popup):</h4>
+                <pre style="background:#f3e5f5;padding:12px;border-radius:6px;font-size:0.82rem;white-space:pre;overflow-x:auto;">INSERT    = green background, green badge, "New" label
+UPDATE    = Before (grey) / After pair, yellow highlight on changed cells
+DELETE    = red background, red badge, strikethrough text, "Deleted" label
+UNCHANGE  = grey background, blue-grey badge, current values</pre>
+                <div style="text-align:right;margin-top:12px;"><button onclick="document.getElementById('devNoteResultsModal').style.display='none'" style="padding:4px 14px;cursor:pointer;">Close</button></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        var _db = null;
+        var _upn = new URLSearchParams(window.location.search).get('upn') || '';
+
+        document.getElementById('signerGadId').textContent = _upn;
+        document.getElementById('btnBack').href = 'signer_details.html?upn=' + encodeURIComponent(_upn);
+
+        // ===================== FORMAT HELPERS =====================
+        function fmtStatus(v) { return v ? 'Active' : 'Inactive'; }
+        function fmtYN(v) { return v ? 'Y' : 'N'; }
+        function fmtAmount(v) { return v != null ? Number(v).toLocaleString() : ''; }
+        function fmtVal(v) { return v != null ? v : ''; }
+
+        function makeActionBadge(act) {
+            var cls = act === 'INSERT' ? 'action-insert' : act === 'DELETE' ? 'action-delete' : act === 'UNCHANGE' ? 'action-unchange' : 'action-update';
+            return '<span class="status-badge ' + cls + '">' + act + '</span>';
+        }
+
+        function makeActionBadges(actionsStr) {
+            return actionsStr.split(',').map(function(a) { return makeActionBadge(a.trim()); }).join(' ');
+        }
+
+        // ===================== SUMMARY =====================
+        function buildSummaryQuery() {
+            var fDate = document.getElementById('fChangeDate').value;
+            var fAction = document.getElementById('fAction').value;
+            var fBy = document.getElementById('fChangeBy').value.trim();
+
+            var c1 = ['gad_id = ?'], p1 = [_upn];
+            var c2 = ['gad_id = ?'], p2 = [_upn];
+
+            if (fDate) { c1.push('change_date = ?'); p1.push(fDate); c2.push('change_date = ?'); p2.push(fDate); }
+            if (fAction) { c1.push('action = ?'); p1.push(fAction); c2.push('action = ?'); p2.push(fAction); }
+            if (fBy) { c1.push('change_by LIKE ?'); p1.push('%' + fBy + '%'); c2.push('change_by LIKE ?'); p2.push('%' + fBy + '%'); }
+
+            var sql = 'SELECT change_date, GROUP_CONCAT(DISTINCT action) as actions, change_by FROM (' +
+                'SELECT change_date, action, change_by FROM audit_signer WHERE ' + c1.join(' AND ') +
+                ' UNION ALL ' +
+                'SELECT change_date, action, change_by FROM audit_signer_limit WHERE ' + c2.join(' AND ') +
+                ') GROUP BY change_date, change_by ORDER BY change_date DESC LIMIT 50';
+
+            return { sql: sql, params: p1.concat(p2) };
+        }
+
+        function renderSummary(results) {
+            var tbody = document.getElementById('summaryBody');
+            tbody.innerHTML = '';
+            if (results.length === 0) return;
+            results[0].values.forEach(function(row) {
+                var changeDate = row[0] || '';
+                var actions = row[1] || '';
+                var changeBy = row[2] || '';
+
+                var tr = document.createElement('tr');
+                tr.className = 'summary-row';
+                tr.innerHTML = '<td>' + changeDate + '</td>' +
+                    '<td>' + makeActionBadges(actions) + '</td>' +
+                    '<td>' + changeBy + '</td>';
+                tr.addEventListener('click', function() { openSnapshot(changeDate, changeBy); });
+                tbody.appendChild(tr);
+            });
+        }
+
+        // ===================== SNAPSHOT POPUP =====================
+        var _signerDetailSql = 'SELECT id, gad_id, action, ' +
+            'old_bu_security_group, old_bu_name, old_pickup_cheque, old_temp, old_temp_start_date, old_temp_end_date, old_status, ' +
+            'new_bu_security_group, new_bu_name, new_pickup_cheque, new_temp, new_temp_start_date, new_temp_end_date, new_status, ' +
+            'change_by, change_date FROM audit_signer WHERE gad_id = ? AND change_date = ? AND change_by = ? ORDER BY id DESC';
+
+        var _limitDetailSql = 'SELECT id, signer_limit_id, gad_id, action, ' +
+            'old_country_code, old_territory, old_policy_country_code, old_policy_category, old_policy_description, ' +
+            'old_policy_system, old_policy_approval_count, old_policy_threshold_amount, old_policy_manual_approval, ' +
+            'old_limit_amount, old_cc_name, old_cc_description, ' +
+            'old_exception, old_temp, old_temp_start_date, old_temp_end_date, ' +
+            'old_business_rationale, old_business_control, old_account_restriction, old_currency, ' +
+            'new_country_code, new_territory, new_policy_country_code, new_policy_category, new_policy_description, ' +
+            'new_policy_system, new_policy_approval_count, new_policy_threshold_amount, new_policy_manual_approval, ' +
+            'new_limit_amount, new_cc_name, new_cc_description, ' +
+            'new_exception, new_temp, new_temp_start_date, new_temp_end_date, ' +
+            'new_business_rationale, new_business_control, new_account_restriction, new_currency, ' +
+            'change_by, change_date FROM audit_signer_limit WHERE gad_id = ? AND change_date = ? AND change_by = ? ORDER BY signer_limit_id, id DESC';
+
+        // Query unchanged signer profile: current signer row with BU FK JOIN
+        var _unchangedSignerSql = 'SELECT bu.security_group, bu.name, s.pickup_cheque, s.temp, ' +
+            's.temp_start_date, s.temp_end_date, s.status ' +
+            'FROM signer s LEFT JOIN infor_business_unit bu ON s.bu_id = bu.id ' +
+            'WHERE s.gad_id = ?';
+
+        // Query unchanged limits: current signer_limit rows with FK JOINs, excluding changed signer_limit_ids
+        var _unchangedLimitSql = 'SELECT sl.id, ' +
+            't.country_code, t.territory, ' +
+            'p.country_code, p.category, p.description, p.system, p.approval_count, p.threshold_amount, p.manual_approval, ' +
+            'sl.limit_amount, cc.name, cc.description, ' +
+            'sl.exception, sl.temp, sl.temp_start_date, sl.temp_end_date, ' +
+            'sl.business_rationale, sl.business_control, sl.account_restriction, sl.currency ' +
+            'FROM signer_limit sl ' +
+            'LEFT JOIN wd_territory t ON sl.territory_id = t.id ' +
+            'LEFT JOIN gdas_policy p ON sl.policy_id = p.id ' +
+            'LEFT JOIN infor_cost_center cc ON sl.approval_cc_id = cc.id ' +
+            'WHERE sl.gad_id = ?';
+
+        function formatSignerRow(vals) {
+            return [fmtVal(vals[0]), fmtVal(vals[1]), fmtYN(vals[2]), fmtYN(vals[3]), fmtVal(vals[4]), fmtVal(vals[5]), fmtStatus(vals[6])];
+        }
+
+        function formatLimitRow(vals) {
+            return [
+                fmtVal(vals[0]), fmtVal(vals[1]), fmtVal(vals[2]), fmtVal(vals[3]), fmtVal(vals[4]),
+                fmtVal(vals[5]), fmtVal(vals[6]), fmtAmount(vals[7]), fmtYN(vals[8]),
+                fmtAmount(vals[9]), fmtVal(vals[10]), fmtVal(vals[11]),
+                fmtYN(vals[12]), fmtYN(vals[13]), fmtVal(vals[14]), fmtVal(vals[15]),
+                fmtYN(vals[16]), fmtYN(vals[17]), fmtVal(vals[18]), fmtVal(vals[19])
+            ];
+        }
+
+        var _limitHeaders = '<th>Change Type</th><th>Row</th>' +
+            '<th>Country Code</th><th>Territory</th>' +
+            '<th>Policy Country</th><th>Policy Category</th><th>Policy Description</th>' +
+            '<th>System</th><th>Approvals</th><th>Threshold Amt</th><th>Manual Approval</th>' +
+            '<th>Limit Amount</th><th>CC Name</th><th>CC Description</th>' +
+            '<th>Exception</th><th>Temporary</th><th>Temp Start Date</th><th>Temp End Date</th>' +
+            '<th>Business Rationale</th><th>Business Control</th><th>Account Restriction</th><th>Currency</th>';
+
+        function openSnapshot(changeDate, changeBy) {
+            document.getElementById('snapshotTitle').textContent =
+                'Audit Snapshot — ' + changeDate + ' by ' + changeBy;
+            document.getElementById('snapshotContent').innerHTML = buildSnapshotHtml(changeDate, changeBy);
+            document.getElementById('snapshotModal').style.display = 'flex';
+        }
+
+        function buildSnapshotHtml(changeDate, changeBy) {
+            var html = '';
+
+            // --- Signer Profile ---
+            var signerResults = _db.exec(_signerDetailSql, [_upn, changeDate, changeBy]);
+            html += '<div class="detail-section"><div class="detail-section-title">Signer Profile</div>';
+            var signerLabels = ['BU Security Group', 'BU Name', 'Pickup Cheque', 'Temporary', 'Temp Start Date', 'Temp End Date', 'Status'];
+            if (signerResults.length > 0 && signerResults[0].values.length > 0) {
+                signerResults[0].values.forEach(function(row) {
+                    var action = row[2];
+                    var oldVals = row.slice(3, 10), newVals = row.slice(10, 17);
+                    html += renderSignerDetailTable(action, formatSignerRow(oldVals), formatSignerRow(newVals), signerLabels);
+                });
+            } else {
+                // No audit_signer change — show current signer as UNCHANGE snapshot
+                var ucSigner = _db.exec(_unchangedSignerSql, [_upn]);
+                if (ucSigner.length > 0 && ucSigner[0].values.length > 0) {
+                    var sv = formatSignerRow(ucSigner[0].values[0]);
+                    html += renderSignerDetailTable('UNCHANGE', sv, sv, signerLabels);
+                } else {
+                    html += '<span class="detail-none">No signer profile data</span>';
+                }
+            }
+            html += '</div>';
+
+            // --- Signing Limit Authorizations (changed + unchanged) ---
+            var limitResults = _db.exec(_limitDetailSql, [_upn, changeDate, changeBy]);
+            // Collect changed signer_limit_ids
+            var changedLimitIds = {};
+            if (limitResults.length > 0) {
+                limitResults[0].values.forEach(function(row) {
+                    if (row[1] != null) changedLimitIds[row[1]] = true;
+                });
+            }
+
+            // Get unchanged limits from current signer_limit table
+            var unchangedResults = _db.exec(_unchangedLimitSql, [_upn]);
+
+            html += '<div class="detail-section"><div class="detail-section-title">Signing Limit Authorizations</div>';
+            html += '<div class="data-table-wrapper"><table class="data-table"><thead><tr>' + _limitHeaders + '</tr></thead><tbody>';
+
+            var hasRows = false;
+
+            // Render changed limits first
+            if (limitResults.length > 0 && limitResults[0].values.length > 0) {
+                limitResults[0].values.forEach(function(row) {
+                    hasRows = true;
+                    var action = row[3];
+                    var limitId = fmtVal(row[1]);
+                    var oldVals = row.slice(4, 24), newVals = row.slice(24, 44);
+                    html += renderLimitAuditRows(action, formatLimitRow(oldVals), formatLimitRow(newVals));
+                });
+            }
+
+            // Render unchanged limits
+            if (unchangedResults.length > 0 && unchangedResults[0].values.length > 0) {
+                unchangedResults[0].values.forEach(function(row) {
+                    var slId = row[0];
+                    if (changedLimitIds[slId]) return; // skip changed ones
+                    hasRows = true;
+                    var vals = row.slice(1, 21); // 20 fields matching formatLimitRow input
+                    var formatted = formatLimitRow(vals);
+                    html += '<tr class="row-unchange"><td>' + makeActionBadge('UNCHANGE') + '</td><td></td>';
+                    for (var i = 0; i < formatted.length; i++) html += '<td>' + formatted[i] + '</td>';
+                    html += '</tr>';
+                });
+            }
+
+            if (!hasRows) {
+                html += '<tr><td colspan="22" style="text-align:center;color:#888;font-style:italic;">No signing limits</td></tr>';
+            }
+            html += '</tbody></table></div></div>';
+
+            return html;
+        }
+
+        function renderSignerDetailTable(action, od, nd, labels) {
+            var html = '<table class="detail-table" style="margin-bottom:10px;"><tbody>';
+            html += '<tr><th>Change Type</th><td>' + makeActionBadge(action) + '</td></tr>';
+            if (action === 'UPDATE') {
+                for (var i = 0; i < labels.length; i++) {
+                    var ch = od[i] !== nd[i];
+                    if (ch) {
+                        html += '<tr><th>' + labels[i] + '</th><td><span style="color:#777;text-decoration:line-through;">' + od[i] + '</span> &rarr; <span class="cell-changed" style="padding:1px 4px;">' + nd[i] + '</span></td></tr>';
+                    } else {
+                        html += '<tr><th>' + labels[i] + '</th><td>' + nd[i] + '</td></tr>';
+                    }
+                }
+            } else if (action === 'INSERT') {
+                for (var i = 0; i < labels.length; i++) html += '<tr><th>' + labels[i] + '</th><td>' + nd[i] + '</td></tr>';
+            } else if (action === 'DELETE') {
+                for (var i = 0; i < labels.length; i++) html += '<tr><th>' + labels[i] + '</th><td class="cell-deleted">' + od[i] + '</td></tr>';
+            } else {
+                for (var i = 0; i < labels.length; i++) html += '<tr><th>' + labels[i] + '</th><td>' + od[i] + '</td></tr>';
+            }
+            html += '</tbody></table>';
+            return html;
+        }
+
+        function renderLimitAuditRows(action, od, nd) {
+            var html = '';
+            if (action === 'UPDATE') {
+                html += '<tr class="row-before"><td>' + makeActionBadge(action) + '</td><td class="ct-label" style="color:#777;">Before</td>';
+                for (var i = 0; i < od.length; i++) html += '<td>' + od[i] + '</td>';
+                html += '</tr><tr class="row-after"><td></td><td class="ct-label" style="color:#2e86c1;">After</td>';
+                for (var i = 0; i < od.length; i++) { var ch = od[i] !== nd[i]; html += '<td' + (ch ? ' class="cell-changed"' : '') + '>' + nd[i] + '</td>'; }
+                html += '</tr>';
+            } else if (action === 'INSERT') {
+                html += '<tr class="row-insert"><td>' + makeActionBadge(action) + '</td><td class="ct-label" style="color:#166534;">New</td>';
+                for (var i = 0; i < nd.length; i++) html += '<td>' + nd[i] + '</td>';
+                html += '</tr>';
+            } else if (action === 'DELETE') {
+                html += '<tr class="row-delete"><td>' + makeActionBadge(action) + '</td><td class="ct-label" style="color:#c0392b;">Deleted</td>';
+                for (var i = 0; i < od.length; i++) html += '<td class="cell-deleted">' + od[i] + '</td>';
+                html += '</tr>';
+            }
+            return html;
+        }
+
+        // ===================== LOAD & FILTER =====================
+        function loadAll() {
+            if (!_db || !_upn) return;
+            var q = buildSummaryQuery();
+            renderSummary(_db.exec(q.sql, q.params));
+        }
+
+        (async function() {
+            var SQL = await initSqlJs({ locateFile: function() { return 'js/sql-js/sql-wasm.wasm'; } });
+            var buf = await fetch('db/data.db').then(function(r) { return r.arrayBuffer(); });
+            _db = new SQL.Database(new Uint8Array(buf));
+            loadAll();
+        })();
+
+        function doSearch() { var p = document.getElementById('searchPanel'); p.style.display = (p.style.display === 'none') ? 'block' : 'none'; }
+        function filterAll() { loadAll(); }
+        function clearFilters() {
+            document.getElementById('fChangeDate').value = '';
+            document.getElementById('fChangeBy').value = '';
+            document.getElementById('fAction').value = '';
+            loadAll();
+        }
+
+        // ===================== EXPORT =====================
+        var _signerExportSql = 'SELECT id, gad_id, action, ' +
+            'old_bu_security_group, old_bu_name, old_pickup_cheque, old_temp, old_temp_start_date, old_temp_end_date, old_status, ' +
+            'new_bu_security_group, new_bu_name, new_pickup_cheque, new_temp, new_temp_start_date, new_temp_end_date, new_status, ' +
+            'change_by, change_date FROM audit_signer';
+
+        var _limitExportSql = 'SELECT id, signer_limit_id, gad_id, action, ' +
+            'old_country_code, old_territory, old_policy_country_code, old_policy_category, old_policy_description, ' +
+            'old_policy_system, old_policy_approval_count, old_policy_threshold_amount, old_policy_manual_approval, ' +
+            'old_limit_amount, old_cc_name, old_cc_description, ' +
+            'old_exception, old_temp, old_temp_start_date, old_temp_end_date, ' +
+            'old_business_rationale, old_business_control, old_account_restriction, old_currency, ' +
+            'new_country_code, new_territory, new_policy_country_code, new_policy_category, new_policy_description, ' +
+            'new_policy_system, new_policy_approval_count, new_policy_threshold_amount, new_policy_manual_approval, ' +
+            'new_limit_amount, new_cc_name, new_cc_description, ' +
+            'new_exception, new_temp, new_temp_start_date, new_temp_end_date, ' +
+            'new_business_rationale, new_business_control, new_account_restriction, new_currency, ' +
+            'change_by, change_date FROM audit_signer_limit';
+
+        function buildExportWhere() {
+            var fDate = document.getElementById('fChangeDate').value;
+            var fAction = document.getElementById('fAction').value;
+            var fBy = document.getElementById('fChangeBy').value.trim();
+            var clauses = ['gad_id = ?'], params = [_upn];
+            if (fDate) { clauses.push('change_date = ?'); params.push(fDate); }
+            if (fAction) { clauses.push('action = ?'); params.push(fAction); }
+            if (fBy) { clauses.push('change_by LIKE ?'); params.push('%' + fBy + '%'); }
+            return { where: ' WHERE ' + clauses.join(' AND '), params: params };
+        }
+
+        function csvQuote(v) { return '"' + String(v).replace(/"/g, '""') + '"'; }
+
+        function downloadCsv(csv, prefix) {
+            var blob = new Blob([csv.join('\n')], { type: 'text/csv;charset=utf-8;' });
+            var link = document.createElement('a'); link.href = URL.createObjectURL(blob);
+            var now = new Date();
+            link.download = prefix + '_' + now.getFullYear() + String(now.getMonth()+1).padStart(2,'0') + String(now.getDate()).padStart(2,'0') +
+                String(now.getHours()).padStart(2,'0') + String(now.getMinutes()).padStart(2,'0') + String(now.getSeconds()).padStart(2,'0') + '.csv';
+            link.click(); URL.revokeObjectURL(link.href);
+        }
+
+        function exportSignerData() {
+            if (!_db || !_upn) return;
+            var ew = buildExportWhere();
+            var results = _db.exec(_signerExportSql + ew.where + ' ORDER BY change_date DESC, id DESC', ew.params);
+            var csv = ['"Change Date","Change Type","Changed By","Row","BU Security Group","BU Name","Pickup Cheque","Temporary","Temp Start Date","Temp End Date","Status"'];
+            if (results.length > 0) results[0].values.forEach(function(row) {
+                var action = row[2], cd = row[18] || '', cb = row[17] || '', ov = row.slice(3,10), nv = row.slice(10,17);
+                if (action === 'UPDATE') { var od = formatSignerRow(ov), nd = formatSignerRow(nv); csv.push([cd,action,cb,'Before'].concat(od).map(csvQuote).join(',')); csv.push([cd,action,cb,'After'].concat(nd).map(csvQuote).join(',')); }
+                else if (action === 'INSERT') { var nd = formatSignerRow(nv); csv.push([cd,action,cb,'New'].concat(nd).map(csvQuote).join(',')); }
+                else if (action === 'DELETE') { var od = formatSignerRow(ov); csv.push([cd,action,cb,'Deleted'].concat(od).map(csvQuote).join(',')); }
+            });
+            downloadCsv(csv, 'audit_signer_' + _upn);
+        }
+
+        function exportLimitData() {
+            if (!_db || !_upn) return;
+            var ew = buildExportWhere();
+            var results = _db.exec(_limitExportSql + ew.where + ' ORDER BY change_date DESC, id DESC', ew.params);
+            var csv = ['"Change Date","Change Type","Changed By","Limit ID","Row",' +
+                '"Country Code","Territory","Policy Country","Policy Category","Policy Description",' +
+                '"System","Approvals","Threshold Amt","Manual Approval",' +
+                '"Limit Amount","CC Name","CC Description",' +
+                '"Exception","Temporary","Temp Start Date","Temp End Date",' +
+                '"Business Rationale","Business Control","Account Restriction","Currency"'];
+            if (results.length > 0) results[0].values.forEach(function(row) {
+                var action = row[3], cd = row[45] || '', cb = row[44] || '', lid = fmtVal(row[1]), ov = row.slice(4,24), nv = row.slice(24,44);
+                if (action === 'UPDATE') { var od = formatLimitRow(ov), nd = formatLimitRow(nv); csv.push([cd,action,cb,lid,'Before'].concat(od).map(csvQuote).join(',')); csv.push([cd,action,cb,lid,'After'].concat(nd).map(csvQuote).join(',')); }
+                else if (action === 'INSERT') { var nd = formatLimitRow(nv); csv.push([cd,action,cb,lid,'New'].concat(nd).map(csvQuote).join(',')); }
+                else if (action === 'DELETE') { var od = formatLimitRow(ov); csv.push([cd,action,cb,lid,'Deleted'].concat(od).map(csvQuote).join(',')); }
+            });
+            downloadCsv(csv, 'audit_signer_limits_' + _upn);
+        }
+
+        document.getElementById('searchPanel').addEventListener('keydown', function(e) { if (e.key === 'Enter') { e.preventDefault(); filterAll(); } });
+    </script>
+</body>
+</html>

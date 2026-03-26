@@ -141,10 +141,15 @@
             var blob = new Blob([csv.join('\n')], { type: 'text/csv;charset=utf-8;' });
             var link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
-            link.download = filename + '.csv';
+            var now = new Date(); var ts = '_' + now.getFullYear() + String(now.getMonth()+1).padStart(2,'0') + String(now.getDate()).padStart(2,'0') + String(now.getHours()).padStart(2,'0') + String(now.getMinutes()).padStart(2,'0') + String(now.getSeconds()).padStart(2,'0');
+            link.download = filename + ts + '.csv';
             link.click();
             URL.revokeObjectURL(link.href);
         }
+
+        document.getElementById('searchPanel').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') { e.preventDefault(); filterTable(); }
+        });
     </script>
 
     <!-- DEV Note Modal: Currencies -->

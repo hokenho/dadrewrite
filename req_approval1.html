@@ -170,6 +170,10 @@
         function doExport() {
             alert('Export triggered – connect to backend API.');
         }
+
+        document.getElementById('searchPanel').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') { e.preventDefault(); filterTable(); }
+        });
     </script>
 
     <style>

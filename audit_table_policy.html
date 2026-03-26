@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DAD - Audit Log: Policies Categories (TOP 50)</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="js/sql-js/sql-wasm.js"></script>
+    <style>
+        .status-badge{display:inline-block;padding:2px 10px;border-radius:12px;font-size:.78rem;font-weight:600}
+        .status-active{background:#dcfce7;color:#166534}
+        .status-inactive{background:#fee2e2;color:#991b1b}
+        .action-insert{background:#dcfce7;color:#166534}
+        .action-update{background:#fef9c3;color:#854d0e}
+        .action-delete{background:#fee2e2;color:#991b1b}
+        .row-before{color:#777;border-top:3px solid #555 !important;border-left:3px solid #555 !important;border-right:3px solid #555 !important;border-bottom:1px dashed #ddd !important;}
+        .row-after{border-bottom:3px solid #555 !important;border-left:3px solid #555 !important;border-right:3px solid #555 !important;}
+        .row-insert{background:#dcfce7 !important;border:3px solid #555 !important;}
+        .row-delete{background:#ffe6e6;border:3px solid #555 !important;}
+        .cell-changed{background-color:#fef9c3 !important;font-weight:bold;}
+        .cell-deleted{text-decoration:line-through;color:#c0392b;}
+        .ct-label{font-weight:bold;font-size:0.78rem;vertical-align:middle;text-align:center;white-space:nowrap;}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="page-header">
+            <h1>Disbursement Authorization Database <span class="subtitle">– Audit Log: Policies Categories (TOP 50)</span></h1>
+        </div>
+
+        <script src="js/navbar.js"></script>
+
+        <!-- Action Bar -->
+        <div class="action-bar action-bar--blue">
+            <span class="action-bar-label">Actions:</span>
+            <button onclick="doSearch()">Search</button>
+            <button onclick="location.reload()">Refresh</button>
+            <button onclick="window.print()">Print</button>
+            <a href="table_policy.html" class="action-bar-link">Back to Policies</a>
+        </div>
+
+        <!-- Section 1: Search Filters (hidden by default) -->
+        <div class="panel panel--blue" id="searchPanel" style="display:none;">
+            <div class="panel-title" style="position:relative;">Section 1: Search Audit Log
+                <button onclick="document.getElementById('devNoteSearchModal').style.display='flex'" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);padding:2px 10px;font-size:0.72rem;font-weight:600;color:#fff;background:#6a1b9a;border:none;border-radius:4px;cursor:pointer;">DEV Note</button>
+            </div>
+            <div class="filter-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
+                <div class="filter-field">
+                    <label for="fChangeDate">Change Date</label>
+                    <input type="date" id="fChangeDate">
+                </div>
+                <div class="filter-field">
+                    <label for="fAction">Change Type</label>
+                    <select id="fAction">
+                        <option value="">-- All --</option>
+                        <option value="INSERT">INSERT</option>
+                        <option value="UPDATE">UPDATE</option>
+                        <option value="DELETE">DELETE</option>
+                    </select>
+                </div>
+                <div class="filter-field">
+                    <label for="fChangeBy">Changed By</label>
+                    <input type="text" id="fChangeBy" placeholder="e.g. admin.user">
+                </div>
+                <div class="filter-field">
+                    <label for="fCountry">Countries</label>
+                    <input type="text" id="fCountry" placeholder="e.g. JP">
+                </div>
+                <div class="filter-field">
+                    <label for="fCategory">Policy Category</label>
+                    <input type="text" id="fCategory" placeholder="e.g. Travel">
+                </div>
+                <div class="filter-field">
+                    <label for="fDescription">Description</label>
+                    <input type="text" id="fDescription" placeholder="Search description">
+                </div>
+                <div class="filter-field">
+                    <label for="fSystem">System Type</label>
+                    <input type="text" id="fSystem" placeholder="e.g. AP">
+                </div>
+                <div class="filter-field">
+                    <label for="fManualApproval">Manual Approval</label>
+                    <select id="fManualApproval">
+                        <option value="">-- All --</option>
+                        <option value="Y">Y</option>
+                        <option value="N">N</option>
+                    </select>
+                </div>
+                <div class="filter-field">
+                    <label for="fStatus">Status</label>
+                    <select id="fStatus">
+                        <option value="">-- All --</option>
+                        <option value="Active">Active</option>
+                        <option value="Inactive">Inactive</option>
+                    </select>
+                </div>
+            </div>
+            <div class="filter-actions">
+                <button class="btn btn-primary" onclick="filterTable()">Apply Filter</button>
+                <button class="btn btn-secondary" onclick="clearFilters()">Clear</button>
+            </div>
+        </div>
+
+        <!-- Section 2: Results Table -->
+        <div class="panel panel--blue">
+            <div class="panel-title" style="position:relative;">Audit Log: Policies Categories (TOP 50)
+                <button style="margin-left:10px; font-size:0.75rem; padding:2px 10px;" onclick="exportAllData()">Export all data</button>
+                <button onclick="document.getElementById('devNoteResultsModal').style.display='flex'" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);padding:2px 10px;font-size:0.72rem;font-weight:600;color:#fff;background:#6a1b9a;border:none;border-radius:4px;cursor:pointer;">DEV Note</button>
+            </div>
+            <div class="data-table-wrapper">
+                <table class="data-table" id="resultsTable">
+                    <thead>
+                        <tr>
+                            <th>Change Date</th>
+                            <th>Change Type</th>
+                            <th>Changed By</th>
+                            <th>Row</th>
+                            <th>Countries</th>
+                            <th>Policy Category</th>
+                            <th>Description</th>
+                            <th>System Type</th>
+                            <th>No. of Approvals</th>
+                            <th>Threshold Amount</th>
+                            <th>Manual Approval</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="resultsBody">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- DEV Note: Search -->
+        <div id="devNoteSearchModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:2000;align-items:center;justify-content:center;" onclick="if(event.target===this)this.style.display='none'">
+            <div style="background:#fff;width:700px;max-height:85%;border-radius:8px;padding:24px;box-shadow:0 4px 12px rgba(0,0,0,0.15);overflow-y:auto;">
+                <h3 style="margin:0 0 12px 0;color:#6a1b9a;">DEV Note – Search Audit Log (table=audit_gdas_policy)</h3>
+                <h4 style="margin:0 0 6px 0;color:#6a1b9a;">Filter Fields:</h4>
+                <pre style="background:#f3e5f5;padding:12px;border-radius:6px;font-size:0.82rem;white-space:pre;overflow-x:auto;">Change Date       = audit_gdas_policy.change_date (exact match)
+Change Type       = audit_gdas_policy.action (exact match: INSERT/UPDATE/DELETE)
+Changed By        = audit_gdas_policy.change_by (LIKE)
+Countries         = old_country_code OR new_country_code (LIKE)
+Policy Category   = old_category OR new_category (LIKE)
+Description       = old_description OR new_description (LIKE)
+System Type       = old_system OR new_system (LIKE)
+Manual Approval   = old_manual_approval OR new_manual_approval (BIT match)
+Status            = old_status OR new_status (BIT match)</pre>
+                <h4 style="margin:12px 0 6px 0;color:#6a1b9a;">Behavior:</h4>
+                <pre style="background:#f3e5f5;padding:12px;border-radius:6px;font-size:0.82rem;white-space:pre;overflow-x:auto;">Apply Filter re-queries database with SQL WHERE clauses, returns TOP 50.
+Clear resets all filters and re-queries TOP 50 unfiltered.
+Enter key triggers filter from any input field.</pre>
+                <div style="text-align:right;margin-top:12px;"><button onclick="document.getElementById('devNoteSearchModal').style.display='none'" style="padding:4px 14px;cursor:pointer;">Close</button></div>
+            </div>
+        </div>
+
+        <!-- DEV Note: Results -->
+        <div id="devNoteResultsModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:2000;align-items:center;justify-content:center;" onclick="if(event.target===this)this.style.display='none'">
+            <div style="background:#fff;width:700px;max-height:85%;border-radius:8px;padding:24px;box-shadow:0 4px 12px rgba(0,0,0,0.15);overflow-y:auto;">
+                <h3 style="margin:0 0 12px 0;color:#6a1b9a;">DEV Note – Audit Log: Policies Categories (table=audit_gdas_policy)</h3>
+                <h4 style="margin:0 0 6px 0;color:#6a1b9a;">Fields Mapping:</h4>
+                <pre style="background:#f3e5f5;padding:12px;border-radius:6px;font-size:0.82rem;white-space:pre;overflow-x:auto;">Change Date       = audit_gdas_policy.change_date
+Change Type       = audit_gdas_policy.action
+Changed By        = audit_gdas_policy.change_by
+Row               = Before / After / New / Deleted label
+Countries         = old_country_code / new_country_code
+Policy Category   = old_category / new_category
+Description       = old_description / new_description
+System Type       = old_system / new_system
+No. of Approvals  = old_approval_count / new_approval_count
+Threshold Amount  = old_threshold_amount / new_threshold_amount
+Manual Approval   = old_manual_approval / new_manual_approval
+Status            = old_status / new_status</pre>
+                <h4 style="margin:12px 0 6px 0;color:#6a1b9a;">Display Rules:</h4>
+                <pre style="background:#f3e5f5;padding:12px;border-radius:6px;font-size:0.82rem;white-space:pre;overflow-x:auto;">Source: audit_gdas_policy table
+Display: TOP 50 audit groups (SQL LIMIT 50, sorted by change_date DESC, id DESC)
+Filtering: Re-queries DB with WHERE clauses, returns TOP 50 of filtered results
+Export: Runs same query WITHOUT LIMIT, exports all matching rows to CSV</pre>
+                <h4 style="margin:12px 0 6px 0;color:#6a1b9a;">Row Styles:</h4>
+                <pre style="background:#f3e5f5;padding:12px;border-radius:6px;font-size:0.82rem;white-space:pre;overflow-x:auto;">INSERT = green background, green badge, "New" label
+UPDATE = Before (grey text) / After pair, yellow highlight on changed cells
+DELETE = red background, red badge, strikethrough text, "Deleted" label</pre>
+                <div style="text-align:right;margin-top:12px;"><button onclick="document.getElementById('devNoteResultsModal').style.display='none'" style="padding:4px 14px;cursor:pointer;">Close</button></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        var _db = null;
+
+        function fmtStatus(v) { return v ? 'Active' : 'Inactive'; }
+        function fmtManual(v) { return v ? 'Y' : 'N'; }
+        function fmtAmount(v) { return v != null ? Number(v).toLocaleString() : ''; }
+        function fmtVal(v) { return v != null ? v : ''; }
+
+        function formatRow(vals) {
+            return [
+                fmtVal(vals[0]), fmtVal(vals[1]), fmtVal(vals[2]), fmtVal(vals[3]),
+                fmtVal(vals[4]), fmtAmount(vals[5]), fmtManual(vals[6]), fmtStatus(vals[7])
+            ];
+        }
+
+        function makeActionBadge(act) {
+            var cls = act === 'INSERT' ? 'action-insert' : act === 'DELETE' ? 'action-delete' : 'action-update';
+            return '<span class="status-badge ' + cls + '">' + act + '</span>';
+        }
+
+        // Build WHERE clause + params from filter values
+        function buildWhereClause() {
+            var fDate     = document.getElementById('fChangeDate').value;
+            var fAction   = document.getElementById('fAction').value;
+            var fBy       = document.getElementById('fChangeBy').value.trim();
+            var fCountry  = document.getElementById('fCountry').value.trim();
+            var fCategory = document.getElementById('fCategory').value.trim();
+            var fDesc     = document.getElementById('fDescription').value.trim();
+            var fSystem   = document.getElementById('fSystem').value.trim();
+            var fManual   = document.getElementById('fManualApproval').value;
+            var fStatus   = document.getElementById('fStatus').value;
+
+            var clauses = [];
+            var params = [];
+
+            if (fDate) { clauses.push('change_date = ?'); params.push(fDate); }
+            if (fAction) { clauses.push('action = ?'); params.push(fAction); }
+            if (fBy) { clauses.push('change_by LIKE ?'); params.push('%' + fBy + '%'); }
+            if (fCountry) {
+                clauses.push('(old_country_code LIKE ? OR new_country_code LIKE ?)');
+                params.push('%' + fCountry + '%', '%' + fCountry + '%');
+            }
+            if (fCategory) {
+                clauses.push('(old_category LIKE ? OR new_category LIKE ?)');
+                params.push('%' + fCategory + '%', '%' + fCategory + '%');
+            }
+            if (fDesc) {
+                clauses.push('(old_description LIKE ? OR new_description LIKE ?)');
+                params.push('%' + fDesc + '%', '%' + fDesc + '%');
+            }
+            if (fSystem) {
+                clauses.push('(old_system LIKE ? OR new_system LIKE ?)');
+                params.push('%' + fSystem + '%', '%' + fSystem + '%');
+            }
+            if (fManual) {
+                var manualBit = fManual === 'Y' ? 1 : 0;
+                clauses.push('(old_manual_approval = ? OR new_manual_approval = ?)');
+                params.push(manualBit, manualBit);
+            }
+            if (fStatus) {
+                var statusBit = fStatus === 'Active' ? 1 : 0;
+                clauses.push('(old_status = ? OR new_status = ?)');
+                params.push(statusBit, statusBit);
+            }
+
+            var where = clauses.length > 0 ? ' WHERE ' + clauses.join(' AND ') : '';
+            return { where: where, params: params };
+        }
+
+        // Render rows from query results into tbody
+        function renderResults(results, limit) {
+            var tbody = document.getElementById('resultsBody');
+            tbody.innerHTML = '';
+            if (results.length === 0) return;
+
+            var groupCount = 0;
+            results[0].values.forEach(function(row) {
+                if (limit && groupCount >= limit) return;
+                var action = row[2];
+                var changeDate = row[22] || '';
+                var changeBy = row[21] || '';
+                var oldVals = row.slice(3, 12);
+                var newVals = row.slice(12, 21);
+
+                groupCount++;
+
+                if (action === 'UPDATE') {
+                    var oldDisp = formatRow(oldVals);
+                    var newDisp = formatRow(newVals);
+
+                    var btr = document.createElement('tr');
+                    btr.className = 'row-before';
+                    btr.innerHTML =
+                        '<td>' + changeDate + '</td>' +
+                        '<td>' + makeActionBadge(action) + '</td>' +
+                        '<td>' + changeBy + '</td>' +
+                        '<td class="ct-label" style="color:#777;">Before</td>' +
+                        '<td>' + oldDisp[0] + '</td><td>' + oldDisp[1] + '</td><td>' + oldDisp[2] + '</td><td>' + oldDisp[3] + '</td>' +
+                        '<td>' + oldDisp[4] + '</td><td>' + oldDisp[5] + '</td><td class="text-center">' + oldDisp[6] + '</td><td>' + oldDisp[7] + '</td>';
+                    tbody.appendChild(btr);
+
+                    var atr = document.createElement('tr');
+                    atr.className = 'row-after';
+                    var afterCells = '<td></td><td></td><td></td><td class="ct-label" style="color:#2e86c1;">After</td>';
+                    for (var ci = 0; ci < oldDisp.length; ci++) {
+                        var changed = oldDisp[ci] !== newDisp[ci];
+                        var cls = changed ? ' class="cell-changed"' : '';
+                        var cAlign = ci === 6 ? ' class="text-center' + (changed ? ' cell-changed' : '') + '"' : cls;
+                        afterCells += '<td' + (ci === 6 ? cAlign : cls) + '>' + newDisp[ci] + '</td>';
+                    }
+                    atr.innerHTML = afterCells;
+                    tbody.appendChild(atr);
+
+                } else if (action === 'INSERT') {
+                    var newDisp = formatRow(newVals);
+                    var itr = document.createElement('tr');
+                    itr.className = 'row-insert';
+                    var insertCells = '<td>' + changeDate + '</td><td>' + makeActionBadge(action) + '</td><td>' + changeBy + '</td>' +
+                        '<td class="ct-label" style="color:#166534;">New</td>';
+                    for (var ci = 0; ci < newDisp.length; ci++) {
+                        var cAlign = ci === 6 ? ' class="text-center"' : '';
+                        insertCells += '<td' + cAlign + '>' + newDisp[ci] + '</td>';
+                    }
+                    itr.innerHTML = insertCells;
+                    tbody.appendChild(itr);
+
+                } else if (action === 'DELETE') {
+                    var oldDisp = formatRow(oldVals);
+                    var dtr = document.createElement('tr');
+                    dtr.className = 'row-delete';
+                    var deleteCells = '<td>' + changeDate + '</td><td>' + makeActionBadge(action) + '</td><td>' + changeBy + '</td>' +
+                        '<td class="ct-label" style="color:#c0392b;">Deleted</td>';
+                    for (var ci = 0; ci < oldDisp.length; ci++) {
+                        var cAlign = ci === 6 ? ' text-center' : '';
+                        deleteCells += '<td class="cell-deleted' + cAlign + '">' + oldDisp[ci] + '</td>';
+                    }
+                    dtr.innerHTML = deleteCells;
+                    tbody.appendChild(dtr);
+                }
+            });
+        }
+
+        var _baseSql = 'SELECT id, record_id, action, ' +
+            'old_country_code, old_category, old_description, old_system, old_approval_count, old_threshold_amount, old_manual_approval, old_status, old_last_update_date, ' +
+            'new_country_code, new_category, new_description, new_system, new_approval_count, new_threshold_amount, new_manual_approval, new_status, new_last_update_date, ' +
+            'change_by, change_date FROM audit_gdas_policy';
+        var _orderBy = ' ORDER BY change_date DESC, id DESC';
+
+        // Initial load
+        (async function() {
+            var SQL = await initSqlJs({ locateFile: function() { return 'js/sql-js/sql-wasm.wasm'; } });
+            var buf = await fetch('db/data.db').then(function(r) { return r.arrayBuffer(); });
+            _db = new SQL.Database(new Uint8Array(buf));
+            var results = _db.exec(_baseSql + _orderBy + ' LIMIT 50');
+            renderResults(results, 50);
+        })();
+
+        function doSearch() {
+            var panel = document.getElementById('searchPanel');
+            panel.style.display = (panel.style.display === 'none') ? 'block' : 'none';
+        }
+
+        function filterTable() {
+            if (!_db) return;
+            var wc = buildWhereClause();
+            var results = _db.exec(_baseSql + wc.where + _orderBy + ' LIMIT 50', wc.params);
+            renderResults(results, 50);
+        }
+
+        function clearFilters() {
+            ['fChangeDate','fChangeBy','fCountry','fCategory','fDescription','fSystem'].forEach(function(id) {
+                document.getElementById(id).value = '';
+            });
+            document.getElementById('fAction').value = '';
+            document.getElementById('fManualApproval').value = '';
+            document.getElementById('fStatus').value = '';
+            if (!_db) return;
+            var results = _db.exec(_baseSql + _orderBy + ' LIMIT 50');
+            renderResults(results, 50);
+        }
+
+        function exportAllData() {
+            if (!_db) return;
+            var wc = buildWhereClause();
+            var results = _db.exec(_baseSql + wc.where + _orderBy, wc.params);
+            var csv = [];
+            var table = document.getElementById('resultsTable');
+            var headers = [];
+            table.querySelectorAll('thead th').forEach(function(th) { headers.push('"' + th.textContent.trim() + '"'); });
+            csv.push(headers.join(','));
+            if (results.length > 0) {
+                results[0].values.forEach(function(row) {
+                    var action = row[2];
+                    var changeDate = row[22] || '';
+                    var changeBy = row[21] || '';
+                    var oldVals = row.slice(3, 12);
+                    var newVals = row.slice(12, 21);
+                    if (action === 'UPDATE') {
+                        var od = formatRow(oldVals), nd = formatRow(newVals);
+                        csv.push([changeDate, action, changeBy, 'Before'].concat(od).map(function(v){return '"'+String(v).replace(/"/g,'""')+'"';}).join(','));
+                        csv.push([changeDate, action, changeBy, 'After'].concat(nd).map(function(v){return '"'+String(v).replace(/"/g,'""')+'"';}).join(','));
+                    } else if (action === 'INSERT') {
+                        var nd = formatRow(newVals);
+                        csv.push([changeDate, action, changeBy, 'New'].concat(nd).map(function(v){return '"'+String(v).replace(/"/g,'""')+'"';}).join(','));
+                    } else if (action === 'DELETE') {
+                        var od = formatRow(oldVals);
+                        csv.push([changeDate, action, changeBy, 'Deleted'].concat(od).map(function(v){return '"'+String(v).replace(/"/g,'""')+'"';}).join(','));
+                    }
+                });
+            }
+            var blob = new Blob([csv.join('\n')], { type: 'text/csv;charset=utf-8;' });
+            var link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            var now = new Date(); var ts = '_' + now.getFullYear() + String(now.getMonth()+1).padStart(2,'0') + String(now.getDate()).padStart(2,'0') + String(now.getHours()).padStart(2,'0') + String(now.getMinutes()).padStart(2,'0') + String(now.getSeconds()).padStart(2,'0');
+            link.download = 'audit_policies' + ts + '.csv';
+            link.click();
+            URL.revokeObjectURL(link.href);
+        }
+
+        document.getElementById('searchPanel').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') { e.preventDefault(); filterTable(); }
+        });
+    </script>
+</body>
+</html>

@@ -168,6 +168,10 @@
             window.location = 'signer_details.html?action=view_request&id=' + dadReqId.replace(/\D/g, '');
         }
 
+        document.getElementById('searchPanel').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') { e.preventDefault(); filterTable(); }
+        });
+
     </script>
 
     <style>

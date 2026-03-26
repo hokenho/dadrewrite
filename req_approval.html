@@ -212,6 +212,10 @@
             var actionParam = isApprover2 ? 'approval2' : 'approval1';
             window.location = 'signer_details.html?action=' + actionParam + '&id=' + dadReqId.replace(/\D/g, '');
         }
+
+        document.getElementById('searchPanel').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') { e.preventDefault(); filterTable(); }
+        });
     </script>
 
     <style>

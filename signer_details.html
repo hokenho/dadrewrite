@@ -26,8 +26,8 @@
                 <a id="btnUpdate" href="#">Request Update</a>
                 <button onclick="location.reload()">Refresh</button>
                 <button onclick="window.print()">Print</button>
-                <a id="btnAudit" href="#">View Audit Log</a>
             </span>
+            <a id="btnAudit" href="#">View Audit Log</a>
             <span id="editActions" style="display:none;">
                 <button onclick="reviewChanges()">Submit for Review</button>
                 <button onclick="cancelEdit()">Cancel</button>
@@ -98,7 +98,7 @@
                     <thead>
                         <tr>
                             <th class="action-col" style="display:none; width:4%">Delete Row</th>
-                            <th style="width:8%">Countries (Territories)</th>
+                            <th style="width:8%">Country (Territory)</th>
                             <th style="width:7%">Policy Category</th>
                             <th style="width:8%">Limit Amounts</th>
                             <th style="width:6%">Currency</th>
@@ -179,6 +179,7 @@
         var isNewSigner = (action === 'new_signer');
         var buNames = [];
         var originalData = [];
+        var policyLookup = []; // [{country_code, category, threshold_amount}, ...]
 
         // Load signer profile and limits from db
         var SIGNER_DB_READY = initSqlJs({
@@ -187,9 +188,28 @@
             return fetch('db/data.db').then(function(r) { return r.arrayBuffer(); }).then(function(buf) {
                 var db = new SQL.Database(new Uint8Array(buf));
 
-                // Load BU names for dropdown
-                var buRes = db.exec("SELECT name FROM infor_business_unit ORDER BY name");
+                // Load BU names for dropdown (active only)
+                var buRes = db.exec("SELECT name FROM infor_business_unit WHERE status = 1 ORDER BY name");
                 if (buRes.length) buRes[0].values.forEach(function(v) { buNames.push(v[0]); });
+
+                // Load gdas_policy for validation (country_code + category + threshold_amount)
+                var polRes = db.exec("SELECT country_code, category, threshold_amount FROM gdas_policy WHERE status = 1");
+                if (polRes.length) polRes[0].values.forEach(function(v) {
+                    policyLookup.push({ country_code: v[0], category: v[1], threshold_amount: v[2] });
+                });
+
+                // Load limitOptions from DB (active records only)
+                var terrRes = db.exec("SELECT DISTINCT country_code FROM wd_territory WHERE status = 1 ORDER BY country_code");
+                if (terrRes.length) terrRes[0].values.forEach(function(v) { limitOptions[0].push(v[0]); });
+
+                var polCatRes = db.exec("SELECT DISTINCT category FROM gdas_policy WHERE status = 1 ORDER BY category");
+                if (polCatRes.length) polCatRes[0].values.forEach(function(v) { limitOptions[1].push(v[0]); });
+
+                var curRes = db.exec("SELECT currency FROM infor_currency WHERE status = 1 ORDER BY currency");
+                if (curRes.length) curRes[0].values.forEach(function(v) { limitOptions[3].push(v[0]); });
+
+                var ccRes = db.exec("SELECT name FROM infor_cost_center WHERE status = 1 ORDER BY name");
+                if (ccRes.length) ccRes[0].values.forEach(function(v) { limitOptions[4].push(v[0]); });
 
                 if (isDADREQMode) {
                     var reqNum = parseInt(reqid);
@@ -313,7 +333,7 @@
                                 var newPickup = req[16] ? 'Y' : 'N';
                                 if (oldPickup !== newPickup) {
                                     var td = document.getElementById('profPickup');
-                                    td.style.backgroundColor = '#ffff00';
+                                    td.style.backgroundColor = '#fef9c3';
                                     td.innerHTML = oldPickup +
                                         ' <span style="color:#999;margin:0 4px;">&#8594;</span>' +
                                         '<span style="font-weight:bold;">' + newPickup + '</span>';
@@ -323,7 +343,7 @@
                                 var newExpireTemp = req[17] ? 'Y' : 'N';
                                 if (oldExpireTemp !== newExpireTemp) {
                                     var td = document.getElementById('profTemp');
-                                    td.style.backgroundColor = '#ffff00';
+                                    td.style.backgroundColor = '#fef9c3';
                                     td.innerHTML = oldExpireTemp +
                                         ' <span style="color:#999;margin:0 4px;">&#8594;</span>' +
                                         '<span style="font-weight:bold;">' + newExpireTemp + '</span>';
@@ -333,7 +353,7 @@
                                 var newTempStart = req[18] || '\u2014';
                                 if (oldTempStart !== newTempStart) {
                                     var td = document.getElementById('profTempStart');
-                                    td.style.backgroundColor = '#ffff00';
+                                    td.style.backgroundColor = '#fef9c3';
                                     td.innerHTML = oldTempStart +
                                         ' <span style="color:#999;margin:0 4px;">&#8594;</span>' +
                                         '<span style="font-weight:bold;">' + newTempStart + '</span>';
@@ -343,7 +363,7 @@
                                 var newTempEnd = req[19] || '\u2014';
                                 if (oldTempEnd !== newTempEnd) {
                                     var td = document.getElementById('profTempEnd');
-                                    td.style.backgroundColor = '#ffff00';
+                                    td.style.backgroundColor = '#fef9c3';
                                     td.innerHTML = oldTempEnd +
                                         ' <span style="color:#999;margin:0 4px;">&#8594;</span>' +
                                         '<span style="font-weight:bold;">' + newTempEnd + '</span>';
@@ -355,7 +375,7 @@
                                     var oldClass = statusClasses2[req[15]] || '';
                                     var newClass = statusClasses2[req[20]] || '';
                                     var td = document.getElementById('profStatus');
-                                    td.style.backgroundColor = '#ffff00';
+                                    td.style.backgroundColor = '#fef9c3';
                                     td.innerHTML =
                                         '<span class="status-badge ' + oldClass + '">' + oldStatus + '</span>' +
                                         ' <span style="color:#999;margin:0 4px;">&#8594;</span>' +
@@ -364,6 +384,7 @@
                             }
                         }
                         upn = gadId;
+                        document.getElementById('btnAudit').href = 'audit_signer_details.html?upn=' + encodeURIComponent(upn);
 
                         // Lookup maps
                         var terrMap = {}, ccMap = {}, polMap = {};
@@ -448,7 +469,7 @@
                                     btr.insertBefore(makeCtTd('Change (Before)', '#2e86c1'), btr.firstChild);
                                     tbody.appendChild(btr);
                                     var atr = makeLimRow(newVals, function(td, i) {
-                                        if (newVals[i] !== sv[i]) { td.style.backgroundColor = '#ffff00'; td.style.fontWeight = 'bold'; }
+                                        if (newVals[i] !== sv[i]) { td.style.backgroundColor = '#fef9c3'; td.style.fontWeight = 'bold'; }
                                     });
                                     atr.style.cssText = 'border-bottom:3px solid #555;border-left:3px solid #555;border-right:3px solid #555;';
                                     atr.insertBefore(makeCtTd('Change (After)', '#2e86c1'), atr.firstChild);
@@ -460,15 +481,15 @@
                                     rtr.insertBefore(makeCtTd('Removal', '#c0392b'), rtr.firstChild);
                                     tbody.appendChild(rtr);
                                 } else if (act === 'Add') {
-                                    var ntr = makeLimRow(newVals, function(td) { td.style.backgroundColor = '#ffff00'; });
-                                    ntr.style.cssText = 'border:3px solid #555;';
-                                    ntr.insertBefore(makeCtTd('Additional', '#8e44ad'), ntr.firstChild);
+                                    var ntr = makeLimRow(newVals);
+                                    ntr.style.cssText = 'background:#dcfce7;border:3px solid #555;';
+                                    ntr.insertBefore(makeCtTd('Additional', '#166534'), ntr.firstChild);
                                     tbody.appendChild(ntr);
                                 } else if (act === 'Unchange' && oldCols[0] != null) {
                                     var sv = resolveSource(oldCols);
                                     var utr = makeLimRow(sv);
-                                    utr.style.cssText = 'background:#e6ffe6;border:3px solid #555;';
-                                    utr.insertBefore(makeCtTd('No Change', '#27ae60'), utr.firstChild);
+                                    utr.style.cssText = 'background:#f3f4f6;border:3px solid #555;';
+                                    utr.insertBefore(makeCtTd('No Change', '#6b7280'), utr.firstChild);
                                     tbody.appendChild(utr);
                                 }
                             });
@@ -610,12 +631,13 @@
         };
 
         // Allowed values for each column in the limits table
+        // Columns 0,1,3,4 are populated from DB (status=1) inside SIGNER_DB_READY
         var limitOptions = {
-            0: ['NA','HK','US'],
-            1: ['EXP','PAC','EXT'],
+            0: [], // Country (Territory) - loaded from wd_territory
+            1: [], // Policy Category - loaded from gdas_policy
             2: null, // number input
-            3: ['CAD','USD','HKD'],
-            4: ['1010','8352','T08'],
+            3: [], // Currency - loaded from infor_currency
+            4: [], // Approval Cost Center - loaded from infor_cost_center
             5: ['Y','N'],
             6: ['Y','N'],
             7: 'date', // Temporary Start Date
@@ -623,12 +645,14 @@
             9: ['Y','N'],
             10: ['Y','N'],
             11: ['AP','SNOW','Concur'],
-            12: ['000000-123456','000000-789012','000000-345678']
+            12: 'text'
         };
+        // Columns that should render as <select> dropdowns instead of datalist
+        var limitSelectCols = [5, 6, 9, 10, 11];
 
         // Wire up action links with UPN
         if (upn) {
-            document.getElementById('btnAudit').href = 'audit_signer.html?upn=' + encodeURIComponent(upn);
+            document.getElementById('btnAudit').href = 'audit_signer_details.html?upn=' + encodeURIComponent(upn);
         }
 
         // Request Update → navigate to update/new URL
@@ -657,12 +681,12 @@
                 var endInput = document.getElementById('profTempEnd').querySelector('input[type="date"]');
                 if (startInput) {
                     startInput.value = '';
-                    if (startInput.value !== startInput.getAttribute('data-orig')) startInput.style.backgroundColor = '#ffff00';
+                    if (startInput.value !== startInput.getAttribute('data-orig')) startInput.style.backgroundColor = '#fef9c3';
                     else startInput.style.backgroundColor = '';
                 }
                 if (endInput) {
                     endInput.value = '';
-                    if (endInput.value !== endInput.getAttribute('data-orig')) endInput.style.backgroundColor = '#ffff00';
+                    if (endInput.value !== endInput.getAttribute('data-orig')) endInput.style.backgroundColor = '#fef9c3';
                     else endInput.style.backgroundColor = '';
                 }
             }
@@ -715,12 +739,12 @@
             // Temporary Start Date → date input
             var tempStartVal = originalProfileData.tempStart === '—' ? '' : originalProfileData.tempStart;
             tempStartTd.innerHTML = '<input type="date" class="edit-input" data-orig="' + tempStartVal + '" value="' + tempStartVal + '" style="padding:4px; width:auto;">' +
-                '<button type="button" onclick="var inp=this.previousElementSibling;inp.value=\'\';if(inp.value===inp.getAttribute(\'data-orig\')){inp.style.backgroundColor=\'\';}else{inp.style.backgroundColor=\'#ffff00\';}" style="margin-left:4px; padding:2px 8px; font-size:0.75rem; cursor:pointer;">Clear</button>';
+                '<button type="button" onclick="var inp=this.previousElementSibling;inp.value=\'\';if(inp.value===inp.getAttribute(\'data-orig\')){inp.style.backgroundColor=\'\';}else{inp.style.backgroundColor=\'#fef9c3\';}" style="margin-left:4px; padding:2px 8px; font-size:0.75rem; cursor:pointer;">Clear</button>';
 
             // Temporary End Date → date input
             var tempEndVal = originalProfileData.tempEnd === '—' ? '' : originalProfileData.tempEnd;
             tempEndTd.innerHTML = '<input type="date" class="edit-input" data-orig="' + tempEndVal + '" value="' + tempEndVal + '" style="padding:4px; width:auto;">' +
-                '<button type="button" onclick="var inp=this.previousElementSibling;inp.value=\'\';if(inp.value===inp.getAttribute(\'data-orig\')){inp.style.backgroundColor=\'\';}else{inp.style.backgroundColor=\'#ffff00\';}" style="margin-left:4px; padding:2px 8px; font-size:0.75rem; cursor:pointer;">Clear</button>';
+                '<button type="button" onclick="var inp=this.previousElementSibling;inp.value=\'\';if(inp.value===inp.getAttribute(\'data-orig\')){inp.style.backgroundColor=\'\';}else{inp.style.backgroundColor=\'#fef9c3\';}" style="margin-left:4px; padding:2px 8px; font-size:0.75rem; cursor:pointer;">Clear</button>';
 
             // Status → Active/Inactive select
             var isActive = originalProfileData.statusText === 'Active';
@@ -736,14 +760,14 @@
                 if (input) {
                     input.addEventListener('input', function() {
                         if (this.value !== this.getAttribute('data-orig')) {
-                            this.style.backgroundColor = '#ffff00';
+                            this.style.backgroundColor = '#fef9c3';
                         } else {
                             this.style.backgroundColor = '';
                         }
                     });
                     input.addEventListener('change', function() {
                         if (this.value !== this.getAttribute('data-orig')) {
-                            this.style.backgroundColor = '#ffff00';
+                            this.style.backgroundColor = '#fef9c3';
                         } else {
                             this.style.backgroundColor = '';
                         }
@@ -775,6 +799,19 @@
                         // Date input
                         var origDate = val === '\u2014' ? '' : val;
                         cell.innerHTML = '<input type="date" class="edit-input" data-orig="' + origDate + '" value="' + origDate + '" style="padding:4px; width:auto;">';
+                    } else if (limitOptions[idx] === 'text') {
+                        // Free text input (no datalist)
+                        cell.innerHTML = '<input type="text" class="edit-input" data-orig="' + val + '" value="' + val + '">';
+                    } else if (limitSelectCols.indexOf(idx) !== -1) {
+                        // Select dropdown
+                        var opts = limitOptions[idx];
+                        var html = '<select class="edit-input" data-orig="' + val + '" style="padding:4px; width:auto;">';
+                        html += '<option value="">(Select)</option>';
+                        opts.forEach(function(o) {
+                            html += '<option value="' + o + '"' + (o === val ? ' selected' : '') + '>' + o + '</option>';
+                        });
+                        html += '</select>';
+                        cell.innerHTML = html;
                     } else {
                         // Text input with datalist dropdown
                         var opts = limitOptions[idx];
@@ -796,7 +833,7 @@
                 input.addEventListener('input', function() {
                     if (this.value !== this.getAttribute('data-orig')) {
                         this.classList.add('changed');
-                        this.style.backgroundColor = '#ffff00';
+                        this.style.backgroundColor = '#fef9c3';
                     } else {
                         this.classList.remove('changed');
                         this.style.backgroundColor = '';
@@ -880,6 +917,15 @@
                     td.innerHTML = '<input type="number" class="edit-input" data-orig="" value="">';
                 } else if (limitOptions[i] === 'date') {
                     td.innerHTML = '<input type="date" class="edit-input" data-orig="" value="" style="padding:4px; width:auto;">';
+                } else if (limitOptions[i] === 'text') {
+                    td.innerHTML = '<input type="text" class="edit-input" data-orig="" value="">';
+                } else if (limitSelectCols.indexOf(i) !== -1) {
+                    var opts = limitOptions[i];
+                    var html = '<select class="edit-input" data-orig="" style="padding:4px; width:auto;">';
+                    html += '<option value="" selected>(Select)</option>';
+                    opts.forEach(function(o) { html += '<option value="' + o + '">' + o + '</option>'; });
+                    html += '</select>';
+                    td.innerHTML = html;
                 } else {
                     var opts = limitOptions[i];
                     var listId = 'new_dl_' + newRowCounter + '_' + i;
@@ -898,7 +944,7 @@
                 input.addEventListener('input', function() {
                     if (this.value !== this.getAttribute('data-orig')) {
                         this.classList.add('changed');
-                        this.style.backgroundColor = '#ffff00';
+                        this.style.backgroundColor = '#fef9c3';
                     } else {
                         this.classList.remove('changed');
                         this.style.backgroundColor = '';
@@ -909,7 +955,225 @@
             newRowCounter++;
         }
 
+        // Column names for validation error messages
+        var limitColNames = [
+            'Country (Territory)', 'Policy Category', 'Limit Amounts', 'Currency',
+            'Approval Cost Center', 'Exception', 'Temporary', 'Temporary Start Date',
+            'Temporary End Date', 'Business Rationale', 'Business Controls', 'System',
+            'Accounts Restriction'
+        ];
+
+        function validateDateInput(input) {
+            // Returns: 'valid' if value is a proper date, 'empty' if truly empty, or an error string
+            if (!input) return 'empty';
+            var val = input.value.trim();
+            if (val === '') {
+                if (input.validity && input.validity.badInput) {
+                    return 'incomplete';
+                }
+                return 'empty';
+            }
+            var d = new Date(val);
+            if (isNaN(d.getTime()) || !/^\d{4}-\d{2}-\d{2}$/.test(val)) {
+                return 'invalid';
+            }
+            return 'valid';
+        }
+
+        function validateLimitInputs() {
+            var errors = [];
+            var rows = document.querySelectorAll('#limitsBody tr');
+            rows.forEach(function(row, rIdx) {
+                var status = row.getAttribute('data-status');
+                if (status === 'deleted') return; // skip deleted rows
+                var cells = row.querySelectorAll('td');
+                var rowLabel = (status === 'new') ? 'New Row ' + (rIdx + 1) : 'Row ' + (rIdx + 1);
+
+                // Collect specific inputs for cross-field validation
+                var startInput = null, endInput = null;
+                var countryInput = null, policyInput = null, limitInput = null, tempInput = null;
+                cells.forEach(function(cell, cIdx) {
+                    if (cIdx === 0) return;
+                    var idx = cIdx - 1;
+                    if (idx === 0) countryInput = cell.querySelector('.edit-input');
+                    if (idx === 1) policyInput = cell.querySelector('.edit-input');
+                    if (idx === 2) limitInput = cell.querySelector('.edit-input');
+                    if (idx === 6) tempInput = cell.querySelector('.edit-input');
+                    if (idx === 7) startInput = cell.querySelector('.edit-input');
+                    if (idx === 8) endInput = cell.querySelector('.edit-input');
+                });
+
+                cells.forEach(function(cell, cIdx) {
+                    if (cIdx === 0) return; // skip action column
+                    var idx = cIdx - 1;
+                    var input = cell.querySelector('.edit-input');
+                    if (!input) return;
+                    var val = input.value.trim();
+
+                    // Validate date columns
+                    if (limitOptions[idx] === 'date') {
+                        var result = validateDateInput(input);
+                        if (result === 'incomplete') {
+                            errors.push(rowLabel + ': "' + limitColNames[idx] + '" has an incomplete or invalid date.');
+                            input.style.outline = '2px solid red';
+                        } else if (result === 'invalid') {
+                            errors.push(rowLabel + ': "' + limitColNames[idx] + '" value "' + val + '" is not a valid date.');
+                            input.style.outline = '2px solid red';
+                        } else {
+                            input.style.outline = '';
+                        }
+                        return;
+                    }
+
+                    if (val === '') return; // allow empty for non-date fields
+
+                    var opts = limitOptions[idx];
+                    if (!Array.isArray(opts)) return;
+                    if (limitSelectCols.indexOf(idx) !== -1) return;
+                    if (opts.indexOf(val) === -1) {
+                        errors.push(rowLabel + ': "' + limitColNames[idx] + '" value "' + val + '" is not a valid active option.');
+                        input.style.outline = '2px solid red';
+                    } else {
+                        input.style.outline = '';
+                    }
+                });
+
+                // Date pair validation: both must be filled or both empty, end >= start
+                var startResult = validateDateInput(startInput);
+                var endResult = validateDateInput(endInput);
+                var startHasValue = (startResult === 'valid');
+                var endHasValue = (endResult === 'valid');
+                if (startHasValue && !endHasValue && endResult === 'empty') {
+                    errors.push(rowLabel + ': "Temporary End Date" is required when "Temporary Start Date" is filled.');
+                    if (endInput) endInput.style.outline = '2px solid red';
+                } else if (!startHasValue && startResult === 'empty' && endHasValue) {
+                    errors.push(rowLabel + ': "Temporary Start Date" is required when "Temporary End Date" is filled.');
+                    if (startInput) startInput.style.outline = '2px solid red';
+                } else if (startHasValue && endHasValue) {
+                    if (endInput.value < startInput.value) {
+                        errors.push(rowLabel + ': "Temporary End Date" must be on or after "Temporary Start Date".');
+                        if (endInput) endInput.style.outline = '2px solid red';
+                    }
+                }
+
+                // Temporary=N: dates must be empty
+                if (tempInput && tempInput.value === 'N') {
+                    if (startResult === 'valid' || startResult === 'incomplete' || startResult === 'invalid') {
+                        errors.push(rowLabel + ': "Temporary Start Date" must be empty when "Temporary" is N.');
+                        if (startInput) startInput.style.outline = '2px solid red';
+                    }
+                    if (endResult === 'valid' || endResult === 'incomplete' || endResult === 'invalid') {
+                        errors.push(rowLabel + ': "Temporary End Date" must be empty when "Temporary" is N.');
+                        if (endInput) endInput.style.outline = '2px solid red';
+                    }
+                }
+
+                // Cross-field: Policy Category + Country combination must exist in gdas_policy
+                var countryVal = countryInput ? countryInput.value.trim() : '';
+                var policyVal = policyInput ? policyInput.value.trim() : '';
+                if (countryVal && policyVal) {
+                    var match = policyLookup.find(function(p) {
+                        return p.country_code === countryVal && p.category === policyVal;
+                    });
+                    if (!match) {
+                        errors.push(rowLabel + ': Policy Category "' + policyVal + '" for Country "' + countryVal + '" is not found.');
+                        if (policyInput) policyInput.style.outline = '2px solid red';
+                        if (countryInput) countryInput.style.outline = '2px solid red';
+                    } else {
+                        // Validate Limit Amounts > Threshold Amount
+                        var limitVal = limitInput ? limitInput.value.trim() : '';
+                        if (limitVal !== '') {
+                            var limitNum = parseFloat(limitVal);
+                            if (!isNaN(limitNum) && match.threshold_amount != null && limitNum > match.threshold_amount) {
+                                errors.push(rowLabel + ': "Limit Amounts" (' + limitNum.toLocaleString() + ') exceeds threshold (' + Number(match.threshold_amount).toLocaleString() + ') for Policy "' + policyVal + '" / Country "' + countryVal + '".');
+                                if (limitInput) limitInput.style.outline = '2px solid red';
+                            }
+                        }
+                    }
+                }
+            });
+            return errors;
+        }
+
         function reviewChanges() {
+            // Validate profile date inputs
+            var profileErrors = [];
+            var profTempStartInput = document.getElementById('profTempStart').querySelector('input[type="date"]');
+            var profTempEndInput = document.getElementById('profTempEnd').querySelector('input[type="date"]');
+            if (profTempStartInput) {
+                profTempStartInput.style.outline = '';
+                var result = validateDateInput(profTempStartInput);
+                if (result === 'incomplete') {
+                    profileErrors.push('"Temporary Start Date" has an incomplete or invalid date.');
+                    profTempStartInput.style.outline = '2px solid red';
+                } else if (result === 'invalid') {
+                    profileErrors.push('"Temporary Start Date" is not a valid date.');
+                    profTempStartInput.style.outline = '2px solid red';
+                }
+            }
+            if (profTempEndInput) {
+                profTempEndInput.style.outline = '';
+                var result = validateDateInput(profTempEndInput);
+                if (result === 'incomplete') {
+                    profileErrors.push('"Temporary End Date" has an incomplete or invalid date.');
+                    profTempEndInput.style.outline = '2px solid red';
+                } else if (result === 'invalid') {
+                    profileErrors.push('"Temporary End Date" is not a valid date.');
+                    profTempEndInput.style.outline = '2px solid red';
+                }
+            }
+            // Profile date pair validation
+            if (profTempStartInput && profTempEndInput) {
+                var startResult = validateDateInput(profTempStartInput);
+                var endResult = validateDateInput(profTempEndInput);
+                if (startResult === 'valid' && endResult === 'empty') {
+                    profileErrors.push('"Temporary End Date" is required when "Temporary Start Date" is filled.');
+                    profTempEndInput.style.outline = '2px solid red';
+                } else if (startResult === 'empty' && endResult === 'valid') {
+                    profileErrors.push('"Temporary Start Date" is required when "Temporary End Date" is filled.');
+                    profTempStartInput.style.outline = '2px solid red';
+                } else if (startResult === 'valid' && endResult === 'valid') {
+                    if (profTempEndInput.value < profTempStartInput.value) {
+                        profileErrors.push('"Temporary End Date" must be on or after "Temporary Start Date".');
+                        profTempEndInput.style.outline = '2px solid red';
+                    }
+                }
+            }
+            // Profile Temporary=N: dates must be empty
+            var profTempSelect = document.getElementById('profTemp').querySelector('.edit-input');
+            if (profTempSelect && profTempSelect.value === 'N' && profTempStartInput && profTempEndInput) {
+                var sResult = validateDateInput(profTempStartInput);
+                var eResult = validateDateInput(profTempEndInput);
+                if (sResult !== 'empty') {
+                    profileErrors.push('"Temporary Start Date" must be empty when "Temporary" is N.');
+                    profTempStartInput.style.outline = '2px solid red';
+                }
+                if (eResult !== 'empty') {
+                    profileErrors.push('"Temporary End Date" must be empty when "Temporary" is N.');
+                    profTempEndInput.style.outline = '2px solid red';
+                }
+            }
+
+            // Validate limit inputs
+            document.querySelectorAll('#limitsBody .edit-input').forEach(function(input) {
+                input.style.outline = '';
+            });
+            var limitErrors = validateLimitInputs();
+
+            // Build grouped error message
+            if (profileErrors.length > 0 || limitErrors.length > 0) {
+                var msg = 'Data errors:\n';
+                if (profileErrors.length > 0) {
+                    msg += '\nSigner Profile:\n' + profileErrors.join('\n');
+                }
+                if (limitErrors.length > 0) {
+                    if (profileErrors.length > 0) msg += '\n';
+                    msg += '\nSigning Limit Authorizations:\n' + limitErrors.join('\n');
+                }
+                alert(msg);
+                return;
+            }
+
             var contentDiv = document.getElementById('reviewModalContent');
             contentDiv.innerHTML = '';
             
@@ -940,7 +1204,7 @@
                         if (cIdx === 0) return;
                         var input = cell.querySelector('.edit-input');
                         var val = input ? input.value : cell.textContent;
-                        tableHTML += '<td style="background-color:#ffff00;">' + val + '</td>';
+                        tableHTML += '<td style="background-color:#fef9c3;">' + val + '</td>';
                     });
                     tableHTML += '</tr>';
                 } 
@@ -969,7 +1233,7 @@
                                 var val = input.value;
                                 var orig = input.getAttribute('data-orig');
                                 if (val !== orig) {
-                                    tableHTML += '<td style="background-color:#ffff00; font-weight:bold;">' + val + '</td>';
+                                    tableHTML += '<td style="background-color:#fef9c3; font-weight:bold;">' + val + '</td>';
                                 } else {
                                     tableHTML += '<td>' + val + '</td>';
                                 }
@@ -1143,7 +1407,7 @@
                         var origText = td.textContent.trim();
                         td.innerHTML = origText +
                             ' <span style="color:#999; margin:0 4px;">&#8594;</span>' +
-                            '<span style="background:#ffff00; padding:2px 6px; border-radius:3px; font-weight:bold;">' +
+                            '<span style="background:#fef9c3; padding:2px 6px; border-radius:3px; font-weight:bold;">' +
                             changes.profile[fieldName] + '</span>';
                     }
                 });
@@ -1212,7 +1476,7 @@
                             var td = document.createElement('td');
                             if (idx >= 5 && idx <= 8) td.className = 'text-center';
                             if (val !== origData[idx]) {
-                                td.style.backgroundColor = '#ffff00';
+                                td.style.backgroundColor = '#fef9c3';
                                 td.style.fontWeight = 'bold';
                             }
                             td.textContent = val;
@@ -1252,7 +1516,7 @@
 
                         change.newData.forEach(function(val, idx) {
                             var td = document.createElement('td');
-                            td.style.backgroundColor = '#ffff00';
+                            td.style.backgroundColor = '#fef9c3';
                             if (idx >= 5 && idx <= 8) td.className = 'text-center';
                             td.textContent = val;
                             newTr.appendChild(td);
@@ -1468,6 +1732,13 @@ Infor
 DAD Request
 - signer
 - signer_limit</pre>
+            <h4 style="margin:12px 0 6px 0;color:#6a1b9a;">Data Validation (on Submit for Review):</h4>
+            <pre style="background:#f3e5f5;padding:12px;border-radius:6px;font-size:0.82rem;white-space:pre;overflow-x:auto;">Signer Profile:
+1. Temporary Start Date / End Date must be valid dates (YYYY-MM-DD)
+   - Incomplete or partial dates are rejected
+2. Both dates must be filled or both empty (cannot have only one)
+3. End Date must be >= Start Date
+4. If Temporary = N, both Start Date and End Date must be empty</pre>
             <div style="text-align:right;margin-top:12px;"><button onclick="document.getElementById('devNoteProfileModal').style.display='none'" style="padding:4px 14px;cursor:pointer;">Close</button></div>
         </div>
     </div>
@@ -1544,6 +1815,26 @@ Infor
 DAD Request
 - signer
 - signer_limit</pre>
+            <h4 style="margin:12px 0 6px 0;color:#6a1b9a;">Data Validation (on Submit for Review):</h4>
+            <pre style="background:#f3e5f5;padding:12px;border-radius:6px;font-size:0.82rem;white-space:pre;overflow-x:auto;">Signing Limit Authorizations (per row):
+1. Datalist fields: Country (Territory), Policy Category, Currency, Approval Cost Center
+   - Value must match an active option (status=1) from the source table
+   - Country (Territory): wd_territory.country_code WHERE status=1
+   - Policy Category: gdas_policy.category WHERE status=1
+   - Currency: infor_currency.currency WHERE status=1
+   - Approval Cost Center: infor_cost_center.name WHERE status=1
+2. Dropdown fields: Exception, Temporary, Business Rationale, Business Controls, System
+   - Constrained by select options (no free-text)
+3. Accounts Restriction: free text input (no validation)
+4. Temporary Start Date / End Date must be valid dates (YYYY-MM-DD)
+   - Incomplete or partial dates are rejected
+5. Both dates must be filled or both empty (cannot have only one)
+6. End Date must be >= Start Date
+7. If Temporary = N, both Start Date and End Date must be empty
+8. Country + Policy Category combination must exist in gdas_policy table
+   - Lookup: gdas_policy.country_code + gdas_policy.category (status=1)
+9. Limit Amounts must not exceed gdas_policy.threshold_amount
+   - Only checked when Country + Policy Category combination is valid</pre>
             <div style="text-align:right;margin-top:12px;"><button onclick="document.getElementById('devNoteLimitsModal').style.display='none'" style="padding:4px 14px;cursor:pointer;">Close</button></div>
         </div>
     </div>

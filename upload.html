@@ -18,6 +18,11 @@
         .upload-item-body input[type="file"] { font-size: 0.8rem; }
         .upload-status { font-size: 0.8rem; color: #666; margin-left: 8px; }
         .upload-group { display: inline-flex; align-items: center; gap: 8px; border: 1px solid #c5d4e8; border-radius: 4px; padding: 4px 10px; background: #f9fbfd; }
+        .file-input-hidden { width: 0.1px; height: 0.1px; opacity: 0; overflow: hidden; position: absolute; z-index: -1; }
+        .file-label { display: inline-block; font-size: 0.8rem; padding: 6px 14px; cursor: pointer; border: 1px solid #999; border-radius: 4px; background: #f5f5f5; font-weight: 400; }
+        .file-label:hover { background: #e0e0e0; }
+        .file-name { font-size: 0.8rem; color: #333; }
+        .btn-logic { font-size: 0.72rem; padding: 2px 10px; font-weight: 600; color: #fff; background: #6a1b9a; border: none; border-radius: 4px; cursor: pointer; margin-left: 8px; }
     </style>
 </head>
 <body>
@@ -52,26 +57,28 @@
                     <div style="padding:12px 16px; display:flex; flex-direction:column; gap:14px;">
 
                         <div>
-                            <div style="font-weight:600; font-size:0.85rem; color:#2a5a8a; margin-bottom:6px;">Update Signer Profile</div>
+                            <div style="font-weight:600; font-size:0.85rem; color:#2a5a8a; margin-bottom:6px;">Update Signer Profile <button class="btn-logic" onclick="document.getElementById('profileLogicModal').style.display='flex'">Validation Logic</button></div>
                             <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
-                                <button class="btn" onclick="downloadSignerProfile()">Download Template File</button>
-                                <span class="upload-group"><button class="btn btn-primary" onclick="handleUpload('uploadProfile')">Upload Changes</button><input type="file" id="uploadProfile" accept=".csv,.xlsx"></span>
+                                <button class="btn btn-primary" onclick="downloadSignerProfile()">Download Template File</button>
+                                <span class="upload-group"><label class="file-label" for="uploadProfile">Choose Upload File</label><input type="file" id="uploadProfile" class="file-input-hidden" accept=".csv" onclick="this.value=''" onchange="onProfileFileSelected(this)"><span class="file-name" id="profileFileName">No file chosen</span></span>
                                 <span class="upload-status" id="statusProfile"></span>
                             </div>
+                            <div id="profileErrors" style="display:none; margin-top:8px; padding:10px 14px; background:#fff3f3; border:1px solid #e57373; border-radius:4px; font-size:0.8rem; color:#c62828; white-space:pre-wrap; max-height:200px; overflow-y:auto;"></div>
                         </div>
 
                         <div>
-                            <div style="font-weight:600; font-size:0.85rem; color:#2a5a8a; margin-bottom:6px;">Update Signer Limit</div>
+                            <div style="font-weight:600; font-size:0.85rem; color:#2a5a8a; margin-bottom:6px;">Update Signer Limit <button class="btn-logic" onclick="document.getElementById('limitLogicModal').style.display='flex'">Validation Logic</button></div>
                             <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
-                                <button class="btn" onclick="downloadSignerLimit()">Download Template File</button>
-                                <span class="upload-group"><button class="btn btn-primary" onclick="handleUpload('uploadLimit')">Upload Changes</button><input type="file" id="uploadLimit" accept=".csv,.xlsx"></span>
+                                <button class="btn btn-primary" onclick="downloadSignerLimit()">Download Template File</button>
+                                <span class="upload-group"><label class="file-label" for="uploadLimit">Choose Upload File</label><input type="file" id="uploadLimit" class="file-input-hidden" accept=".csv" onclick="this.value=''" onchange="onLimitFileSelected(this)"><span class="file-name" id="limitFileName">No file chosen</span></span>
                                 <span class="upload-status" id="statusLimit"></span>
                             </div>
+                            <div id="limitErrors" style="display:none; margin-top:8px; padding:10px 14px; background:#fff3f3; border:1px solid #e57373; border-radius:4px; font-size:0.8rem; color:#c62828; white-space:pre-wrap; max-height:200px; overflow-y:auto;"></div>
                         </div>
 
                         <div style="border-top:1px solid #c5d4e8; padding-top:12px; display:flex; align-items:center; gap:12px;">
-                            <button id="btnSubmitUpload" class="btn btn-primary" style="font-size:0.85rem; padding:8px 28px;" onclick="submitUpload()">Submit</button>
-                            <span id="submitMsg" style="display:none; font-size:0.85rem; font-weight:600; color:#2e7d32;">Submitted successfully, pending for review.</span>
+                            <button id="btnSubmitUpload" class="btn btn-primary" style="display:none; font-size:0.85rem; padding:8px 28px;" onclick="submitUpload()">Submit</button>
+                            <span id="submitMsg" style="display:none; font-size:0.85rem; font-weight:600; color:#2e7d32;">Submitted successfully, pending for review.<br>Restore files downloaded. Please keep them and you could upload them for reverting the changes.</span>
                         </div>
                     </div>
                 </div>
@@ -81,6 +88,340 @@
     </div>
 
     <script>
+        // Lookup data loaded from DB
+        var buNames = [];
+        var policyLookup = []; // [{country_code, category, threshold_amount}]
+        var territoryNames = [];
+        var policyCats = [];
+        var currencyNames = [];
+        var ccNames = [];
+        var validActions = ['UPDATE', 'DELETE', 'ADD'];
+        var ynValues = ['Y', 'N'];
+
+        // Validation state
+        var profileValid = false;
+        var limitValid = false;
+        var profileRows = [];
+        var limitRows = [];
+
+        // Load lookup data from DB on page load
+        (async function() {
+            var SQL = await initSqlJs({ locateFile: function(f) { return 'js/sql-js/' + f; } });
+            var buf = await fetch('db/data.db').then(function(r) { return r.arrayBuffer(); });
+            var db = new SQL.Database(new Uint8Array(buf));
+
+            var buRes = db.exec("SELECT name FROM infor_business_unit WHERE status = 1 ORDER BY name");
+            if (buRes.length) buRes[0].values.forEach(function(v) { buNames.push(v[0]); });
+
+            var polRes = db.exec("SELECT country_code, category, threshold_amount FROM gdas_policy WHERE status = 1");
+            if (polRes.length) polRes[0].values.forEach(function(v) {
+                policyLookup.push({ country_code: v[0], category: v[1], threshold_amount: v[2] });
+            });
+
+            var terrRes = db.exec("SELECT DISTINCT country_code FROM wd_territory WHERE status = 1 ORDER BY country_code");
+            if (terrRes.length) terrRes[0].values.forEach(function(v) { territoryNames.push(v[0]); });
+
+            var polCatRes = db.exec("SELECT DISTINCT category FROM gdas_policy WHERE status = 1 ORDER BY category");
+            if (polCatRes.length) polCatRes[0].values.forEach(function(v) { policyCats.push(v[0]); });
+
+            var curRes = db.exec("SELECT currency FROM infor_currency WHERE status = 1 ORDER BY currency");
+            if (curRes.length) curRes[0].values.forEach(function(v) { currencyNames.push(v[0]); });
+
+            var ccRes = db.exec("SELECT name FROM infor_cost_center WHERE status = 1 ORDER BY name");
+            if (ccRes.length) ccRes[0].values.forEach(function(v) { ccNames.push(v[0]); });
+
+            db.close();
+        })();
+
+        function parseCSV(text) {
+            var lines = text.split(/\r?\n/).filter(function(l) { return l.trim() !== ''; });
+            return lines.map(function(line) {
+                var result = [];
+                var inQuote = false;
+                var field = '';
+                for (var i = 0; i < line.length; i++) {
+                    var c = line[i];
+                    if (inQuote) {
+                        if (c === '"' && i + 1 < line.length && line[i + 1] === '"') {
+                            field += '"';
+                            i++;
+                        } else if (c === '"') {
+                            inQuote = false;
+                        } else {
+                            field += c;
+                        }
+                    } else {
+                        if (c === '"') {
+                            inQuote = true;
+                        } else if (c === ',') {
+                            result.push(field.trim());
+                            field = '';
+                        } else {
+                            field += c;
+                        }
+                    }
+                }
+                result.push(field.trim());
+                return result;
+            });
+        }
+
+        function isValidDate(s) {
+            if (!s) return false;
+            // Accept YYYYMMDD or YYYY-MM-DD
+            var m = s.match(/^(\d{4})-?(\d{2})-?(\d{2})$/);
+            if (!m) return false;
+            var d = new Date(m[1] + '-' + m[2] + '-' + m[3]);
+            return !isNaN(d.getTime());
+        }
+
+        function normDate(s) {
+            // Normalize YYYYMMDD or YYYY-MM-DD to YYYY-MM-DD
+            if (!s) return '';
+            var m = s.match(/^(\d{4})-?(\d{2})-?(\d{2})$/);
+            if (!m) return s;
+            return m[1] + '-' + m[2] + '-' + m[3];
+        }
+
+        function updateSubmitButton() {
+            var btn = document.getElementById('btnSubmitUpload');
+            btn.style.display = (profileValid && limitValid) ? 'inline-block' : 'none';
+            document.getElementById('submitMsg').style.display = 'none';
+        }
+
+        // Profile columns: Action, GAD ID, Business Unit, Pickup Cheques, Temporary, Temporary Start Date, Temporary End Date
+        function validateProfileRows(rows) {
+            var errors = [];
+            if (rows.length < 2) { errors.push('File has no data rows.'); return errors; }
+            for (var i = 1; i < rows.length; i++) {
+                var row = rows[i];
+                var label = 'Row ' + i;
+                if (row.length < 7) { errors.push(label + ': Expected 7 columns, got ' + row.length + '.'); continue; }
+                var action = row[0].toUpperCase();
+                var bu = row[2];
+                var pickup = row[3].toUpperCase();
+                var temp = row[4].toUpperCase();
+                var startDate = row[5];
+                var endDate = row[6];
+
+                // Action
+                if (validActions.indexOf(action) === -1) {
+                    errors.push(label + ': "Action" value "' + row[0] + '" is not valid. Must be UPDATE, DELETE, or ADD.');
+                }
+                // Skip further validation for DELETE rows
+                if (action === 'DELETE') continue;
+
+                // Business Unit
+                if (bu && buNames.indexOf(bu) === -1) {
+                    errors.push(label + ': "Business Unit" value "' + bu + '" is not a valid active option.');
+                }
+                // Pickup Cheques
+                if (pickup && ynValues.indexOf(pickup) === -1) {
+                    errors.push(label + ': "Pickup Cheques" value "' + row[3] + '" is not valid. Must be Y or N.');
+                }
+                // Temporary
+                if (temp && ynValues.indexOf(temp) === -1) {
+                    errors.push(label + ': "Temporary" value "' + row[4] + '" is not valid. Must be Y or N.');
+                }
+                // Date validation
+                if (startDate && !isValidDate(startDate)) {
+                    errors.push(label + ': "Temporary Start Date" value "' + startDate + '" is not a valid date.');
+                }
+                if (endDate && !isValidDate(endDate)) {
+                    errors.push(label + ': "Temporary End Date" value "' + endDate + '" is not a valid date.');
+                }
+                // Both or neither
+                var hasStart = startDate && isValidDate(startDate);
+                var hasEnd = endDate && isValidDate(endDate);
+                if (hasStart && !hasEnd && !endDate) {
+                    errors.push(label + ': "Temporary End Date" is required when "Temporary Start Date" is filled.');
+                } else if (!hasStart && !startDate && hasEnd) {
+                    errors.push(label + ': "Temporary Start Date" is required when "Temporary End Date" is filled.');
+                }
+                // End >= Start
+                if (hasStart && hasEnd) {
+                    if (normDate(endDate) < normDate(startDate)) {
+                        errors.push(label + ': "Temporary End Date" must be on or after "Temporary Start Date".');
+                    }
+                }
+                // Temp=N: dates must be empty
+                if (temp === 'N') {
+                    if (startDate) errors.push(label + ': "Temporary Start Date" must be empty when "Temporary" is N.');
+                    if (endDate) errors.push(label + ': "Temporary End Date" must be empty when "Temporary" is N.');
+                }
+            }
+            return errors;
+        }
+
+        // Limit columns: Action, Approval ID, GAD ID, Countries (Territories), Policy Category, Limit Amounts, Currency, Approval Cost Center, Exception, Temporary, Temporary Start Date, Temporary End Date, Business Rationale, Business Controls, Accounts Restriction
+        function validateLimitRows(rows) {
+            var errors = [];
+            if (rows.length < 2) { errors.push('File has no data rows.'); return errors; }
+            for (var i = 1; i < rows.length; i++) {
+                var row = rows[i];
+                var label = 'Row ' + i;
+                if (row.length < 15) { errors.push(label + ': Expected 15 columns, got ' + row.length + '.'); continue; }
+                var action = row[0].toUpperCase();
+                var country = row[3];
+                var policy = row[4];
+                var limitAmt = row[5];
+                var currency = row[6];
+                var cc = row[7];
+                var exception = row[8].toUpperCase();
+                var temp = row[9].toUpperCase();
+                var startDate = row[10];
+                var endDate = row[11];
+                var bizRat = row[12].toUpperCase();
+                var bizCtrl = row[13].toUpperCase();
+
+                // Action
+                if (validActions.indexOf(action) === -1) {
+                    errors.push(label + ': "Action" value "' + row[0] + '" is not valid. Must be UPDATE, DELETE, or ADD.');
+                }
+                // Skip further validation for DELETE rows
+                if (action === 'DELETE') continue;
+
+                // Country (Territory)
+                if (country && territoryNames.indexOf(country) === -1) {
+                    errors.push(label + ': "Country (Territory)" value "' + country + '" is not a valid active option.');
+                }
+                // Policy Category
+                if (policy && policyCats.indexOf(policy) === -1) {
+                    errors.push(label + ': "Policy Category" value "' + policy + '" is not a valid active option.');
+                }
+                // Currency
+                if (currency && currencyNames.indexOf(currency) === -1) {
+                    errors.push(label + ': "Currency" value "' + currency + '" is not a valid active option.');
+                }
+                // Approval Cost Center
+                if (cc && ccNames.indexOf(cc) === -1) {
+                    errors.push(label + ': "Approval Cost Center" value "' + cc + '" is not a valid active option.');
+                }
+                // Y/N fields
+                if (exception && ynValues.indexOf(exception) === -1) {
+                    errors.push(label + ': "Exception" value "' + row[8] + '" is not valid. Must be Y or N.');
+                }
+                if (temp && ynValues.indexOf(temp) === -1) {
+                    errors.push(label + ': "Temporary" value "' + row[9] + '" is not valid. Must be Y or N.');
+                }
+                if (bizRat && ynValues.indexOf(bizRat) === -1) {
+                    errors.push(label + ': "Business Rationale" value "' + row[12] + '" is not valid. Must be Y or N.');
+                }
+                if (bizCtrl && ynValues.indexOf(bizCtrl) === -1) {
+                    errors.push(label + ': "Business Controls" value "' + row[13] + '" is not valid. Must be Y or N.');
+                }
+                // Date validation
+                if (startDate && !isValidDate(startDate)) {
+                    errors.push(label + ': "Temporary Start Date" value "' + startDate + '" is not a valid date.');
+                }
+                if (endDate && !isValidDate(endDate)) {
+                    errors.push(label + ': "Temporary End Date" value "' + endDate + '" is not a valid date.');
+                }
+                var hasStart = startDate && isValidDate(startDate);
+                var hasEnd = endDate && isValidDate(endDate);
+                if (hasStart && !hasEnd && !endDate) {
+                    errors.push(label + ': "Temporary End Date" is required when "Temporary Start Date" is filled.');
+                } else if (!hasStart && !startDate && hasEnd) {
+                    errors.push(label + ': "Temporary Start Date" is required when "Temporary End Date" is filled.');
+                }
+                if (hasStart && hasEnd) {
+                    if (normDate(endDate) < normDate(startDate)) {
+                        errors.push(label + ': "Temporary End Date" must be on or after "Temporary Start Date".');
+                    }
+                }
+                // Temp=N: dates must be empty
+                if (temp === 'N') {
+                    if (startDate) errors.push(label + ': "Temporary Start Date" must be empty when "Temporary" is N.');
+                    if (endDate) errors.push(label + ': "Temporary End Date" must be empty when "Temporary" is N.');
+                }
+                // Country + Policy combination must exist in gdas_policy
+                if (country && policy) {
+                    var match = policyLookup.find(function(p) {
+                        return p.country_code === country && p.category === policy;
+                    });
+                    if (!match) {
+                        errors.push(label + ': Policy Category "' + policy + '" for Country "' + country + '" is not found.');
+                    } else if (limitAmt !== '') {
+                        var limitNum = parseFloat(limitAmt);
+                        if (!isNaN(limitNum) && match.threshold_amount != null && limitNum > match.threshold_amount) {
+                            errors.push(label + ': "Limit Amounts" (' + limitNum.toLocaleString() + ') exceeds threshold (' + Number(match.threshold_amount).toLocaleString() + ') for Policy "' + policy + '" / Country "' + country + '".');
+                        }
+                    }
+                }
+            }
+            return errors;
+        }
+
+        function onProfileFileSelected(input) {
+            var statusEl = document.getElementById('statusProfile');
+            var errDiv = document.getElementById('profileErrors');
+            var fileNameEl = document.getElementById('profileFileName');
+            errDiv.style.display = 'none';
+            errDiv.textContent = '';
+            profileValid = false;
+            updateSubmitButton();
+
+            if (!input.files || !input.files.length) {
+                statusEl.textContent = '';
+                fileNameEl.textContent = 'No file chosen';
+                return;
+            }
+            var file = input.files[0];
+            fileNameEl.textContent = file.name;
+            var reader = new FileReader();
+            reader.onload = function(e) {
+                var rows = parseCSV(e.target.result);
+                var errors = validateProfileRows(rows);
+                if (errors.length > 0) {
+                    statusEl.innerHTML = '<span style="color:#d32f2f;">File "' + file.name + '" has ' + errors.length + ' error(s).</span>';
+                    errDiv.textContent = errors.join('\n');
+                    errDiv.style.display = 'block';
+                    profileValid = false;
+                } else {
+                    statusEl.innerHTML = '<span style="color:#2e7d32;">File "' + file.name + '" loaded. ' + (rows.length - 1) + ' row(s) validated OK.</span>';
+                    profileValid = true;
+                    profileRows = rows;
+                }
+                updateSubmitButton();
+            };
+            reader.readAsText(file);
+        }
+
+        function onLimitFileSelected(input) {
+            var statusEl = document.getElementById('statusLimit');
+            var errDiv = document.getElementById('limitErrors');
+            var fileNameEl = document.getElementById('limitFileName');
+            errDiv.style.display = 'none';
+            errDiv.textContent = '';
+            limitValid = false;
+            updateSubmitButton();
+
+            if (!input.files || !input.files.length) {
+                statusEl.textContent = '';
+                fileNameEl.textContent = 'No file chosen';
+                return;
+            }
+            var file = input.files[0];
+            fileNameEl.textContent = file.name;
+            var reader = new FileReader();
+            reader.onload = function(e) {
+                var rows = parseCSV(e.target.result);
+                var errors = validateLimitRows(rows);
+                if (errors.length > 0) {
+                    statusEl.innerHTML = '<span style="color:#d32f2f;">File "' + file.name + '" has ' + errors.length + ' error(s).</span>';
+                    errDiv.textContent = errors.join('\n');
+                    errDiv.style.display = 'block';
+                    limitValid = false;
+                } else {
+                    statusEl.innerHTML = '<span style="color:#2e7d32;">File "' + file.name + '" loaded. ' + (rows.length - 1) + ' row(s) validated OK.</span>';
+                    limitValid = true;
+                    limitRows = rows;
+                }
+                updateSubmitButton();
+            };
+            reader.readAsText(file);
+        }
+
         async function downloadSignerLimit() {
             var SQL = await initSqlJs({ locateFile: function(f) { return 'js/sql-js/' + f; } });
             var buf = await fetch('db/data.db').then(function(r) { return r.arrayBuffer(); });
@@ -257,30 +598,202 @@
             var blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
             var link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
-            link.download = 'all_signer_data.csv';
+            var now = new Date(); var ts = '_' + now.getFullYear() + String(now.getMonth()+1).padStart(2,'0') + String(now.getDate()).padStart(2,'0') + String(now.getHours()).padStart(2,'0') + String(now.getMinutes()).padStart(2,'0') + String(now.getSeconds()).padStart(2,'0');
+            link.download = 'all_signer_data' + ts + '.csv';
             link.click();
             URL.revokeObjectURL(link.href);
             db.close();
         }
 
-        function handleUpload(inputId) {
-            var input = document.getElementById(inputId);
-            var statusId = 'status' + inputId.replace('upload', '');
-            var statusEl = document.getElementById(statusId);
-            if (!input.files || !input.files.length) {
-                statusEl.textContent = 'Please select a file first.';
-                statusEl.style.color = '#d32f2f';
-                return;
-            }
-            statusEl.textContent = 'File "' + input.files[0].name + '" loaded.';
-            statusEl.style.color = '#2e7d32';
-        }
-
-        function submitUpload() {
+        async function submitUpload() {
             if (!confirm('Are you sure you want to submit the uploaded changes for review?')) return;
+
+            var now = new Date(); var ts = '_' + now.getFullYear() + String(now.getMonth()+1).padStart(2,'0') + String(now.getDate()).padStart(2,'0') + String(now.getHours()).padStart(2,'0') + String(now.getMinutes()).padStart(2,'0') + String(now.getSeconds()).padStart(2,'0');
+
+            // Generate restore upload files
+            var SQL = await initSqlJs({ locateFile: function(f) { return 'js/sql-js/' + f; } });
+            var buf = await fetch('db/data.db').then(function(r) { return r.arrayBuffer(); });
+            var db = new SQL.Database(new Uint8Array(buf));
+
+            function fmtDate(d) {
+                if (!d) return '';
+                return String(d).replace(/-/g, '');
+            }
+            function csvQuote(v) { return '"' + String(v).replace(/"/g, '""') + '"'; }
+
+            // --- Restore: Signer Profile ---
+            var profHeaders = ['Action (UPDATE/DELETE/ADD)','GAD ID (key)','Business Unit','Pickup Cheques','Temporary','Temporary Start Date','Temporary End Date'];
+            var profCsv = [profHeaders.map(function(h) { return csvQuote(h); }).join(',')];
+            for (var pi = 1; pi < profileRows.length; pi++) {
+                var pr = profileRows[pi];
+                var pAction = pr[0].toUpperCase();
+                var pGad = pr[1];
+                if (pAction === 'ADD') {
+                    // ADD → DELETE: just need the GAD ID
+                    profCsv.push([csvQuote('DELETE'), csvQuote(pGad), '""', '""', '""', '""', '""'].join(','));
+                } else if (pAction === 'UPDATE' || pAction === 'DELETE') {
+                    // Look up current data from DB
+                    var pRes = db.exec(
+                        "SELECT COALESCE(bu.name, '') AS bu_name, " +
+                        "s.pickup_cheque, s.temp, s.temp_start_date, s.temp_end_date " +
+                        "FROM signer s " +
+                        "LEFT JOIN infor_business_unit bu ON s.bu_id = bu.id " +
+                        "WHERE s.gad_id = ?", [pGad]
+                    );
+                    if (pRes.length && pRes[0].values.length) {
+                        var pd = pRes[0].values[0];
+                        var restoreAction = (pAction === 'DELETE') ? 'ADD' : 'UPDATE';
+                        profCsv.push([
+                            csvQuote(restoreAction), csvQuote(pGad),
+                            csvQuote(pd[0] || ''),
+                            csvQuote(pd[1] ? 'Y' : 'N'),
+                            csvQuote(pd[2] ? 'Y' : 'N'),
+                            csvQuote(fmtDate(pd[3])),
+                            csvQuote(fmtDate(pd[4]))
+                        ].join(','));
+                    }
+                }
+            }
+            var profBlob = new Blob([profCsv.join('\n')], { type: 'text/csv;charset=utf-8;' });
+            var profLink = document.createElement('a');
+            profLink.href = URL.createObjectURL(profBlob);
+            profLink.download = 'restore_signer_profile' + ts + '.csv';
+            profLink.click();
+            URL.revokeObjectURL(profLink.href);
+
+            // --- Restore: Signer Limit ---
+            var limHeaders = ['Action (UPDATE/DELETE/ADD)','Approval ID (key)','GAD ID','Countries (Territories)','Policy Category','Limit Amounts','Currency','Approval Cost Center','Exception','Temporary','Temporary Start Date','Temporary End Date','Business Rationale','Business Controls','Accounts Restriction'];
+            var limCsv = [limHeaders.map(function(h) { return csvQuote(h); }).join(',')];
+            for (var li = 1; li < limitRows.length; li++) {
+                var lr = limitRows[li];
+                var lAction = lr[0].toUpperCase();
+                var lId = lr[1]; // Approval ID
+                var lGad = lr[2];
+                if (lAction === 'ADD') {
+                    // ADD → DELETE: copy the row data with DELETE action
+                    limCsv.push([
+                        csvQuote('DELETE'), csvQuote(lId), csvQuote(lGad),
+                        csvQuote(lr[3] || ''), csvQuote(lr[4] || ''), csvQuote(lr[5] || ''),
+                        csvQuote(lr[6] || ''), csvQuote(lr[7] || ''), csvQuote(lr[8] || ''),
+                        csvQuote(lr[9] || ''), csvQuote(lr[10] || ''), csvQuote(lr[11] || ''),
+                        csvQuote(lr[12] || ''), csvQuote(lr[13] || ''), csvQuote(lr[14] || '')
+                    ].join(','));
+                } else if (lAction === 'UPDATE' || lAction === 'DELETE') {
+                    // Look up current data from DB
+                    var lRes = db.exec(
+                        "SELECT sl.id, sl.gad_id, " +
+                        "COALESCE(t.country_code, '') AS country_code, " +
+                        "COALESCE(p.category, '') AS category, " +
+                        "sl.limit_amount, sl.currency, " +
+                        "COALESCE(cc.name, '') AS cc_name, " +
+                        "sl.exception, sl.temp, sl.temp_start_date, sl.temp_end_date, " +
+                        "sl.business_rationale, sl.business_control, sl.account_restriction " +
+                        "FROM signer_limit sl " +
+                        "LEFT JOIN wd_territory t ON sl.territory_id = t.id " +
+                        "LEFT JOIN gdas_policy p ON sl.policy_id = p.id " +
+                        "LEFT JOIN infor_cost_center cc ON sl.approval_cc_id = cc.id " +
+                        "WHERE sl.id = ?", [parseInt(lId)]
+                    );
+                    if (lRes.length && lRes[0].values.length) {
+                        var ld = lRes[0].values[0];
+                        var restoreLAction = (lAction === 'DELETE') ? 'ADD' : 'UPDATE';
+                        limCsv.push([
+                            csvQuote(restoreLAction), csvQuote(ld[0] || ''), csvQuote(ld[1] || ''),
+                            csvQuote(ld[2] || ''), csvQuote(ld[3] || ''),
+                            csvQuote(ld[4] != null ? ld[4] : ''),
+                            csvQuote(ld[5] || ''), csvQuote(ld[6] || ''),
+                            csvQuote(ld[7] ? 'Y' : 'N'), csvQuote(ld[8] ? 'Y' : 'N'),
+                            csvQuote(fmtDate(ld[9])), csvQuote(fmtDate(ld[10])),
+                            csvQuote(ld[11] ? 'Y' : 'N'), csvQuote(ld[12] ? 'Y' : 'N'),
+                            csvQuote(ld[13] || '')
+                        ].join(','));
+                    }
+                }
+            }
+            var limBlob = new Blob([limCsv.join('\n')], { type: 'text/csv;charset=utf-8;' });
+            var limLink = document.createElement('a');
+            limLink.href = URL.createObjectURL(limBlob);
+            limLink.download = 'restore_signer_limit' + ts + '.csv';
+            limLink.click();
+            URL.revokeObjectURL(limLink.href);
+
+            db.close();
+
             document.getElementById('btnSubmitUpload').style.display = 'none';
             document.getElementById('submitMsg').style.display = 'inline';
         }
     </script>
+
+    <!-- Validation Logic Modal: Signer Profile -->
+    <div id="profileLogicModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:2000;align-items:center;justify-content:center;" onclick="if(event.target===this)this.style.display='none'">
+        <div style="background:#fff;width:600px;max-height:80%;border-radius:8px;padding:24px;box-shadow:0 4px 12px rgba(0,0,0,0.15);overflow-y:auto;">
+            <h3 style="margin:0 0 12px 0;color:#6a1b9a;">Validation Logic – Signer Profile</h3>
+            <h4 style="margin:0 0 6px 0;color:#6a1b9a;">CSV Columns:</h4>
+            <pre style="background:#f3e5f5;padding:12px;border-radius:6px;font-size:0.82rem;white-space:pre-wrap;">Action (UPDATE/DELETE/ADD), GAD ID (key), Business Unit,
+Pickup Cheques, Temporary, Temporary Start Date, Temporary End Date</pre>
+            <h4 style="margin:12px 0 6px 0;color:#6a1b9a;">Validation Rules:</h4>
+            <pre style="background:#f3e5f5;padding:12px;border-radius:6px;font-size:0.82rem;white-space:pre-wrap;">1. Action must be UPDATE, DELETE, or ADD
+   - DELETE rows skip all other validations
+
+2. Business Unit must match an active value in infor_business_unit table (status=1)
+
+3. Pickup Cheques must be Y or N
+
+4. Temporary must be Y or N
+
+5. Temporary Start Date / End Date:
+   - Must be valid date format (YYYYMMDD or YYYY-MM-DD)
+   - Both must be filled or both must be empty
+   - End Date must be on or after Start Date
+
+6. If Temporary = N:
+   - Both Start Date and End Date must be empty</pre>
+            <div style="text-align:right;margin-top:12px;"><button onclick="document.getElementById('profileLogicModal').style.display='none'" style="padding:4px 14px;cursor:pointer;">Close</button></div>
+        </div>
+    </div>
+
+    <!-- Validation Logic Modal: Signer Limit -->
+    <div id="limitLogicModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:2000;align-items:center;justify-content:center;" onclick="if(event.target===this)this.style.display='none'">
+        <div style="background:#fff;width:650px;max-height:80%;border-radius:8px;padding:24px;box-shadow:0 4px 12px rgba(0,0,0,0.15);overflow-y:auto;">
+            <h3 style="margin:0 0 12px 0;color:#6a1b9a;">Validation Logic – Signer Limit</h3>
+            <h4 style="margin:0 0 6px 0;color:#6a1b9a;">CSV Columns:</h4>
+            <pre style="background:#f3e5f5;padding:12px;border-radius:6px;font-size:0.82rem;white-space:pre-wrap;">Action (UPDATE/DELETE/ADD), Approval ID (key), GAD ID,
+Country (Territory), Policy Category, Limit Amounts, Currency,
+Approval Cost Center, Exception, Temporary,
+Temporary Start Date, Temporary End Date,
+Business Rationale, Business Controls, Accounts Restriction</pre>
+            <h4 style="margin:12px 0 6px 0;color:#6a1b9a;">Validation Rules:</h4>
+            <pre style="background:#f3e5f5;padding:12px;border-radius:6px;font-size:0.82rem;white-space:pre-wrap;">1. Action must be UPDATE, DELETE, or ADD
+   - DELETE rows skip all other validations
+
+2. Country (Territory) must match an active value in wd_territory table (status=1)
+
+3. Policy Category must match an active value in gdas_policy table (status=1)
+
+4. Currency must match an active value in infor_currency table (status=1)
+
+5. Approval Cost Center must match an active value in infor_cost_center table (status=1)
+
+6. Exception, Temporary, Business Rationale, Business Controls
+   must be Y or N
+
+7. Accounts Restriction: free text (no validation)
+
+8. Temporary Start Date / End Date:
+   - Must be valid date format (YYYYMMDD or YYYY-MM-DD)
+   - Both must be filled or both must be empty
+   - End Date must be on or after Start Date
+
+9. If Temporary = N:
+   - Both Start Date and End Date must be empty
+
+10. Country + Policy Category combination must exist
+    in gdas_policy table (country_code + category, status=1)
+
+11. Limit Amounts must not exceed gdas_policy.threshold_amount
+    for the matched Country + Policy Category</pre>
+            <div style="text-align:right;margin-top:12px;"><button onclick="document.getElementById('limitLogicModal').style.display='none'" style="padding:4px 14px;cursor:pointer;">Close</button></div>
+        </div>
+    </div>
 </body>
 </html>
