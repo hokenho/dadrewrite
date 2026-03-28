@@ -12,6 +12,9 @@
         .status-complete{background:#dcfce7;color:#166534}
         .status-reject{background:#fee2e2;color:#991b1b}
         .status-cancel{background:#f3f4f6;color:#4b5563}
+        .filter-row th{padding:4px 3px;background:#eef3fa;}
+        .filter-row input,.filter-row select{width:100%;box-sizing:border-box;font-size:0.72rem;padding:3px 4px;border:1px solid #b0c4de;border-radius:3px;}
+        .filter-row input[type="date"]{width:90px;font-size:0.65rem;padding:2px 2px;}
     </style>
 </head>
 <body>
@@ -27,109 +30,32 @@
             <button onclick="window.print()">Print</button>
         </div>
 
-        <!-- Search Panel -->
-        <div class="panel panel--blue">
-            <div class="panel-title" style="position:relative;">Search Filters
-                <button onclick="document.getElementById('devNoteFilterModal').style.display='flex'" style="position:absolute;right:0;top:50%;transform:translateY(-50%);background:#6a1b9a;color:#fff;border:none;padding:4px 14px;border-radius:4px;font-size:0.78rem;cursor:pointer;">DEV Note</button>
-            </div>
-            <div class="filter-grid">
-                <div class="filter-field">
-                    <label for="gadId">GAD ID</label>
-                    <input type="text" id="gadId" placeholder="e.g. user@domain.com">
-                </div>
-                <div class="filter-field">
-                    <label for="status">Status</label>
-                    <select id="status">
-                        <option value="">All</option>
-                        <option value="1">Active</option>
-                        <option value="0">Inactive</option>
-                    </select>
-                </div>
-                <div class="filter-field">
-                    <label for="empNo">Employee No.</label>
-                    <input type="number" id="empNo" placeholder="e.g. 10001">
-                </div>
-                <div class="filter-field">
-                    <label for="firstName">First Name</label>
-                    <input type="text" id="firstName" placeholder="First name">
-                </div>
-                <div class="filter-field">
-                    <label for="lastName">Last Name</label>
-                    <input type="text" id="lastName" placeholder="Last name">
-                </div>
-                <div class="filter-field">
-                    <label for="bu">Business Unit</label>
-                    <select id="bu">
-                        <option value="">All</option>
-                    </select>
-                </div>
-                <div class="filter-field">
-                    <label for="currency">Currency</label>
-                    <select id="currency">
-                        <option value="">All</option>
-                    </select>
-                </div>
-                <div class="filter-field">
-                    <label for="limitAmt">Limit Amounts</label>
-                    <input type="number" id="limitAmt" placeholder="e.g. 50000">
-                </div>
-                <div class="filter-field">
-                    <label for="costCentre">Approval Cost Centre</label>
-                    <select id="costCentre">
-                        <option value="">All</option>
-                    </select>
-                </div>
-                <div class="filter-field">
-                    <label for="policyCategory">Policy Category</label>
-                    <select id="policyCategory">
-                        <option value="">All</option>
-                    </select>
-                </div>
-                <div class="filter-field">
-                    <label for="system">System</label>
-                    <select id="system">
-                        <option value="">All</option>
-                    </select>
-                </div>
-                <div class="filter-field">
-                    <label for="chequePickUp">Cheque Pick Up</label>
-                    <select id="chequePickUp">
-                        <option value="">All</option>
-                        <option>Y</option>
-                        <option>N</option>
-                    </select>
-                </div>
-                <div class="filter-field">
-                    <label for="exception">Exception</label>
-                    <select id="exception">
-                        <option value="">All</option>
-                        <option>Y</option>
-                        <option>N</option>
-                    </select>
-                </div>
-                <div class="filter-field">
-                    <label for="tempDelegation">Temporary</label>
-                    <select id="tempDelegation">
-                        <option value="">-- All --</option>
-                        <option>Y</option>
-                        <option>N</option>
-                    </select>
-                </div>
-            </div>
-            <div class="filter-actions">
-                <button class="btn btn-primary" onclick="doSearch()">Search</button>
-                <button class="btn btn-secondary" onclick="clearFilters()">Clear</button>
-            </div>
-        </div>
-
         <!-- Results Table -->
         <div class="panel panel--blue">
             <div class="panel-title" style="position:relative;">Results (TOP 50)
+                <button class="btn btn-primary" style="margin-left:10px;font-size:0.75rem;padding:2px 10px;" onclick="doSearch()">Apply Filter</button>
+                <button class="btn btn-secondary" style="margin-left:6px;font-size:0.75rem;padding:2px 10px;" onclick="clearFilters()">Clear</button>
+                <button style="margin-left:10px; font-size:0.75rem; padding:2px 10px;" onclick="exportAllData()">Export all data</button>
                 <button onclick="document.getElementById('devNoteModal').style.display='flex'" style="position:absolute;right:0;top:50%;transform:translateY(-50%);background:#6a1b9a;color:#fff;border:none;padding:4px 14px;border-radius:4px;font-size:0.78rem;cursor:pointer;">DEV Note</button>
             </div>
             <div class="data-table-wrapper">
                 <table class="data-table" id="resultsTable">
                     <thead>
+                        <tr class="filter-row">
+                            <th><input type="text" id="gadId" placeholder="Filter"></th>
+                            <th><select id="status"><option value="">All</option><option value="1">Active</option><option value="0">Inactive</option></select></th>
+                            <th><input type="number" id="empNo" placeholder="Filter"></th>
+                            <th><input type="text" id="firstName" placeholder="Filter"></th>
+                            <th><input type="text" id="lastName" placeholder="Filter"></th>
+                            <th><select id="bu"><option value="">All</option></select></th>
+                            <th><select id="currency"><option value="">All</option></select></th>
+                            <th><input type="number" id="limitAmt" placeholder="Filter"></th>
+                            <th><select id="costCentre"><option value="">All</option></select></th>
+                            <th><select id="policyCategory"><option value="">All</option></select></th>
+                            <th><select id="system"><option value="">All</option></select></th>
+                            <th><select id="chequePickUp"><option value="">All</option><option>Y</option><option>N</option></select></th>
+                            <th><select id="exception"><option value="">All</option><option>Y</option><option>N</option></select></th>
+                        </tr>
                         <tr>
                             <th>GAD ID</th>
                             <th>Status</th>
@@ -144,9 +70,6 @@
                             <th>System</th>
                             <th>Cheque Pick Up</th>
                             <th>Exception</th>
-                            <th>Temporary</th>
-                            <th>Temporary Start Date</th>
-                            <th>Temporary End Date</th>
                         </tr>
                     </thead>
                     <tbody id="resultsBody">
@@ -182,7 +105,7 @@
             populateSelect('system', 'SELECT DISTINCT system FROM gdas_policy ORDER BY system');
 
             var res = DB.exec(
-                "SELECT s.gad_id, s.status, s.pickup_cheque, s.temp, s.temp_start_date, s.temp_end_date, " +
+                "SELECT s.gad_id, s.status, s.pickup_cheque, " +
                 "u.employee_id, u.first_name, u.last_name, " +
                 "b.name AS bu_name, " +
                 "sl.limit_amount, sl.currency, sl.exception, sl.approval_cc_id, sl.policy_id, " +
@@ -201,12 +124,11 @@
                 ALL_ROWS = res[0].values.map(function(r) {
                     return {
                         gadId: r[0] || '', status: r[1], pickupCheque: r[2],
-                        temp: r[3], tempStartDate: r[4] || '', tempEndDate: r[5] || '',
-                        employeeId: r[6] || '',
-                        firstName: r[7] || '', lastName: r[8] || '',
-                        buName: r[9] || '', limitAmount: r[10],
-                        currency: r[11] || '', exception: r[12],
-                        cc: r[17] || '', category: r[15] || '', system: r[16] || ''
+                        employeeId: r[3] || '',
+                        firstName: r[4] || '', lastName: r[5] || '',
+                        buName: r[6] || '', limitAmount: r[7],
+                        currency: r[8] || '', exception: r[9],
+                        cc: r[14] || '', category: r[12] || '', system: r[13] || ''
                     };
                 });
             }
@@ -236,10 +158,7 @@
                     '<td>' + r.category + '</td>' +
                     '<td>' + r.system + '</td>' +
                     '<td class="text-center">' + (r.pickupCheque ? 'Y' : 'N') + '</td>' +
-                    '<td class="text-center">' + (r.exception ? 'Y' : 'N') + '</td>' +
-                    '<td class="text-center">' + (r.temp ? 'Y' : 'N') + '</td>' +
-                    '<td>' + (r.tempStartDate || '—') + '</td>' +
-                    '<td>' + (r.tempEndDate || '—') + '</td>';
+                    '<td class="text-center">' + (r.exception ? 'Y' : 'N') + '</td>';
                 tbody.appendChild(tr);
             });
         }
@@ -248,12 +167,12 @@
         var FILTER_COL_MAP = {
             gadId: 0, status: 1, empNo: 2, firstName: 3, lastName: 4, bu: 5,
             currency: 6, limitAmt: 7, costCentre: 8, policyCategory: 9,
-            system: 10, chequePickUp: 11, exception: 12, tempDelegation: 13, tempStart: 14, tempEnd: 15
+            system: 10, chequePickUp: 11, exception: 12
         };
 
         function highlightColumns() {
-            // Clear previous highlights
-            document.querySelectorAll('#resultsTable th, #resultsTable td').forEach(function(cell) {
+            // Clear previous highlights (skip filter row)
+            document.querySelectorAll('#resultsTable thead tr:not(.filter-row) th, #resultsTable td').forEach(function(cell) {
                 cell.style.backgroundColor = '';
             });
             // Highlight columns for active filters
@@ -261,7 +180,8 @@
                 var el = document.getElementById(id);
                 if (!el || !el.value) return;
                 var col = FILTER_COL_MAP[id];
-                document.querySelectorAll('#resultsTable thead th')[col].style.backgroundColor = '#c8e6c9';
+                var headerCells = document.querySelectorAll('#resultsTable thead tr:not(.filter-row) th');
+                if (headerCells[col]) headerCells[col].style.backgroundColor = '#c8e6c9';
                 document.querySelectorAll('#resultsTable tbody tr').forEach(function(tr) {
                     var td = tr.children[col];
                     if (td) td.style.backgroundColor = '#e8f5e9';
@@ -283,16 +203,15 @@
             var sys = document.getElementById('system').value;
             var chq = document.getElementById('chequePickUp').value;
             var exc = document.getElementById('exception').value;
-            var temp = document.getElementById('tempDelegation').value;
 
-            if (!gadIdVal && status === '' && !empNo && !firstName && !lastName && !bu && !cur && !limitAmt && !cc && !cat && !sys && !chq && !exc && !temp) {
+            if (!gadIdVal && status === '' && !empNo && !firstName && !lastName && !bu && !cur && !limitAmt && !cc && !cat && !sys && !chq && !exc) {
                 renderRows(ALL_ROWS);
                 highlightColumns();
                 return;
             }
 
             var sql =
-                "SELECT s.gad_id, s.status, s.pickup_cheque, s.temp, s.temp_start_date, s.temp_end_date, " +
+                "SELECT s.gad_id, s.status, s.pickup_cheque, " +
                 "u.employee_id, u.first_name, u.last_name, " +
                 "b.name AS bu_name, " +
                 "sl.limit_amount, sl.currency, sl.exception, sl.approval_cc_id, sl.policy_id, " +
@@ -320,7 +239,6 @@
             if (sys) { wheres.push("p.system = ?"); params.push(sys); }
             if (chq) { wheres.push("s.pickup_cheque = ?"); params.push(chq === 'Y' ? 1 : 0); }
             if (exc) { wheres.push("sl.exception = ?"); params.push(exc === 'Y' ? 1 : 0); }
-            if (temp) { wheres.push("s.temp = ?"); params.push(temp === 'Y' ? 1 : 0); }
 
             if (wheres.length) sql += " WHERE " + wheres.join(" AND ");
             sql += " ORDER BY s.gad_id LIMIT 50";
@@ -331,12 +249,11 @@
                 rows = res[0].values.map(function(r) {
                     return {
                         gadId: r[0] || '', status: r[1], pickupCheque: r[2],
-                        temp: r[3], tempStartDate: r[4] || '', tempEndDate: r[5] || '',
-                        employeeId: r[6] || '',
-                        firstName: r[7] || '', lastName: r[8] || '',
-                        buName: r[9] || '', limitAmount: r[10],
-                        currency: r[11] || '', exception: r[12],
-                        cc: r[17] || '', category: r[15] || '', system: r[16] || ''
+                        employeeId: r[3] || '',
+                        firstName: r[4] || '', lastName: r[5] || '',
+                        buName: r[6] || '', limitAmount: r[7],
+                        currency: r[8] || '', exception: r[9],
+                        cc: r[14] || '', category: r[12] || '', system: r[13] || ''
                     };
                 });
             }
@@ -345,7 +262,7 @@
         }
 
         function clearFilters() {
-            document.querySelectorAll('.filter-field input, .filter-field select').forEach(function(el) {
+            document.querySelectorAll('.filter-row input, .filter-row select').forEach(function(el) {
                 el.value = '';
             });
             document.querySelectorAll('#resultsTable th, #resultsTable td').forEach(function(cell) {
@@ -354,9 +271,86 @@
             renderRows(ALL_ROWS);
         }
 
-        document.querySelectorAll('.filter-field input, .filter-field select').forEach(function(el) {
+        document.querySelectorAll('.filter-row input, .filter-row select').forEach(function(el) {
             el.addEventListener('keydown', function(e) { if (e.key === 'Enter') { e.preventDefault(); doSearch(); } });
         });
+
+        function exportAllData() {
+            var sql =
+                "SELECT s.gad_id, s.status, s.pickup_cheque, " +
+                "u.employee_id, u.first_name, u.last_name, " +
+                "b.name AS bu_name, " +
+                "sl.limit_amount, sl.currency, sl.exception, sl.approval_cc_id, sl.policy_id, " +
+                "p.category, p.system, " +
+                "cc.name " +
+                "FROM signer s " +
+                "LEFT JOIN wd_user_profile u ON s.gad_id = u.gad_id " +
+                "LEFT JOIN infor_business_unit b ON s.bu_id = b.id " +
+                "LEFT JOIN signer_limit sl ON sl.gad_id = s.gad_id " +
+                "LEFT JOIN gdas_policy p ON sl.policy_id = p.id " +
+                "LEFT JOIN infor_cost_center cc ON sl.approval_cc_id = cc.id";
+            var wheres = [];
+            var params = [];
+
+            var gadIdVal = document.getElementById('gadId').value.trim();
+            var status = document.getElementById('status').value;
+            var empNo = document.getElementById('empNo').value.trim();
+            var firstName = document.getElementById('firstName').value.trim();
+            var lastName = document.getElementById('lastName').value.trim();
+            var bu = document.getElementById('bu').value;
+            var cur = document.getElementById('currency').value;
+            var limitAmt = document.getElementById('limitAmt').value.trim();
+            var cc_val = document.getElementById('costCentre').value;
+            var cat = document.getElementById('policyCategory').value;
+            var sys = document.getElementById('system').value;
+            var chq = document.getElementById('chequePickUp').value;
+            var exc = document.getElementById('exception').value;
+
+            if (gadIdVal) { wheres.push("LOWER(s.gad_id) LIKE ?"); params.push('%' + gadIdVal.toLowerCase() + '%'); }
+            if (status !== '') { wheres.push("s.status = ?"); params.push(Number(status)); }
+            if (empNo) { wheres.push("u.employee_id = ?"); params.push(Number(empNo)); }
+            if (firstName) { wheres.push("LOWER(u.first_name) LIKE ?"); params.push('%' + firstName.toLowerCase() + '%'); }
+            if (lastName) { wheres.push("LOWER(u.last_name) LIKE ?"); params.push('%' + lastName.toLowerCase() + '%'); }
+            if (bu) { wheres.push("b.name = ?"); params.push(bu); }
+            if (cur) { wheres.push("sl.currency = ?"); params.push(cur); }
+            if (limitAmt) { wheres.push("sl.limit_amount = ?"); params.push(Number(limitAmt)); }
+            if (cc_val) { wheres.push("cc.name = ?"); params.push(cc_val); }
+            if (cat) { wheres.push("p.category = ?"); params.push(cat); }
+            if (sys) { wheres.push("p.system = ?"); params.push(sys); }
+            if (chq) { wheres.push("s.pickup_cheque = ?"); params.push(chq === 'Y' ? 1 : 0); }
+            if (exc) { wheres.push("sl.exception = ?"); params.push(exc === 'Y' ? 1 : 0); }
+
+            if (wheres.length) sql += " WHERE " + wheres.join(" AND ");
+            sql += " ORDER BY s.gad_id";
+
+            var res = DB.exec(sql, params);
+            var rows = res.length ? res[0].values.map(function(r) {
+                return {
+                    gadId: r[0] || '', status: r[1], pickupCheque: r[2],
+                    employeeId: r[3] || '',
+                    firstName: r[4] || '', lastName: r[5] || '',
+                    buName: r[6] || '', limitAmount: r[7],
+                    currency: r[8] || '', exception: r[9],
+                    cc: r[14] || '', category: r[12] || '', system: r[13] || ''
+                };
+            }) : [];
+
+            var statusLabels = { 1: 'Active', 0: 'Inactive' };
+            var headers = ['"GAD ID"','"Status"','"Employee No."','"First Name"','"Last Name"','"Business Unit"','"Currency"','"Limit Amounts"','"Approval Cost Centre"','"Policy Category"','"System"','"Cheque Pick Up"','"Exception"'];
+            var csv = [headers.join(',')];
+            rows.forEach(function(r) {
+                var amt = r.limitAmount != null ? Number(r.limitAmount).toLocaleString() : '';
+                csv.push(['"'+r.gadId+'"','"'+(statusLabels[r.status]||'')+'"','"'+r.employeeId+'"','"'+r.firstName+'"','"'+r.lastName+'"','"'+r.buName+'"','"'+r.currency+'"','"'+amt+'"','"'+r.cc+'"','"'+r.category+'"','"'+r.system+'"','"'+(r.pickupCheque?'Y':'N')+'"','"'+(r.exception?'Y':'N')+'"'].join(','));
+            });
+
+            var blob = new Blob([csv.join('\n')], { type: 'text/csv;charset=utf-8;' });
+            var link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            var now = new Date(); var ts = '_' + now.getFullYear() + String(now.getMonth()+1).padStart(2,'0') + String(now.getDate()).padStart(2,'0') + String(now.getHours()).padStart(2,'0') + String(now.getMinutes()).padStart(2,'0') + String(now.getSeconds()).padStart(2,'0');
+            link.download = 'signer_authorization' + ts + '.csv';
+            link.click();
+            URL.revokeObjectURL(link.href);
+        }
     </script>
 
     <!-- DEV Note Modal (Search Filters) -->
@@ -376,8 +370,7 @@ Approval Cost Centre = Distinct infor_cost_center.name
 Policy Category = Distinct gdas_policy.category
 System = Distinct gdas_policy.system
 Cheque Pick Up = Dropdown (Y/N)
-Exception = Dropdown (Y/N)
-Temporary = Dropdown (Y/N)</pre>
+Exception = Dropdown (Y/N)</pre>
             <h4 style="margin:0 0 8px;color:#6a1b9a;font-size:0.85rem;">Inbound:</h4>
             <pre style="background:#f3e5f5;color:#4a148c;padding:14px;border-radius:6px;font-size:0.75rem;line-height:1.6;margin:0;white-space:pre-wrap;">Workday + AD (gad_id)
 - wd_user_profile
@@ -417,10 +410,7 @@ Approval Cost Centre = signer_limit.approval_cc_id -> infor_cost_center.name
 Policy Category = signer_limit.policy_id -> gdas_policy.category
 System = signer_limit.policy_id -> gdas_policy.system
 Cheque Pick Up = signer.pickup_cheque
-Exception = signer_limit.exception
-Temporary = signer.temp
-Temporary Start Date = signer.temp_start_date
-Temporary End Date = signer.temp_end_date</pre>
+Exception = signer_limit.exception</pre>
             <h4 style="margin:0 0 8px;color:#6a1b9a;font-size:0.85rem;">Inbound:</h4>
             <pre style="background:#f3e5f5;color:#4a148c;padding:14px;border-radius:6px;font-size:0.75rem;line-height:1.6;margin:0;white-space:pre-wrap;">Workday + AD (gad_id)
 - wd_user_profile

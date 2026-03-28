@@ -89,9 +89,6 @@ CREATE TABLE signer (
     gad_id NVARCHAR(255) PRIMARY KEY, (->wd_user_profile.gad_id)
     bu_id NUMBER FK (->infor_business_unit.id)
     pickup_cheque BIT,
-    temp BIT,
-    temp_start_date DATE,
-    temp_end_date DATE,
     status      BIT
 )
 CREATE TABLE signer_limit (
@@ -105,8 +102,8 @@ CREATE TABLE signer_limit (
     temp          BIT,
     temp_start_date DATE,
     temp_end_date   DATE,
-    business_rationale     BIT,
-    business_control       BIT,
+    business_rationale     NVARCHAR(255),
+    business_control       NVARCHAR(255),
     account_restriction    NVARCHAR(100),
     currency    NVARCHAR(10)
 )
@@ -159,8 +156,8 @@ CREATE TABLE req_signer_limit (
     old_temp          BIT,
     old_temp_start_date DATE,
     old_temp_end_date   DATE,
-    old_business_rationale     BIT,
-    old_business_control       BIT,
+    old_business_rationale     NVARCHAR(255),
+    old_business_control       NVARCHAR(255),
     old_account_restriction    NVARCHAR(100),
     old_currency    NVARCHAR(10),
 
@@ -173,8 +170,8 @@ CREATE TABLE req_signer_limit (
     new_temp          BIT,
     new_temp_start_date DATE,
     new_temp_end_date   DATE,
-    new_business_rationale     BIT,
-    new_business_control       BIT,
+    new_business_rationale     NVARCHAR(255),
+    new_business_control       NVARCHAR(255),
     new_account_restriction    NVARCHAR(100),
     new_currency    NVARCHAR(10)
 )
@@ -408,17 +405,11 @@ CREATE TABLE audit_signer (
     old_bu_security_group NVARCHAR(255),  # expanded from bu_id
     old_bu_name           NVARCHAR(255),  # expanded from bu_id
     old_pickup_cheque     BIT,
-    old_temp              BIT,
-    old_temp_start_date   DATE,
-    old_temp_end_date     DATE,
     old_status            BIT,
 
     new_bu_security_group NVARCHAR(255),  # expanded from bu_id
     new_bu_name           NVARCHAR(255),  # expanded from bu_id
     new_pickup_cheque     BIT,
-    new_temp              BIT,
-    new_temp_start_date   DATE,
-    new_temp_end_date     DATE,
     new_status            BIT,
 
     change_by     NVARCHAR(255),
@@ -448,8 +439,8 @@ CREATE TABLE audit_signer_limit (
     old_temp                    BIT,
     old_temp_start_date         DATE,
     old_temp_end_date           DATE,
-    old_business_rationale      BIT,
-    old_business_control        BIT,
+    old_business_rationale      NVARCHAR(255),
+    old_business_control        NVARCHAR(255),
     old_account_restriction     NVARCHAR(100),
     old_currency                NVARCHAR(10),
 
@@ -469,8 +460,8 @@ CREATE TABLE audit_signer_limit (
     new_temp                    BIT,
     new_temp_start_date         DATE,
     new_temp_end_date           DATE,
-    new_business_rationale      BIT,
-    new_business_control        BIT,
+    new_business_rationale      NVARCHAR(255),
+    new_business_control        NVARCHAR(255),
     new_account_restriction     NVARCHAR(100),
     new_currency                NVARCHAR(10),
 

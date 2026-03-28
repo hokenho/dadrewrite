@@ -14,8 +14,12 @@
             #resultsTable { font-size: 5.5pt; table-layout: auto; }
             #resultsTable th { font-size: 5pt; white-space: normal; word-break: break-word; max-width: 30px; }
             #resultsTable td { padding: 1px 2px; white-space: nowrap; }
-            .action-bar, .alerts-toggle, .alerts-panel, .alerts-overlay, nav, #searchPanel { display: none !important; }
+            .action-bar, .alerts-toggle, .alerts-panel, .alerts-overlay, nav, .filter-row { display: none !important; }
         }
+        .filter-row th{padding:4px 3px;background:#eef3fa;}
+        .filter-row input,.filter-row select{width:100%;box-sizing:border-box;font-size:0.72rem;padding:3px 4px;border:1px solid #b0c4de;border-radius:3px;}
+        .filter-row input[type="number"]{width:70px;}
+        .filter-row input[type="date"]{width:90px;font-size:0.65rem;padding:2px 2px;}
     </style>
 </head>
 <body>
@@ -29,95 +33,55 @@
         <!-- Action Bar -->
         <div class="action-bar action-bar--blue">
             <span class="action-bar-label">Actions:</span>
+            <button onclick="location.reload()">Refresh</button>
             <button onclick="window.print()">Print</button>
         </div>
 
-        <!-- Section 1: Filter (shown by default) -->
-        <div class="panel panel--blue" id="searchPanel">
-            <div class="panel-title" style="position:relative;">Filter Signer Data
-                <button onclick="document.getElementById('devNoteS1Modal').style.display='flex'" style="position:absolute;right:0;top:50%;transform:translateY(-50%);background:#6a1b9a;color:#fff;border:none;padding:4px 14px;border-radius:4px;font-size:0.78rem;cursor:pointer;">DEV Note</button>
-            </div>
-            <div class="filter-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
-                <div class="filter-field">
-                    <label for="fBU">Business Unit</label>
-                    <select id="fBU" onchange="handleFilterChange(this)">
-                        <option value="">-- All --</option>
-                    </select>
-                </div>
-                <div class="filter-field">
-                    <label for="fCC">Signer Cost Center</label>
-                    <select id="fCC" onchange="handleFilterChange(this)">
-                        <option value="">-- All --</option>
-                    </select>
-                </div>
-                <div class="filter-field">
-                    <label for="fJL">Job Level / Job Grade</label>
-                    <select id="fJL" onchange="handleFilterChange(this)">
-                        <option value="">-- All --</option>
-                    </select>
-                </div>
-                <div class="filter-field">
-                    <label for="fCheque">Pickup Cheques</label>
-                    <select id="fCheque" onchange="handleFilterChange(this)">
-                        <option value="">-- All --</option>
-                        <option value="Y">Y</option>
-                        <option value="N">N</option>
-                    </select>
-                </div>
-                <div class="filter-field">
-                    <label for="fCountry">Countries</label>
-                    <select id="fCountry" onchange="handleFilterChange(this)">
-                        <option value="">-- All --</option>
-                    </select>
-                </div>
-                <div class="filter-field">
-                    <label for="fPolicyCat">Policy Category</label>
-                    <select id="fPolicyCat" onchange="handleFilterChange(this)">
-                        <option value="">-- All --</option>
-                    </select>
-                </div>
-                <div class="filter-field">
-                    <label for="fLimit">Limit Amounts (max)</label>
-                    <input type="number" id="fLimit" placeholder="e.g. 50000" min="0" oninput="handleFilterChange(this)">
-                </div>
-                <div class="filter-field">
-                    <label for="fCurrency">Currency</label>
-                    <select id="fCurrency" onchange="handleFilterChange(this)">
-                        <option value="">-- All --</option>
-                    </select>
-                </div>
-                <div class="filter-field">
-                    <label for="fApprCC">Approval Cost Center</label>
-                    <select id="fApprCC" onchange="handleFilterChange(this)">
-                        <option value="">-- All --</option>
-                    </select>
-                </div>
-                <div class="filter-field">
-                    <label for="fSystem">System</label>
-                    <select id="fSystem" onchange="handleFilterChange(this)">
-                        <option value="">-- All --</option>
-                    </select>
-                </div>
-            </div>
-            <div id="filterError" style="display:none; color:#d32f2f; font-weight:600; margin-bottom:8px;">Please select exactly one filter before applying.</div>
-            <div class="filter-actions">
-                <button class="btn btn-primary" onclick="applyFilter()">Apply</button>
-                <button class="btn btn-secondary" onclick="clearFilters()">Clear</button>
-            </div>
-        </div>
-
-        <!-- Section 2: Results (hidden until Apply) -->
-        <div class="panel panel--blue" id="resultsPanel" style="display:none;">
-            <div class="panel-title" style="position:relative;">Results (TOP 50) <button style="margin-left:10px; font-size:0.75rem; padding:2px 10px;" onclick="exportCSV()">Export all data</button>
+        <!-- Results -->
+        <div class="panel panel--blue" id="resultsPanel">
+            <div class="panel-title" style="position:relative;">Results (TOP 50)
+                <button class="btn btn-primary" style="margin-left:10px;font-size:0.75rem;padding:2px 10px;" onclick="applyFilter()">Apply Filter</button>
+                <button class="btn btn-secondary" style="margin-left:6px;font-size:0.75rem;padding:2px 10px;" onclick="clearFilters()">Clear</button>
+                <button style="margin-left:10px; font-size:0.75rem; padding:2px 10px;" onclick="exportCSV()">Export all data</button>
                 <button onclick="document.getElementById('devNoteS2Modal').style.display='flex'" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:#6a1b9a;color:#fff;border:none;padding:4px 14px;border-radius:4px;font-size:0.78rem;cursor:pointer;">DEV Note</button>
             </div>
-            <div class="data-table-wrapper">
-                <table class="data-table" id="resultsTable" style="font-size:0.7rem; word-break:break-word; width:100%;">
+            <div id="topScrollWrapper" style="overflow-x:auto;overflow-y:hidden;margin-bottom:-1px;">
+                <div id="topScrollSpacer" style="height:1px;"></div>
+            </div>
+            <div class="data-table-wrapper" id="tableWrapper" style="max-height:70vh;overflow:auto;">
+                <table class="data-table" id="resultsTable" style="font-size:0.7rem; word-break:break-word; min-width:2200px;">
                     <style>
-                        #resultsTable th { font-size: 0.6rem; white-space: normal; }
-                        #resultsTable td { padding: 4px 5px; white-space: nowrap; min-width: 25px; }
+                        #resultsTable th { font-size: 0.6rem; white-space: nowrap; padding: 6px 5px; }
+                        #resultsTable td { padding: 4px 5px; white-space: nowrap; }
+                        #resultsTable thead { position: sticky; top: 0; z-index: 2; }
+                        #resultsTable thead th { background: #eef3fa; }
+                        #resultsTable thead tr:not(.filter-row) th { background: #eef3fa; }
                     </style>
                     <thead>
+                        <tr class="filter-row">
+                            <th><input type="text" id="fGadId" placeholder="Filter"></th>
+                            <th><input type="text" id="fLastName" placeholder="Filter"></th>
+                            <th><input type="text" id="fFirstName" placeholder="Filter"></th>
+                            <th><select id="fBU"><option value="">All</option></select></th>
+                            <th><select id="fCC"><option value="">All</option></select></th>
+                            <th><select id="fJL"><option value="">All</option></select></th>
+                            <th><input type="text" id="fJobTitle" placeholder="Filter"></th>
+                            <th><input type="text" id="fEmpNo" placeholder="Filter"></th>
+                            <th><select id="fCheque"><option value="">All</option><option value="Y">Y</option><option value="N">N</option></select></th>
+                            <th><select id="fCountry"><option value="">All</option></select></th>
+                            <th><select id="fPolicyCat"><option value="">All</option></select></th>
+                            <th><input type="number" id="fLimit" placeholder="Max" min="0"></th>
+                            <th><select id="fCurrency"><option value="">All</option></select></th>
+                            <th><select id="fApprCC"><option value="">All</option></select></th>
+                            <th><select id="fException"><option value="">All</option><option value="Y">Y</option><option value="N">N</option></select></th>
+                            <th><select id="fTemp"><option value="">All</option><option value="Y">Y</option><option value="N">N</option></select></th>
+                            <th><input type="date" id="fTempStart"></th>
+                            <th><input type="date" id="fTempEnd"></th>
+                            <th><input type="text" id="fBR" placeholder="Filter" style="width:100%;"></th>
+                            <th><input type="text" id="fBC" placeholder="Filter" style="width:100%;"></th>
+                            <th><select id="fSystem"><option value="">All</option></select></th>
+                            <th><input type="text" id="fAcctRestr" placeholder="Filter"></th>
+                        </tr>
                         <tr>
                             <th>GAD ID</th>
                             <th>Last Name</th>
@@ -203,11 +167,11 @@
                     '<td>' + r.curr + '</td>' +
                     '<td>' + r.apprCC + '</td>' +
                     '<td class="text-center">' + r.exc + '</td>' +
-                    '<td class="text-center">' + r.temp + '</td>' +
-                    '<td>' + (r.tempStart || '\u2014') + '</td>' +
-                    '<td>' + (r.tempEnd || '\u2014') + '</td>' +
-                    '<td class="text-center">' + r.br + '</td>' +
-                    '<td class="text-center">' + r.bc + '</td>' +
+                    '<td class="text-center">' + r.tmp + '</td>' +
+                    '<td>' + r.tmpStart + '</td>' +
+                    '<td>' + r.tmpEnd + '</td>' +
+                    '<td>' + r.br + '</td>' +
+                    '<td>' + r.bc + '</td>' +
                     '<td>' + r.sys + '</td>' +
                     '<td>' + r.acct + '</td>';
                 tbody.appendChild(tr);
@@ -229,29 +193,53 @@
             "LEFT JOIN infor_cost_center cc_a ON sl.approval_cc_id = cc_a.id";
 
         function buildFilterConditions() {
+            var fGadId = document.getElementById('fGadId').value.trim();
+            var fLN  = document.getElementById('fLastName').value.trim();
+            var fFN  = document.getElementById('fFirstName').value.trim();
             var fBU  = document.getElementById('fBU').value;
             var fCC  = document.getElementById('fCC').value;
             var fJL  = document.getElementById('fJL').value;
+            var fJT  = document.getElementById('fJobTitle').value.trim();
+            var fEmp = document.getElementById('fEmpNo').value.trim();
             var fChq = document.getElementById('fCheque').value;
             var fCnt = document.getElementById('fCountry').value;
             var fPC  = document.getElementById('fPolicyCat').value;
             var fLim = document.getElementById('fLimit').value;
             var fCur = document.getElementById('fCurrency').value;
             var fACC = document.getElementById('fApprCC').value;
+            var fExc = document.getElementById('fException').value;
+            var fTmp = document.getElementById('fTemp').value;
+            var fTS  = document.getElementById('fTempStart').value;
+            var fTE  = document.getElementById('fTempEnd').value;
+            var fBR  = document.getElementById('fBR').value;
+            var fBC  = document.getElementById('fBC').value;
             var fSys = document.getElementById('fSystem').value;
+            var fAR  = document.getElementById('fAcctRestr').value.trim();
             var conditions = [];
             var params = [];
+            if (fGadId) { conditions.push('LOWER(s.gad_id) LIKE ?'); params.push('%' + fGadId.toLowerCase() + '%'); }
+            if (fLN)  { conditions.push('LOWER(u.last_name) LIKE ?'); params.push('%' + fLN.toLowerCase() + '%'); }
+            if (fFN)  { conditions.push('LOWER(u.first_name) LIKE ?'); params.push('%' + fFN.toLowerCase() + '%'); }
             if (fBU)  { conditions.push('b.name = ?'); params.push(fBU); }
             if (fCC)  { conditions.push('u.signer_cost_center = ?'); params.push(fCC); }
             if (fJL)  { conditions.push('j.job_grade = ?'); params.push(fJL); }
+            if (fJT)  { conditions.push('LOWER(j.job_title) LIKE ?'); params.push('%' + fJT.toLowerCase() + '%'); }
+            if (fEmp) { conditions.push('LOWER(u.employee_id) LIKE ?'); params.push('%' + fEmp.toLowerCase() + '%'); }
             if (fChq) { conditions.push('s.pickup_cheque = ?'); params.push(fChq === 'Y' ? 1 : 0); }
             if (fCnt) { conditions.push('t.country_code = ?'); params.push(fCnt); }
             if (fPC)  { conditions.push('p.category = ?'); params.push(fPC); }
             if (fLim) { conditions.push('sl.limit_amount <= ?'); params.push(Number(fLim)); }
             if (fCur) { conditions.push('sl.currency = ?'); params.push(fCur); }
             if (fACC) { conditions.push('cc_a.name = ?'); params.push(fACC); }
+            if (fExc) { conditions.push('sl.exception = ?'); params.push(fExc === 'Y' ? 1 : 0); }
+            if (fTmp) { conditions.push('sl.temp = ?'); params.push(fTmp === 'Y' ? 1 : 0); }
+            if (fTS)  { conditions.push('sl.temp_start_date >= ?'); params.push(fTS); }
+            if (fTE)  { conditions.push('sl.temp_end_date <= ?'); params.push(fTE); }
+            if (fBR)  { conditions.push('LOWER(sl.business_rationale) LIKE ?'); params.push('%' + fBR.toLowerCase() + '%'); }
+            if (fBC)  { conditions.push('LOWER(sl.business_control) LIKE ?'); params.push('%' + fBC.toLowerCase() + '%'); }
             if (fSys) { conditions.push('p.system = ?'); params.push(fSys); }
-            return { conditions: conditions, params: params, count: [fBU,fCC,fJL,fChq,fCnt,fPC,fLim,fCur,fACC,fSys].filter(function(v){return v!=='';}).length };
+            if (fAR)  { conditions.push('LOWER(sl.account_restriction) LIKE ?'); params.push('%' + fAR.toLowerCase() + '%'); }
+            return { conditions: conditions, params: params };
         }
 
         function mapRow(r) {
@@ -260,87 +248,71 @@
                 cc: r[4] || '', jl: r[5] || '', jt: r[6] || '', emp: r[7] || '',
                 chq: r[8] ? 'Y' : 'N', country: r[9] || '', pcat: r[10] || '',
                 limit: r[11] || 0, curr: r[12] || '', apprCC: r[13] || '',
-                exc: r[14] ? 'Y' : 'N', temp: r[15] ? 'Y' : 'N',
-                tempStart: r[16] || '', tempEnd: r[17] || '',
-                br: r[18] ? 'Y' : 'N', bc: r[19] ? 'Y' : 'N',
+                exc: r[14] ? 'Y' : 'N',
+                tmp: r[15] ? 'Y' : 'N', tmpStart: r[16] || '', tmpEnd: r[17] || '',
+                br: r[18] || '', bc: r[19] || '',
                 sys: r[20] || '', acct: r[21] || ''
             };
         }
 
         async function applyFilter() {
             var f = buildFilterConditions();
-
-            var errMsg = document.getElementById('filterError');
-            if (f.count !== 1) {
-                errMsg.textContent = 'Please select exactly one filter before applying.';
-                errMsg.style.display = 'block';
-                document.getElementById('resultsPanel').style.display = 'none';
-                return;
-            }
-            errMsg.style.display = 'none';
-
             await dbReady;
 
-            var sql = baseSql + " WHERE " + f.conditions.join(' AND ') + " ORDER BY s.gad_id LIMIT 50";
+            var sql = baseSql;
+            if (f.conditions.length) sql += " WHERE " + f.conditions.join(' AND ');
+            sql += " ORDER BY s.gad_id LIMIT 50";
             var res = reportDb.exec(sql, f.params);
             var filtered = res.length ? res[0].values.map(mapRow) : [];
-            document.getElementById('resultsPanel').style.display = 'block';
             renderTable(filtered);
-
-            // Highlight the filtered column in green
-            var filterColMap = { fBU: 3, fCC: 4, fJL: 5, fCheque: 8, fCountry: 9, fPolicyCat: 10, fLimit: 11, fCurrency: 12, fApprCC: 13, fSystem: 18 };
-            var activeId = filterIds.find(function(id) { return document.getElementById(id).value !== ''; });
-            var colIdx = activeId ? filterColMap[activeId] : -1;
-            // Clear previous highlights
-            document.querySelectorAll('#resultsTable th, #resultsTable td').forEach(function(cell) { cell.style.backgroundColor = ''; });
-            if (colIdx >= 0) {
-                document.querySelectorAll('#resultsTable thead th')[colIdx].style.backgroundColor = '#c8e6c9';
-                document.querySelectorAll('#resultsTable tbody tr').forEach(function(tr) {
-                    var td = tr.children[colIdx];
-                    if (td) td.style.backgroundColor = '#e8f5e9';
-                });
-            }
+            highlightColumns();
         }
 
-        var filterIds = ['fBU','fCC','fJL','fCheque','fCountry','fPolicyCat','fLimit','fCurrency','fApprCC','fSystem'];
+        var filterIds = ['fGadId','fLastName','fFirstName','fBU','fCC','fJL','fJobTitle','fEmpNo','fCheque','fCountry','fPolicyCat','fLimit','fCurrency','fApprCC','fException','fTemp','fTempStart','fTempEnd','fBR','fBC','fSystem','fAcctRestr'];
+        var filterColMap = { fGadId: 0, fLastName: 1, fFirstName: 2, fBU: 3, fCC: 4, fJL: 5, fJobTitle: 6, fEmpNo: 7, fCheque: 8, fCountry: 9, fPolicyCat: 10, fLimit: 11, fCurrency: 12, fApprCC: 13, fException: 14, fTemp: 15, fTempStart: 16, fTempEnd: 17, fBR: 18, fBC: 19, fSystem: 20, fAcctRestr: 21 };
 
-        function handleFilterChange(el) {
-            var hasValue = el.value !== '';
-            document.getElementById('filterError').style.display = 'none';
+        function highlightColumns() {
+            document.querySelectorAll('#resultsTable thead tr:not(.filter-row) th, #resultsTable td').forEach(function(cell) { cell.style.backgroundColor = ''; });
             filterIds.forEach(function(id) {
-                var field = document.getElementById(id).closest('.filter-field');
-                if (id === el.id) return;
-                field.style.display = hasValue ? 'none' : '';
+                if (document.getElementById(id).value === '') return;
+                var col = filterColMap[id];
+                var hdr = document.querySelectorAll('#resultsTable thead tr:not(.filter-row) th')[col];
+                if (hdr) hdr.style.backgroundColor = '#c8e6c9';
+                document.querySelectorAll('#resultsTable tbody tr').forEach(function(tr) {
+                    var td = tr.children[col];
+                    if (td) td.style.backgroundColor = '#e8f5e9';
+                });
             });
         }
 
         function clearFilters() {
-            filterIds.forEach(function(id) {
-                document.getElementById(id).value = '';
-                document.getElementById(id).closest('.filter-field').style.display = '';
+            document.querySelectorAll('.filter-row input, .filter-row select').forEach(function(el) {
+                if (el.tagName === 'SELECT') el.selectedIndex = 0; else el.value = '';
             });
-            document.getElementById('filterError').style.display = 'none';
-            document.getElementById('resultsPanel').style.display = 'none';
+            applyFilter();
         }
 
         function exportCSV() {
             var f = buildFilterConditions();
-            if (f.count !== 1) return;
 
-            var sql = baseSql + " WHERE " + f.conditions.join(' AND ') + " ORDER BY s.gad_id";
+            var sql = baseSql;
+            if (f.conditions.length) sql += " WHERE " + f.conditions.join(' AND ');
+            sql += " ORDER BY s.gad_id";
             var res = reportDb.exec(sql, f.params);
             var allRows = res.length ? res[0].values.map(mapRow) : [];
 
             var headers = ['"GAD ID"','"Last Name"','"First Name"','"Business Unit"','"Signers Cost Center"',
                 '"Job Level / Job Grade"','"Job Title"','"Employee No."','"Pickup Cheques"','"Countries"',
                 '"Policy Category"','"Limit Amounts"','"Currency"','"Approval Cost Center"','"Exception"',
-                '"Temporary"','"Temporary Start Date"','"Temporary End Date"','"Business Rationale"','"Business Controls"','"System"','"Accounts Restriction"'];
+                '"Temporary"','"Temporary Start Date"','"Temporary End Date"',
+                '"Business Rationale"','"Business Controls"','"System"','"Accounts Restriction"'];
             var csv = [headers.join(',')];
             allRows.forEach(function(r) {
                 csv.push(['"'+r.gadId+'"','"'+r.ln+'"','"'+r.fn+'"','"'+r.bu+'"','"'+r.cc+'"',
                     '"'+r.jl+'"','"'+r.jt.replace(/"/g,'""')+'"','"'+r.emp+'"','"'+r.chq+'"','"'+r.country+'"',
                     '"'+r.pcat+'"','"'+Number(r.limit).toLocaleString()+'"','"'+r.curr+'"','"'+r.apprCC+'"',
-                    '"'+r.exc+'"','"'+r.temp+'"','"'+(r.tempStart||'')+'"','"'+(r.tempEnd||'')+'"','"'+r.br+'"','"'+r.bc+'"','"'+r.sys+'"','"'+r.acct+'"'].join(','));
+                    '"'+r.exc+'"','"'+r.tmp+'"','"'+r.tmpStart+'"','"'+r.tmpEnd+'"',
+                    '"'+r.br+'"','"'+r.bc+'"','"'+r.sys+'"','"'+r.acct+'"'].join(','));
             });
 
             var blob = new Blob([csv.join('\n')], { type: 'text/csv;charset=utf-8;' });
@@ -352,9 +324,29 @@
             URL.revokeObjectURL(link.href);
         }
 
-        document.getElementById('searchPanel').addEventListener('keydown', function(e) {
-            if (e.key === 'Enter') { e.preventDefault(); applyFilter(); }
+        document.querySelectorAll('.filter-row input, .filter-row select').forEach(function(el) {
+            el.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') { e.preventDefault(); applyFilter(); }
+            });
         });
+
+        // Sync top scrollbar with table wrapper
+        (function() {
+            var topScroll = document.getElementById('topScrollWrapper');
+            var tableWrap = document.getElementById('tableWrapper');
+            var spacer = document.getElementById('topScrollSpacer');
+            var table = document.getElementById('resultsTable');
+            function syncWidth() { spacer.style.width = table.scrollWidth + 'px'; }
+            syncWidth();
+            var ob = new MutationObserver(syncWidth);
+            ob.observe(document.getElementById('resultsBody'), { childList: true });
+            var syncing = false;
+            topScroll.addEventListener('scroll', function() { if (!syncing) { syncing = true; tableWrap.scrollLeft = topScroll.scrollLeft; syncing = false; } });
+            tableWrap.addEventListener('scroll', function() { if (!syncing) { syncing = true; topScroll.scrollLeft = tableWrap.scrollLeft; syncing = false; } });
+        })();
+
+        // Load initial data on page load
+        dbReady.then(function() { applyFilter(); });
     </script>
 
     <!-- DEV Note Modal (Section 1: Filter) -->

@@ -64,7 +64,7 @@
                                 terrMap[r[11]] || '', pol.cat || '', amt, r[22] || '',
                                 ccMap[r[14]] || '', r[15] ? 'Y' : 'N', r[16] ? 'Y' : 'N',
                                 r[17] || '\u2014', r[18] || '\u2014',
-                                r[19] ? 'Y' : 'N', r[20] ? 'Y' : 'N', pol.sys || '', r[21] || ''
+                                r[19] || '', r[20] || '', pol.sys || '', r[21] || ''
                             ];
                         }
                         openMap[reqNum].limits.push(limEntry);

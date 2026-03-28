@@ -37,6 +37,7 @@
         <div class="action-bar action-bar--blue">
             <span class="action-bar-label">Actions:</span>
             <button onclick="location.reload()">Refresh</button>
+            <button onclick="window.print()">Print</button>
         </div>
 
         <div class="panel panel--blue">
@@ -166,43 +167,23 @@
             });
         }
 
-        function isValidDate(s) {
-            if (!s) return false;
-            // Accept YYYYMMDD or YYYY-MM-DD
-            var m = s.match(/^(\d{4})-?(\d{2})-?(\d{2})$/);
-            if (!m) return false;
-            var d = new Date(m[1] + '-' + m[2] + '-' + m[3]);
-            return !isNaN(d.getTime());
-        }
-
-        function normDate(s) {
-            // Normalize YYYYMMDD or YYYY-MM-DD to YYYY-MM-DD
-            if (!s) return '';
-            var m = s.match(/^(\d{4})-?(\d{2})-?(\d{2})$/);
-            if (!m) return s;
-            return m[1] + '-' + m[2] + '-' + m[3];
-        }
-
         function updateSubmitButton() {
             var btn = document.getElementById('btnSubmitUpload');
             btn.style.display = (profileValid && limitValid) ? 'inline-block' : 'none';
             document.getElementById('submitMsg').style.display = 'none';
         }
 
-        // Profile columns: Action, GAD ID, Business Unit, Pickup Cheques, Temporary, Temporary Start Date, Temporary End Date
+        // Profile columns: Action, GAD ID, Business Unit, Pickup Cheques
         function validateProfileRows(rows) {
             var errors = [];
             if (rows.length < 2) { errors.push('File has no data rows.'); return errors; }
             for (var i = 1; i < rows.length; i++) {
                 var row = rows[i];
                 var label = 'Row ' + i;
-                if (row.length < 7) { errors.push(label + ': Expected 7 columns, got ' + row.length + '.'); continue; }
+                if (row.length < 4) { errors.push(label + ': Expected 4 columns, got ' + row.length + '.'); continue; }
                 var action = row[0].toUpperCase();
                 var bu = row[2];
                 var pickup = row[3].toUpperCase();
-                var temp = row[4].toUpperCase();
-                var startDate = row[5];
-                var endDate = row[6];
 
                 // Action
                 if (validActions.indexOf(action) === -1) {
@@ -219,41 +200,11 @@
                 if (pickup && ynValues.indexOf(pickup) === -1) {
                     errors.push(label + ': "Pickup Cheques" value "' + row[3] + '" is not valid. Must be Y or N.');
                 }
-                // Temporary
-                if (temp && ynValues.indexOf(temp) === -1) {
-                    errors.push(label + ': "Temporary" value "' + row[4] + '" is not valid. Must be Y or N.');
-                }
-                // Date validation
-                if (startDate && !isValidDate(startDate)) {
-                    errors.push(label + ': "Temporary Start Date" value "' + startDate + '" is not a valid date.');
-                }
-                if (endDate && !isValidDate(endDate)) {
-                    errors.push(label + ': "Temporary End Date" value "' + endDate + '" is not a valid date.');
-                }
-                // Both or neither
-                var hasStart = startDate && isValidDate(startDate);
-                var hasEnd = endDate && isValidDate(endDate);
-                if (hasStart && !hasEnd && !endDate) {
-                    errors.push(label + ': "Temporary End Date" is required when "Temporary Start Date" is filled.');
-                } else if (!hasStart && !startDate && hasEnd) {
-                    errors.push(label + ': "Temporary Start Date" is required when "Temporary End Date" is filled.');
-                }
-                // End >= Start
-                if (hasStart && hasEnd) {
-                    if (normDate(endDate) < normDate(startDate)) {
-                        errors.push(label + ': "Temporary End Date" must be on or after "Temporary Start Date".');
-                    }
-                }
-                // Temp=N: dates must be empty
-                if (temp === 'N') {
-                    if (startDate) errors.push(label + ': "Temporary Start Date" must be empty when "Temporary" is N.');
-                    if (endDate) errors.push(label + ': "Temporary End Date" must be empty when "Temporary" is N.');
-                }
             }
             return errors;
         }
 
-        // Limit columns: Action, Approval ID, GAD ID, Countries (Territories), Policy Category, Limit Amounts, Currency, Approval Cost Center, Exception, Temporary, Temporary Start Date, Temporary End Date, Business Rationale, Business Controls, Accounts Restriction
+        // Limit columns: Action, Approval ID, GAD ID, Countries (Territories), Policy Category, Limit Amounts, Currency, Approval Cost Center, Exception, Temporary, Temp Start Date, Temp End Date, Business Rationale, Business Controls, Accounts Restriction
         function validateLimitRows(rows) {
             var errors = [];
             if (rows.length < 2) { errors.push('File has no data rows.'); return errors; }
@@ -269,10 +220,10 @@
                 var cc = row[7];
                 var exception = row[8].toUpperCase();
                 var temp = row[9].toUpperCase();
-                var startDate = row[10];
-                var endDate = row[11];
-                var bizRat = row[12].toUpperCase();
-                var bizCtrl = row[13].toUpperCase();
+                var startDate = row[10].trim();
+                var endDate = row[11].trim();
+                var bizRat = row[12].trim();
+                var bizCtrl = row[13].trim();
 
                 // Action
                 if (validActions.indexOf(action) === -1) {
@@ -304,35 +255,11 @@
                 if (temp && ynValues.indexOf(temp) === -1) {
                     errors.push(label + ': "Temporary" value "' + row[9] + '" is not valid. Must be Y or N.');
                 }
-                if (bizRat && ynValues.indexOf(bizRat) === -1) {
-                    errors.push(label + ': "Business Rationale" value "' + row[12] + '" is not valid. Must be Y or N.');
+                if (startDate && !/^\d{4}-\d{2}-\d{2}$/.test(startDate)) {
+                    errors.push(label + ': "Temp Start Date" value "' + startDate + '" is not a valid date (YYYY-MM-DD).');
                 }
-                if (bizCtrl && ynValues.indexOf(bizCtrl) === -1) {
-                    errors.push(label + ': "Business Controls" value "' + row[13] + '" is not valid. Must be Y or N.');
-                }
-                // Date validation
-                if (startDate && !isValidDate(startDate)) {
-                    errors.push(label + ': "Temporary Start Date" value "' + startDate + '" is not a valid date.');
-                }
-                if (endDate && !isValidDate(endDate)) {
-                    errors.push(label + ': "Temporary End Date" value "' + endDate + '" is not a valid date.');
-                }
-                var hasStart = startDate && isValidDate(startDate);
-                var hasEnd = endDate && isValidDate(endDate);
-                if (hasStart && !hasEnd && !endDate) {
-                    errors.push(label + ': "Temporary End Date" is required when "Temporary Start Date" is filled.');
-                } else if (!hasStart && !startDate && hasEnd) {
-                    errors.push(label + ': "Temporary Start Date" is required when "Temporary End Date" is filled.');
-                }
-                if (hasStart && hasEnd) {
-                    if (normDate(endDate) < normDate(startDate)) {
-                        errors.push(label + ': "Temporary End Date" must be on or after "Temporary Start Date".');
-                    }
-                }
-                // Temp=N: dates must be empty
-                if (temp === 'N') {
-                    if (startDate) errors.push(label + ': "Temporary Start Date" must be empty when "Temporary" is N.');
-                    if (endDate) errors.push(label + ': "Temporary End Date" must be empty when "Temporary" is N.');
+                if (endDate && !/^\d{4}-\d{2}-\d{2}$/.test(endDate)) {
+                    errors.push(label + ': "Temp End Date" value "' + endDate + '" is not a valid date (YYYY-MM-DD).');
                 }
                 // Country + Policy combination must exist in gdas_policy
                 if (country && policy) {
@@ -427,18 +354,13 @@
             var buf = await fetch('db/data.db').then(function(r) { return r.arrayBuffer(); });
             var db = new SQL.Database(new Uint8Array(buf));
 
-            var headers = ['Action (UPDATE/DELETE/ADD)','Approval ID (key)','GAD ID','Countries (Territories)','Policy Category','Limit Amounts','Currency','Approval Cost Center','Exception','Temporary','Temporary Start Date','Temporary End Date','Business Rationale','Business Controls','Accounts Restriction'];
+            var headers = ['Action (UPDATE/DELETE/ADD)','Approval ID (key)','GAD ID','Countries (Territories)','Policy Category','Limit Amounts','Currency','Approval Cost Center','Exception','Temporary','Temp Start Date','Temp End Date','Business Rationale','Business Controls','Accounts Restriction'];
             var csvRows = [headers.map(function(h) { return '"' + h + '"'; }).join(',')];
 
             // 3 dummy template rows
-            csvRows.push('"UPDATE","9999","template@please_delete","NA","EXP","50000","CAD","1010","N","N","","","N","N",""');
-            csvRows.push('"DELETE","9998","template2@please_delete","US","PAC","100000","USD","2020","Y","Y","20260131","20260220","Y","Y","GL1234"');
-            csvRows.push('"ADD","","template3@please_delete","HK","EXT","25000","HKD","3030","N","N","","","N","N",""');
-
-            function fmtDate(d) {
-                if (!d) return '';
-                return String(d).replace(/-/g, '');
-            }
+            csvRows.push('"UPDATE","9999","template@please_delete","NA","EXP","50000","CAD","1010","N","N","","","rationale text","control text",""');
+            csvRows.push('"DELETE","9998","template2@please_delete","US","PAC","100000","USD","2020","Y","N","","","","","GL1234"');
+            csvRows.push('"ADD","","template3@please_delete","HK","EXT","25000","HKD","3030","N","N","","","","",""');
 
             var res = db.exec(
                 "SELECT sl.id, sl.gad_id, " +
@@ -467,10 +389,10 @@
                         '"' + (row[6] || '') + '",' +
                         '"' + (row[7] ? 'Y' : 'N') + '",' +
                         '"' + (row[8] ? 'Y' : 'N') + '",' +
-                        '"' + fmtDate(row[9]) + '",' +
-                        '"' + fmtDate(row[10]) + '",' +
-                        '"' + (row[11] ? 'Y' : 'N') + '",' +
-                        '"' + (row[12] ? 'Y' : 'N') + '",' +
+                        '"' + (row[9] || '') + '",' +
+                        '"' + (row[10] || '') + '",' +
+                        '"' + (row[11] || '').toString().replace(/"/g, '""') + '",' +
+                        '"' + (row[12] || '').toString().replace(/"/g, '""') + '",' +
                         '"' + (row[13] || '') + '"'
                     );
                 });
@@ -490,22 +412,17 @@
             var buf = await fetch('db/data.db').then(function(r) { return r.arrayBuffer(); });
             var db = new SQL.Database(new Uint8Array(buf));
 
-            var headers = ['Action (UPDATE/DELETE/ADD)','GAD ID (key)','Business Unit','Pickup Cheques','Temporary','Temporary Start Date','Temporary End Date'];
+            var headers = ['Action (UPDATE/DELETE/ADD)','GAD ID (key)','Business Unit','Pickup Cheques'];
             var csvRows = [headers.map(function(h) { return '"' + h + '"'; }).join(',')];
 
             // 3 dummy template rows
-            csvRows.push('"UPDATE","template@please_delete","CDN HR","Y","N","",""');
-            csvRows.push('"DELETE","template2@please_delete","Cdn Manulife Bank","N","Y","20260131","20260220"');
-            csvRows.push('"ADD","template3@please_delete","CDN IS","N","N","",""');
-
-            function fmtDate(d) {
-                if (!d) return '';
-                return String(d).replace(/-/g, '');
-            }
+            csvRows.push('"UPDATE","template@please_delete","CDN HR","Y"');
+            csvRows.push('"DELETE","template2@please_delete","Cdn Manulife Bank","N"');
+            csvRows.push('"ADD","template3@please_delete","CDN IS","N"');
 
             var res = db.exec(
                 "SELECT s.gad_id, COALESCE(bu.name, '') AS bu_name, " +
-                "s.pickup_cheque, s.temp, s.temp_start_date, s.temp_end_date " +
+                "s.pickup_cheque " +
                 "FROM signer s " +
                 "LEFT JOIN infor_business_unit bu ON s.bu_id = bu.id " +
                 "ORDER BY s.gad_id"
@@ -516,10 +433,7 @@
                         '"",' +
                         '"' + (row[0] || '') + '",' +
                         '"' + (row[1] || '') + '",' +
-                        '"' + (row[2] ? 'Y' : 'N') + '",' +
-                        '"' + (row[3] ? 'Y' : 'N') + '",' +
-                        '"' + fmtDate(row[4]) + '",' +
-                        '"' + fmtDate(row[5]) + '"'
+                        '"' + (row[2] ? 'Y' : 'N') + '"'
                     );
                 });
             }
@@ -552,7 +466,7 @@
                 "SELECT s.gad_id, u.employee_id, u.last_name, u.first_name, u.signer_cost_center, " +
                 "j.job_grade, j.job_title, j.limit_amount_max, " +
                 "bu.name, " +
-                "s.pickup_cheque, s.temp, s.temp_start_date, s.temp_end_date, s.status, " +
+                "s.pickup_cheque, s.status, " +
                 "sl.id, " +
                 "t.country_code, t.territory, " +
                 "p.country_code AS policy_country, p.category, p.description, p.system, p.approval_count, p.threshold_amount, p.manual_approval, " +
@@ -574,13 +488,13 @@
                 'GAD ID','Employee No.','Last Name','First Name','Signers Cost Center',
                 'Job Level / Job Grade','Job Title','Job Level Limit Amount',
                 'Business Unit',
-                'Pickup Cheques','Temporary','Temporary Start Date','Temporary End Date','Status',
+                'Pickup Cheques','Status',
                 'Approval ID',
                 'Countries','Territory',
                 'Policy Country','Policy Category','Policy Description','System','No. of Approvals','Threshold Amount','Manual Approval',
                 'Limit Amounts','Currency',
                 'Approval Cost Center',
-                'Exception','Limit Temporary','Limit Temporary Start Date','Limit Temporary End Date',
+                'Exception','Limit Temporary','Limit Temp Start Date','Limit Temp End Date',
                 'Business Rationale','Business Controls','Accounts Restriction'
             ];
             var csvRows = [headers.map(function(h) { return '"' + h + '"'; }).join(',')];
@@ -615,14 +529,10 @@
             var buf = await fetch('db/data.db').then(function(r) { return r.arrayBuffer(); });
             var db = new SQL.Database(new Uint8Array(buf));
 
-            function fmtDate(d) {
-                if (!d) return '';
-                return String(d).replace(/-/g, '');
-            }
             function csvQuote(v) { return '"' + String(v).replace(/"/g, '""') + '"'; }
 
             // --- Restore: Signer Profile ---
-            var profHeaders = ['Action (UPDATE/DELETE/ADD)','GAD ID (key)','Business Unit','Pickup Cheques','Temporary','Temporary Start Date','Temporary End Date'];
+            var profHeaders = ['Action (UPDATE/DELETE/ADD)','GAD ID (key)','Business Unit','Pickup Cheques'];
             var profCsv = [profHeaders.map(function(h) { return csvQuote(h); }).join(',')];
             for (var pi = 1; pi < profileRows.length; pi++) {
                 var pr = profileRows[pi];
@@ -630,12 +540,12 @@
                 var pGad = pr[1];
                 if (pAction === 'ADD') {
                     // ADD → DELETE: just need the GAD ID
-                    profCsv.push([csvQuote('DELETE'), csvQuote(pGad), '""', '""', '""', '""', '""'].join(','));
+                    profCsv.push([csvQuote('DELETE'), csvQuote(pGad), '""', '""'].join(','));
                 } else if (pAction === 'UPDATE' || pAction === 'DELETE') {
                     // Look up current data from DB
                     var pRes = db.exec(
                         "SELECT COALESCE(bu.name, '') AS bu_name, " +
-                        "s.pickup_cheque, s.temp, s.temp_start_date, s.temp_end_date " +
+                        "s.pickup_cheque " +
                         "FROM signer s " +
                         "LEFT JOIN infor_business_unit bu ON s.bu_id = bu.id " +
                         "WHERE s.gad_id = ?", [pGad]
@@ -646,10 +556,7 @@
                         profCsv.push([
                             csvQuote(restoreAction), csvQuote(pGad),
                             csvQuote(pd[0] || ''),
-                            csvQuote(pd[1] ? 'Y' : 'N'),
-                            csvQuote(pd[2] ? 'Y' : 'N'),
-                            csvQuote(fmtDate(pd[3])),
-                            csvQuote(fmtDate(pd[4]))
+                            csvQuote(pd[1] ? 'Y' : 'N')
                         ].join(','));
                     }
                 }
@@ -662,7 +569,7 @@
             URL.revokeObjectURL(profLink.href);
 
             // --- Restore: Signer Limit ---
-            var limHeaders = ['Action (UPDATE/DELETE/ADD)','Approval ID (key)','GAD ID','Countries (Territories)','Policy Category','Limit Amounts','Currency','Approval Cost Center','Exception','Temporary','Temporary Start Date','Temporary End Date','Business Rationale','Business Controls','Accounts Restriction'];
+            var limHeaders = ['Action (UPDATE/DELETE/ADD)','Approval ID (key)','GAD ID','Countries (Territories)','Policy Category','Limit Amounts','Currency','Approval Cost Center','Exception','Temporary','Temp Start Date','Temp End Date','Business Rationale','Business Controls','Accounts Restriction'];
             var limCsv = [limHeaders.map(function(h) { return csvQuote(h); }).join(',')];
             for (var li = 1; li < limitRows.length; li++) {
                 var lr = limitRows[li];
@@ -702,9 +609,9 @@
                             csvQuote(ld[2] || ''), csvQuote(ld[3] || ''),
                             csvQuote(ld[4] != null ? ld[4] : ''),
                             csvQuote(ld[5] || ''), csvQuote(ld[6] || ''),
-                            csvQuote(ld[7] ? 'Y' : 'N'), csvQuote(ld[8] ? 'Y' : 'N'),
-                            csvQuote(fmtDate(ld[9])), csvQuote(fmtDate(ld[10])),
-                            csvQuote(ld[11] ? 'Y' : 'N'), csvQuote(ld[12] ? 'Y' : 'N'),
+                            csvQuote(ld[7] ? 'Y' : 'N'),
+                            csvQuote(ld[8] ? 'Y' : 'N'), csvQuote(ld[9] || ''), csvQuote(ld[10] || ''),
+                            csvQuote(ld[11] || ''), csvQuote(ld[12] || ''),
                             csvQuote(ld[13] || '')
                         ].join(','));
                     }
@@ -730,24 +637,14 @@
             <h3 style="margin:0 0 12px 0;color:#6a1b9a;">Validation Logic – Signer Profile</h3>
             <h4 style="margin:0 0 6px 0;color:#6a1b9a;">CSV Columns:</h4>
             <pre style="background:#f3e5f5;padding:12px;border-radius:6px;font-size:0.82rem;white-space:pre-wrap;">Action (UPDATE/DELETE/ADD), GAD ID (key), Business Unit,
-Pickup Cheques, Temporary, Temporary Start Date, Temporary End Date</pre>
+Pickup Cheques</pre>
             <h4 style="margin:12px 0 6px 0;color:#6a1b9a;">Validation Rules:</h4>
             <pre style="background:#f3e5f5;padding:12px;border-radius:6px;font-size:0.82rem;white-space:pre-wrap;">1. Action must be UPDATE, DELETE, or ADD
    - DELETE rows skip all other validations
 
 2. Business Unit must match an active value in infor_business_unit table (status=1)
 
-3. Pickup Cheques must be Y or N
-
-4. Temporary must be Y or N
-
-5. Temporary Start Date / End Date:
-   - Must be valid date format (YYYYMMDD or YYYY-MM-DD)
-   - Both must be filled or both must be empty
-   - End Date must be on or after Start Date
-
-6. If Temporary = N:
-   - Both Start Date and End Date must be empty</pre>
+3. Pickup Cheques must be Y or N</pre>
             <div style="text-align:right;margin-top:12px;"><button onclick="document.getElementById('profileLogicModal').style.display='none'" style="padding:4px 14px;cursor:pointer;">Close</button></div>
         </div>
     </div>
@@ -759,8 +656,7 @@ Pickup Cheques, Temporary, Temporary Start Date, Temporary End Date</pre>
             <h4 style="margin:0 0 6px 0;color:#6a1b9a;">CSV Columns:</h4>
             <pre style="background:#f3e5f5;padding:12px;border-radius:6px;font-size:0.82rem;white-space:pre-wrap;">Action (UPDATE/DELETE/ADD), Approval ID (key), GAD ID,
 Country (Territory), Policy Category, Limit Amounts, Currency,
-Approval Cost Center, Exception, Temporary,
-Temporary Start Date, Temporary End Date,
+Approval Cost Center, Exception, Temporary, Temp Start Date, Temp End Date,
 Business Rationale, Business Controls, Accounts Restriction</pre>
             <h4 style="margin:12px 0 6px 0;color:#6a1b9a;">Validation Rules:</h4>
             <pre style="background:#f3e5f5;padding:12px;border-radius:6px;font-size:0.82rem;white-space:pre-wrap;">1. Action must be UPDATE, DELETE, or ADD
@@ -774,23 +670,17 @@ Business Rationale, Business Controls, Accounts Restriction</pre>
 
 5. Approval Cost Center must match an active value in infor_cost_center table (status=1)
 
-6. Exception, Temporary, Business Rationale, Business Controls
+6. Exception, Temporary
    must be Y or N
 
-7. Accounts Restriction: free text (no validation)
+7. Temp Start Date, Temp End Date: must be valid date (YYYY-MM-DD) or empty
 
-8. Temporary Start Date / End Date:
-   - Must be valid date format (YYYYMMDD or YYYY-MM-DD)
-   - Both must be filled or both must be empty
-   - End Date must be on or after Start Date
+8. Business Rationale, Business Controls, Accounts Restriction: free text (no validation)
 
-9. If Temporary = N:
-   - Both Start Date and End Date must be empty
-
-10. Country + Policy Category combination must exist
+9. Country + Policy Category combination must exist
     in gdas_policy table (country_code + category, status=1)
 
-11. Limit Amounts must not exceed gdas_policy.threshold_amount
+10. Limit Amounts must not exceed gdas_policy.threshold_amount
     for the matched Country + Policy Category</pre>
             <div style="text-align:right;margin-top:12px;"><button onclick="document.getElementById('limitLogicModal').style.display='none'" style="padding:4px 14px;cursor:pointer;">Close</button></div>
         </div>

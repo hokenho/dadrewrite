@@ -5,22 +5,26 @@ Purpose: Landing page / navigation hub. No data fields — only menu links group
 Sections & Links:
   - Signer Authorization
       • Signer Authorization → signer.html
-  - Signer Onboarding
+  - Signer Onboarding (Public)
       • Request New Signer Form → request_signer.html
-      • Signer Request Status → request_status.html
+      • My Signer Request Status → request_status.html
+      • Signer Request Approval (AVP+) → req_approval.html?mode=approver1
   - Tables Administration
-      • Policies Categories → policy.html
-      • Countries/Territories → country.html
-      • Business Units → bu.html
-      • Cost Centres → cc.html
-      • Currencies → currency.html
-      • Exchange Rates → exrate.html
-      • Job Levels → joblevel.html
+      • Policies Categories → table_policy.html
+      • Countries/Territories → table_country.html
+      • Business Units → table_bu.html
+      • Cost Centres → table_cc.html
+      • Currencies → table_currency.html
+      • Exchange Rates → table_exrate.html
+      • Job Levels → table_joblevel.html
   - Reports and Extracts
       • Reports and Extracts → report.html
-  - Utilities
-      • Upload Tool → upload.html
+  - Utilities (TSA only)
       • Dashboard → dashboard.html
+      • Signer Request Approval (TSA) → req_approval.html?mode=approver2
+      • User Access → user_access.html
+      • Upload Tool → upload.html
+      • Update Policies Categories table → table_policy_edit.html
 
 Logic: None — purely navigational.
 
@@ -110,27 +114,31 @@ Table 2 – Signing Limit Authorizations (editable in edit mode):
     • Approval Cost Center
     • Exception (Y/N)
     • Temporary (Y/N)
-    • Business Rationale (Y/N)
-    • Business Controls (Y/N)
+    • Temporary Start Date
+    • Temporary End Date
+    • Business Rationale (free text)
+    • Business Controls (free text)
     • System
     • Accounts Restriction
 
   Allowed dropdown values per column (used in edit mode):
-    • Countries: NA, HK, US
-    • Policy Category: EXP, PAC, EXT
+    • Countries: from wd_territory (datalist)
+    • Policy Category: from gdas_policy (datalist)
     • Limit Amounts: number input (no dropdown)
-    • Currency: CAD, USD, HKD
-    • Approval Cost Center: 1010, 8352, T08
-    • Exception: Y, N
-    • Temporary: Y, N
-    • Business Rationale: Y, N
-    • Business Controls: Y, N
-    • System: AP, SNOW, Concur
-    • Accounts Restriction: 000000-123456, 000000-789012, 000000-345678
+    • Currency: from infor_currency (datalist)
+    • Approval Cost Center: from infor_cost_center (datalist)
+    • Exception: Y, N (select)
+    • Temporary: Y, N (select)
+    • Temporary Start Date: date input
+    • Temporary End Date: date input
+    • Business Rationale: free text input
+    • Business Controls: free text input
+    • System: AP, SNOW, Concur (select)
+    • Accounts Restriction: free text input
 
 Logic – Edit Mode:
   - enterEditMode(): 
-      • Shows Delete (signer) button and New Row button.
+      • Shows New Row button.
       • Swaps action bar to Submit for Review | Cancel.
       • Shows the "Delete Row" column.
       • Converts all table cells into editable inputs (number input for Limit Amounts,
@@ -152,7 +160,6 @@ Logic – Edit Mode:
       • If no changes detected, shows "No changes detected" message and hides
         Confirm Submit button.
   - confirmSubmit(): Placeholder alert — "Changes submitted to backend API." Then reloads.
-  - deleteSigner(): Confirmation dialog, then placeholder alert.
 
 Logic – DADREQ Mode (read-only change review):
   - Activated when URL has ?action=view_request or ?action=approval1
@@ -236,22 +243,11 @@ Logic:
   - doExport(): Placeholder alert.
 
 ===============================
-policy.html
+table_policy.html
 Title: DAD – Policies Categories
-Purpose: View, search, and export policy category records with multi-field filtering.
+Purpose: View and export policy category records.
 
-Action Bar: Search | Refresh | Export | Print | View Audit Log (→ audit_policy.html)
-
-Search Panel (hidden by default):
-  Fields:
-    • Countries (text input with datalist: NA, US, HK)
-    • Policy Category (text input with datalist: EXT, PAC, EXP)
-    • Description (text input, freeform)
-    • System Type (text input with datalist: AP, SNOW, Concur)
-    • Number of Approvals (number input, min 0)
-    • Threshold Amount (number input, min 0)
-    • Manual Approval Required (select: -- All -- | Y | N)
-  Buttons: Apply Filter | Clear
+Action Bar: Refresh | Print | View Audit Log (→ audit_table_policy.html)
 
 Results Table Columns:
   • Countries
@@ -261,78 +257,77 @@ Results Table Columns:
   • No. of Approvals
   • Threshold Amount
   • Manual Approval Required
+  • Last Update Date
+  • Status
 
 Logic:
-  - doSearch(): Toggles search panel visibility.
-  - filterTable(): Multi-field filter logic:
-      • Countries, Policy Category, Description, System Type: case-insensitive substring match.
-      • Number of Approvals: exact match.
-      • Threshold Amount: shows rows where amount (commas removed) ≤ entered value.
-      • Manual Approval Required: exact lowercase match.
-    All conditions are ANDed together — row must match ALL active filters.
-  - clearFilters(): Clears all inputs/selects, shows all rows.
-  - doExport(): Placeholder alert.
+  - Data loaded from gdas_policy table via sql.js on page load.
+  - exportTable(): Exports all table data as CSV file.
 
 ===============================
-country.html
+table_policy_edit.html
+Title: DAD – Update Policies Categories
+Purpose: Editable version of Policies Categories table for TSA users.
+
+Action Bar: Save Changes | Discard & Reload | View Read-Only (→ table_policy.html) | View Audit Log (→ audit_table_policy.html)
+
+Panel Title Bar: Add Row button
+
+Results Table Columns (all editable inline):
+  • Delete (X button per row)
+  • Countries (text input)
+  • Policy Category (text input)
+  • Description (text input)
+  • System Type (text input)
+  • No. of Approvals (number input)
+  • Threshold Amount (number input)
+  • Manual Approval Required (Y/N select)
+  • Last Update Date (date input)
+  • Status (Active/Inactive select)
+
+Logic:
+  - Data loaded from gdas_policy table via sql.js, rendered as editable inputs.
+  - addNewRow(): Appends a new editable row with today's date.
+  - deleteRow(btn): New rows removed from DOM; existing rows hidden (marked deleted).
+  - saveChanges(): Validates required fields (Countries, Category), submits to backend.
+  - Changed cells highlighted yellow via data-orig comparison.
+
+===============================
+table_country.html
 Title: DAD – Countries/Territories
-Purpose: View, search, and export country/territory records.
+Purpose: View and export country/territory records.
 
-Action Bar: Search | Refresh | Export | Print | View Audit Log (→ audit_country.html)
-
-Search Panel (hidden by default):
-  Fields:
-    • Country Code (text input, placeholder "e.g. NA")
-    • Territory (text input, placeholder "e.g. North America")
-  Buttons: Apply Filter | Clear
+Action Bar: Refresh | Print | View Audit Log (→ audit_table_country.html)
 
 Results Table Columns:
   • Country Code
   • Territory
 
 Logic:
-  - doSearch(): Toggles search panel visibility.
-  - filterTable(): Case-insensitive substring match on Country Code and Territory.
-  - clearFilters(): Clears inputs, shows all rows.
-  - doExport(): Placeholder alert.
+  - Data loaded from wd_territory table via sql.js on page load.
+  - exportTable(): Exports all table data as CSV file.
 
 ===============================
-bu.html
+table_bu.html
 Title: DAD – Business Units
-Purpose: View, search, and export a list of business units.
+Purpose: View and export a list of business units.
 
-Action Bar: Search | Refresh | Export | Print | View Audit Log (→ audit_bu.html)
-
-Search Panel (hidden by default, toggled by Search button):
-  Fields:
-    • Security Group (text input, placeholder "e.g. GRP-FIN")
-    • Business Unit Name (text input, placeholder "e.g. Canadian IS")
-  Buttons: Apply Filter | Clear
+Action Bar: Refresh | Print | View Audit Log (→ audit_table_bu.html)
 
 Results Table Columns:
   • Security Group
   • Business Unit Name
 
 Logic:
-  - doSearch(): Toggles search panel visibility (display none/block).
-  - filterTable(): Reads filter inputs, iterates all <tr> in #resultsBody. Hides rows where
-    Security Group or Business Unit Name do not contain the filter text (case-insensitive substring match).
-  - clearFilters(): Clears inputs, shows all rows.
-  - doExport(): Placeholder alert — "connect to backend API."
+  - Data loaded from infor_business_unit table via sql.js on page load.
+  - exportTable(): Exports all table data as CSV file.
 
 ===============================
-cc.html
+table_cc.html
 Title: DAD – Cost Centres
-Purpose: View, search, and export cost centre records.
+Purpose: View and export cost centre records.
 
-Action Bar: Search | Refresh | Export | Print | View Audit Log (→ audit_cc.html)
-
-Search Panel (hidden by default):
-  Fields:
-    • Cost Centre No. (text input, placeholder "e.g. 1010")
-    • Cost Centre Description (text input, placeholder "e.g. IT Operations")
-    • Status (select: -- All -- | Active | Inactive)
-  Buttons: Apply Filter | Clear
+Action Bar: Refresh | Print | View Audit Log (→ audit_table_cc.html)
 
 Results Table Columns:
   • Cost Centre No.
@@ -340,49 +335,31 @@ Results Table Columns:
   • Status
 
 Logic:
-  - doSearch(): Toggles search panel visibility.
-  - filterTable(): Substring match on Cost Centre No. and Description (case-insensitive).
-    Exact match on Status (lowercase comparison).
-  - clearFilters(): Clears all inputs/selects, shows all rows.
-  - doExport(): Placeholder alert.
+  - Data loaded from infor_cost_center table via sql.js on page load.
+  - exportTable(): Exports all table data as CSV file.
 
 
 ===============================
-currency.html
+table_currency.html
 Title: DAD – Currencies
-Purpose: View, search, and export currency records.
+Purpose: View and export currency records.
 
-Action Bar: Search | Refresh | Export | Print | View Audit Log (→ audit_currency.html)
-
-Search Panel (hidden by default):
-  Fields:
-    • Currency (text input, placeholder "e.g. CAD")
-    • Currency Name (text input, placeholder "e.g. Canadian Dollar")
-  Buttons: Apply Filter | Clear
+Action Bar: Refresh | Print | View Audit Log (→ audit_table_currency.html)
 
 Results Table Columns:
   • Currency
   • Currency Name
 
 Logic:
-  - doSearch(): Toggles search panel visibility.
-  - filterTable(): Case-insensitive substring match on Currency code and Currency Name.
-  - clearFilters(): Clears inputs, shows all rows.
-  - doExport(): Placeholder alert.
+  - Data loaded from infor_currency table via sql.js on page load.
+  - exportTable(): Exports all table data as CSV file.
 
 ===============================
-exrate.html
+table_exrate.html
 Title: DAD – Exchange Rates
-Purpose: View, search, and export exchange rate records.
+Purpose: View and export exchange rate records.
 
-Action Bar: Search | Refresh | Export | Print | View Audit Log (→ audit_exrate.html)
-
-Search Panel (hidden by default):
-  Fields:
-    • Source Currency (text input, placeholder "e.g. USD")
-    • Target Currency (text input, placeholder "e.g. CAD")
-    • Plan Rate (max) (number input, placeholder "e.g. 2.0", step 0.0001, min 0)
-  Buttons: Apply Filter | Clear
+Action Bar: Refresh | Print | View Audit Log (→ audit_table_exrate.html)
 
 Results Table Columns:
   • Source Currency
@@ -390,34 +367,23 @@ Results Table Columns:
   • Plan Rate
 
 Logic:
-  - doSearch(): Toggles search panel visibility.
-  - filterTable(): Case-insensitive substring match on Source and Target Currency.
-    Plan Rate filter: shows rows where the rate value is ≤ the entered max value.
-  - clearFilters(): Clears all inputs, shows all rows.
-  - doExport(): Placeholder alert.
+  - Data loaded from infor_exchange_rate table via sql.js on page load.
+  - exportTable(): Exports all table data as CSV file.
 
 ===============================
-joblevel.html
+table_joblevel.html
 Title: DAD – Job Levels
-Purpose: View, search, and export job level records.
+Purpose: View and export job level records.
 
-Action Bar: Search | Refresh | Export | Print | View Audit Log (→ audit_joblevel.html)
-
-Search Panel (hidden by default):
-  Fields:
-    • Job Grade (text input, placeholder "e.g. Level 8")
-    • Job Title (text input, placeholder "e.g. Engineer")
-  Buttons: Apply Filter | Clear
+Action Bar: Refresh | Print | View Audit Log (→ audit_table_joblevel.html)
 
 Results Table Columns:
   • Job Grade
   • Job Title
 
 Logic:
-  - doSearch(): Toggles search panel visibility.
-  - filterTable(): Case-insensitive substring match on Job Grade and Job Title.
-  - clearFilters(): Clears inputs, shows all rows.
-  - doExport(): Placeholder alert.
+  - Data loaded from wd_job_level table via sql.js on page load.
+  - exportTable(): Exports all table data as CSV file.
 
 ===============================
 report.html
@@ -445,8 +411,9 @@ Results Table (hidden until Apply, top 50 rows):
   Columns: GAD ID | Last Name | First Name | Business Unit | Signers Cost Center |
            Job Level / Job Grade | Job Title | Employee No. | Pickup Cheques |
            Countries | Policy Category | Limit Amounts | Currency |
-           Approval Cost Center | Exception | Temporary | Business Rationale |
-           Business Controls | System | Accounts Restriction
+           Approval Cost Center | Exception | Temporary | Temporary Start Date |
+           Temporary End Date | Business Rationale | Business Controls | System |
+           Accounts Restriction
   Button: Export all data
 
 Logic:
@@ -514,39 +481,37 @@ Logic:
 
 dashboard.html
 Title: DAD – Dashboard
-Purpose: Summary view with KPI cards and three data tables showing exceptions, temporary delegations, and request statuses.
+Purpose: Summary view with KPI cards and three data tables showing request status, signer changes, and exceptions.
 
 Action Bar: Refresh | Print
 
-KPI Cards (static demo values):
-  • Requests Submitted: 600
-  • Requests Approved: 900
-  • Signers with Updated Job Level: 300
-  • Inactive Signers: 500
-  • Cost Centres Inactivated / Recycled: 200
+KPI Cards (values loaded from database):
+  • Requests Submitted
+  • Requests Approved
+  • Signers with Updated Job Level
+  • Inactive Signers
+  • Cost Centres Inactivated / Recycled
 
-Table 1 – Signers with Exception (50 rows, generated via JS):
-  Columns: GAD ID | Last Name | First Name | Business Unit | Signers Cost Center |
-           Job Level / Job Grade | Job Title | Employee No. | Pickup Cheques |
-           Countries | Policy Category | Limit Amounts | Currency |
-           Approval Cost Center | Exception | Temporary | Business Rationale |
-           Business Controls | System | Accounts Restriction
+Table 1 – Request Status (Past 90 days):
+  Columns: Request ID | Date Submitted | Submitted By | Submitted For |
+           Approval (AVP+) | Approval (TSA) | Request Status
+  Filter: Request Status dropdown (All / Open / Complete / Reject)
   Button: Export all data (CSV export)
 
-Table 2 – Temporary Delegated Signers Set to Expire (Top 30, generated via JS):
-  Columns: Same 20 columns as Table 1.
+Table 2 – Signer Change (Past 90 days):
+  Columns: GAD ID | First Name | Last Name | Action | Old Status | New Status |
+           Changed By | Change Date
+  Filter: Action dropdown (All / INSERT / UPDATE / DELETE)
   Button: Export all data (CSV export)
 
-Table 3 – Request Status (Top 30, generated via JS):
-  Columns: Request ID | Date Submitted | Submitted By | Submitted For | Request Status
+Table 3 – Signers with Exception (TOP 50):
+  Columns: GAD ID | Status | Employee No. | First Name | Last Name |
+           Business Unit | Currency | Limit Amounts | Approval Cost Centre |
+           Policy Category | System | Cheque Pick Up | Exception
   Button: Export all data (CSV export)
 
 Logic:
-  - genSignerRows(count, overrides): Generates dummy signer data using cycling arrays.
-    Overrides can force Exception=Y or Temporary=Y.
-  - renderSignerTable(bodyId, data): Renders signer rows into a given <tbody>.
-  - Table 3 generates request IDs (DADREQ100001+), dates starting 2026-01-01,
-    cycling statuses (Open/Complete/Reject) with color-coded badges.
+  - Data loaded from database via sql.js.
   - exportTable(tableId, filename): Extracts all visible rows from a table as CSV,
     creates a Blob download link, and triggers download.
   - Print style: landscape layout, hides nav/action bar.

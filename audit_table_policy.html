@@ -33,75 +33,12 @@
         <!-- Action Bar -->
         <div class="action-bar action-bar--blue">
             <span class="action-bar-label">Actions:</span>
-            <button onclick="doSearch()">Search</button>
             <button onclick="location.reload()">Refresh</button>
             <button onclick="window.print()">Print</button>
             <a href="table_policy.html" class="action-bar-link">Back to Policies</a>
         </div>
 
-        <!-- Section 1: Search Filters (hidden by default) -->
-        <div class="panel panel--blue" id="searchPanel" style="display:none;">
-            <div class="panel-title" style="position:relative;">Section 1: Search Audit Log
-                <button onclick="document.getElementById('devNoteSearchModal').style.display='flex'" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);padding:2px 10px;font-size:0.72rem;font-weight:600;color:#fff;background:#6a1b9a;border:none;border-radius:4px;cursor:pointer;">DEV Note</button>
-            </div>
-            <div class="filter-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
-                <div class="filter-field">
-                    <label for="fChangeDate">Change Date</label>
-                    <input type="date" id="fChangeDate">
-                </div>
-                <div class="filter-field">
-                    <label for="fAction">Change Type</label>
-                    <select id="fAction">
-                        <option value="">-- All --</option>
-                        <option value="INSERT">INSERT</option>
-                        <option value="UPDATE">UPDATE</option>
-                        <option value="DELETE">DELETE</option>
-                    </select>
-                </div>
-                <div class="filter-field">
-                    <label for="fChangeBy">Changed By</label>
-                    <input type="text" id="fChangeBy" placeholder="e.g. admin.user">
-                </div>
-                <div class="filter-field">
-                    <label for="fCountry">Countries</label>
-                    <input type="text" id="fCountry" placeholder="e.g. JP">
-                </div>
-                <div class="filter-field">
-                    <label for="fCategory">Policy Category</label>
-                    <input type="text" id="fCategory" placeholder="e.g. Travel">
-                </div>
-                <div class="filter-field">
-                    <label for="fDescription">Description</label>
-                    <input type="text" id="fDescription" placeholder="Search description">
-                </div>
-                <div class="filter-field">
-                    <label for="fSystem">System Type</label>
-                    <input type="text" id="fSystem" placeholder="e.g. AP">
-                </div>
-                <div class="filter-field">
-                    <label for="fManualApproval">Manual Approval</label>
-                    <select id="fManualApproval">
-                        <option value="">-- All --</option>
-                        <option value="Y">Y</option>
-                        <option value="N">N</option>
-                    </select>
-                </div>
-                <div class="filter-field">
-                    <label for="fStatus">Status</label>
-                    <select id="fStatus">
-                        <option value="">-- All --</option>
-                        <option value="Active">Active</option>
-                        <option value="Inactive">Inactive</option>
-                    </select>
-                </div>
-            </div>
-            <div class="filter-actions">
-                <button class="btn btn-primary" onclick="filterTable()">Apply Filter</button>
-                <button class="btn btn-secondary" onclick="clearFilters()">Clear</button>
-            </div>
-        </div>
-
-        <!-- Section 2: Results Table -->
+        <!-- Results Table -->
         <div class="panel panel--blue">
             <div class="panel-title" style="position:relative;">Audit Log: Policies Categories (TOP 50)
                 <button style="margin-left:10px; font-size:0.75rem; padding:2px 10px;" onclick="exportAllData()">Export all data</button>
@@ -204,55 +141,6 @@ DELETE = red background, red badge, strikethrough text, "Deleted" label</pre>
             return '<span class="status-badge ' + cls + '">' + act + '</span>';
         }
 
-        // Build WHERE clause + params from filter values
-        function buildWhereClause() {
-            var fDate     = document.getElementById('fChangeDate').value;
-            var fAction   = document.getElementById('fAction').value;
-            var fBy       = document.getElementById('fChangeBy').value.trim();
-            var fCountry  = document.getElementById('fCountry').value.trim();
-            var fCategory = document.getElementById('fCategory').value.trim();
-            var fDesc     = document.getElementById('fDescription').value.trim();
-            var fSystem   = document.getElementById('fSystem').value.trim();
-            var fManual   = document.getElementById('fManualApproval').value;
-            var fStatus   = document.getElementById('fStatus').value;
-
-            var clauses = [];
-            var params = [];
-
-            if (fDate) { clauses.push('change_date = ?'); params.push(fDate); }
-            if (fAction) { clauses.push('action = ?'); params.push(fAction); }
-            if (fBy) { clauses.push('change_by LIKE ?'); params.push('%' + fBy + '%'); }
-            if (fCountry) {
-                clauses.push('(old_country_code LIKE ? OR new_country_code LIKE ?)');
-                params.push('%' + fCountry + '%', '%' + fCountry + '%');
-            }
-            if (fCategory) {
-                clauses.push('(old_category LIKE ? OR new_category LIKE ?)');
-                params.push('%' + fCategory + '%', '%' + fCategory + '%');
-            }
-            if (fDesc) {
-                clauses.push('(old_description LIKE ? OR new_description LIKE ?)');
-                params.push('%' + fDesc + '%', '%' + fDesc + '%');
-            }
-            if (fSystem) {
-                clauses.push('(old_system LIKE ? OR new_system LIKE ?)');
-                params.push('%' + fSystem + '%', '%' + fSystem + '%');
-            }
-            if (fManual) {
-                var manualBit = fManual === 'Y' ? 1 : 0;
-                clauses.push('(old_manual_approval = ? OR new_manual_approval = ?)');
-                params.push(manualBit, manualBit);
-            }
-            if (fStatus) {
-                var statusBit = fStatus === 'Active' ? 1 : 0;
-                clauses.push('(old_status = ? OR new_status = ?)');
-                params.push(statusBit, statusBit);
-            }
-
-            var where = clauses.length > 0 ? ' WHERE ' + clauses.join(' AND ') : '';
-            return { where: where, params: params };
-        }
-
         // Render rows from query results into tbody
         function renderResults(results, limit) {
             var tbody = document.getElementById('resultsBody');
@@ -341,34 +229,10 @@ DELETE = red background, red badge, strikethrough text, "Deleted" label</pre>
             renderResults(results, 50);
         })();
 
-        function doSearch() {
-            var panel = document.getElementById('searchPanel');
-            panel.style.display = (panel.style.display === 'none') ? 'block' : 'none';
-        }
-
-        function filterTable() {
-            if (!_db) return;
-            var wc = buildWhereClause();
-            var results = _db.exec(_baseSql + wc.where + _orderBy + ' LIMIT 50', wc.params);
-            renderResults(results, 50);
-        }
-
-        function clearFilters() {
-            ['fChangeDate','fChangeBy','fCountry','fCategory','fDescription','fSystem'].forEach(function(id) {
-                document.getElementById(id).value = '';
-            });
-            document.getElementById('fAction').value = '';
-            document.getElementById('fManualApproval').value = '';
-            document.getElementById('fStatus').value = '';
-            if (!_db) return;
-            var results = _db.exec(_baseSql + _orderBy + ' LIMIT 50');
-            renderResults(results, 50);
-        }
 
         function exportAllData() {
             if (!_db) return;
-            var wc = buildWhereClause();
-            var results = _db.exec(_baseSql + wc.where + _orderBy, wc.params);
+            var results = _db.exec(_baseSql + _orderBy);
             var csv = [];
             var table = document.getElementById('resultsTable');
             var headers = [];
@@ -403,9 +267,6 @@ DELETE = red background, red badge, strikethrough text, "Deleted" label</pre>
             URL.revokeObjectURL(link.href);
         }
 
-        document.getElementById('searchPanel').addEventListener('keydown', function(e) {
-            if (e.key === 'Enter') { e.preventDefault(); filterTable(); }
-        });
     </script>
 </body>
 </html>

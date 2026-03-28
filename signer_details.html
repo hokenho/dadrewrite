@@ -68,7 +68,7 @@
 
         <!-- Signer Profile -->
         <div class="panel panel--blue">
-            <div class="panel-title" style="position:relative;">Signer Profile <button id="btnDeleteSigner" class="btn-delete-signer" style="display:none;" onclick="deleteSigner()">Delete</button>
+            <div class="panel-title" style="position:relative;">Signer Profile
                 <button onclick="document.getElementById('devNoteProfileModal').style.display='flex'" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);padding:2px 10px;font-size:0.72rem;font-weight:600;color:#fff;background:#6a1b9a;border:none;border-radius:4px;cursor:pointer;">DEV Note</button>
             </div>
             <table class="detail-table">
@@ -77,13 +77,10 @@
                 <tr><th>First Name</th><td id="profFirstName"></td></tr>
                 <tr><th>Business Unit</th><td id="profBU"></td></tr>
                 <tr><th>Signers Cost Center</th><td id="profCC"></td></tr>
-                <tr><th>Job Level / Job Grade</th><td id="profJobGrade"></td></tr>
+                <tr style="display:none;"><th>Job Level / Job Grade</th><td id="profJobGrade"></td></tr>
                 <tr><th>Job Title</th><td id="profJobTitle"></td></tr>
                 <tr><th>Employee No.</th><td id="profEmpNo"></td></tr>
                 <tr><th>Pickup Cheques</th><td id="profPickup"></td></tr>
-                <tr><th>Temporary</th><td id="profTemp"></td></tr>
-                <tr id="rowTempStart"><th>Temporary Start Date</th><td id="profTempStart"></td></tr>
-                <tr id="rowTempEnd"><th>Temporary End Date</th><td id="profTempEnd"></td></tr>
                 <tr><th>Status</th><td id="profStatus"></td></tr>
             </table>
         </div>
@@ -105,8 +102,8 @@
                             <th style="width:9%">Approval Cost Center</th>
                             <th style="width:5%">Exception</th>
                             <th style="width:5%">Temporary</th>
-                            <th style="width:8%">Temporary Start Date</th>
-                            <th style="width:8%">Temporary End Date</th>
+                            <th style="width:6%">Temporary Start Date</th>
+                            <th style="width:6%">Temporary End Date</th>
                             <th style="width:5%">Business Rationale</th>
                             <th style="width:5%">Business Controls</th>
                             <th style="width:6%">System</th>
@@ -152,7 +149,7 @@
         <!-- Submit For Review Modal -->
         <div id="reviewModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center;">
             <div style="background:#fff; width:90%; max-height:90%; border-radius:8px; padding:24px; box-shadow:0 4px 12px rgba(0,0,0,0.15); display:flex; flex-direction:column;">
-                <h2 style="margin-bottom:16px;">Review Changes - Signing Limit Authorizations</h2>
+                <h2 style="margin-bottom:16px;">Review Changes</h2>
                 <div id="reviewModalContent" style="margin-bottom:24px; overflow-y:auto; flex-grow:1;"></div>
                 <div style="text-align:right;">
                     <button style="padding: 6px 12px; margin-right: 8px;" onclick="closeReviewModal()">Cancel</button>
@@ -217,8 +214,8 @@
                         "SELECT id, req_date, submitter, gad_id, bu_id, " +
                         "approver1_gad_id, approver1_result, approver1_note, " +
                         "approver2_gad_id, approver2_result, approver2_note, " +
-                        "old_pickup_cheque, old_temp, old_temp_start_date, old_temp_end_date, old_status, " +
-                        "new_pickup_cheque, new_temp, new_temp_start_date, new_temp_end_date, new_status, status_reason " +
+                        "old_pickup_cheque, old_status, " +
+                        "new_pickup_cheque, new_status, status_reason " +
                         "FROM req_signer WHERE id = ?", [reqNum]
                     );
                     if (reqRes.length && reqRes[0].values.length) {
@@ -235,12 +232,12 @@
                         document.getElementById('dadreqRequester').textContent = req[2] || '';
                         document.getElementById('dadreqStatus').innerHTML =
                             '<span class="status-badge ' +
-                            (reqStatusClasses[reqStatusLabels[req[20]] || 'Pending'] || 'status-open') + '">' + (reqStatusLabels[req[20]] || 'Pending') + '</span>';
-                        window._dadreqDbData = { requestStatus: reqStatusLabels[req[20]] || 'Pending', requester: req[2] };
+                            (reqStatusClasses[reqStatusLabels[req[14]] || 'Pending'] || 'status-open') + '">' + (reqStatusLabels[req[14]] || 'Pending') + '</span>';
+                        window._dadreqDbData = { requestStatus: reqStatusLabels[req[14]] || 'Pending', requester: req[2] };
 
                         // Approval fields
                         var approvalResultLabels = { 1: 'Approved', 0: 'Rejected' };
-                        document.getElementById('dadreqStatusReason').textContent = req[21] || '\u2014';
+                        document.getElementById('dadreqStatusReason').textContent = req[15] || '\u2014';
                         document.getElementById('dadreqAvpGad').textContent = req[5] || '\u2014';
                         var avpLabel = approvalResultLabels[req[6]] || 'Pending';
                         document.getElementById('dadreqAvpResult').innerHTML =
@@ -317,20 +314,17 @@
                             document.getElementById('profJobGrade').textContent = p[5] || '';
                             document.getElementById('profJobTitle').textContent = p[6] || '';
                             document.getElementById('profEmpNo').textContent = p[2] || '';
-                            document.getElementById('profPickup').textContent = req[16] ? 'Y' : 'N';
-                            document.getElementById('profTemp').textContent = req[17] ? 'Y' : 'N';
-                            document.getElementById('profTempStart').textContent = req[18] || '\u2014';
-                            document.getElementById('profTempEnd').textContent = req[19] || '\u2014';
+                            document.getElementById('profPickup').textContent = req[13] ? 'Y' : 'N';
                             document.getElementById('profStatus').innerHTML =
                                 '<span class="status-badge ' +
-                                (statusClasses2[req[20]] || '') + '">' + (statusLabels[req[20]] || '') + '</span>';
+                                (statusClasses2[req[14]] || '') + '">' + (statusLabels[req[14]] || '') + '</span>';
 
                             // Compare new values with old values for editable fields
-                            // req[11]=old_pickup_cheque, req[12]=old_temp, req[13]=old_temp_start_date, req[14]=old_temp_end_date, req[15]=old_status
-                            // req[16]=new_pickup_cheque, req[17]=new_temp, req[18]=new_temp_start_date, req[19]=new_temp_end_date, req[20]=new_status
+                            // req[11]=old_pickup_cheque, req[12]=old_status
+                            // req[13]=new_pickup_cheque, req[14]=new_status
                             if (req[11] != null) {
                                 var oldPickup = req[11] ? 'Y' : 'N';
-                                var newPickup = req[16] ? 'Y' : 'N';
+                                var newPickup = req[13] ? 'Y' : 'N';
                                 if (oldPickup !== newPickup) {
                                     var td = document.getElementById('profPickup');
                                     td.style.backgroundColor = '#fef9c3';
@@ -339,41 +333,11 @@
                                         '<span style="font-weight:bold;">' + newPickup + '</span>';
                                 }
 
-                                var oldExpireTemp = req[12] ? 'Y' : 'N';
-                                var newExpireTemp = req[17] ? 'Y' : 'N';
-                                if (oldExpireTemp !== newExpireTemp) {
-                                    var td = document.getElementById('profTemp');
-                                    td.style.backgroundColor = '#fef9c3';
-                                    td.innerHTML = oldExpireTemp +
-                                        ' <span style="color:#999;margin:0 4px;">&#8594;</span>' +
-                                        '<span style="font-weight:bold;">' + newExpireTemp + '</span>';
-                                }
-
-                                var oldTempStart = req[13] || '\u2014';
-                                var newTempStart = req[18] || '\u2014';
-                                if (oldTempStart !== newTempStart) {
-                                    var td = document.getElementById('profTempStart');
-                                    td.style.backgroundColor = '#fef9c3';
-                                    td.innerHTML = oldTempStart +
-                                        ' <span style="color:#999;margin:0 4px;">&#8594;</span>' +
-                                        '<span style="font-weight:bold;">' + newTempStart + '</span>';
-                                }
-
-                                var oldTempEnd = req[14] || '\u2014';
-                                var newTempEnd = req[19] || '\u2014';
-                                if (oldTempEnd !== newTempEnd) {
-                                    var td = document.getElementById('profTempEnd');
-                                    td.style.backgroundColor = '#fef9c3';
-                                    td.innerHTML = oldTempEnd +
-                                        ' <span style="color:#999;margin:0 4px;">&#8594;</span>' +
-                                        '<span style="font-weight:bold;">' + newTempEnd + '</span>';
-                                }
-
-                                var oldStatus = statusLabels[req[15]] || '';
-                                var newStatus = statusLabels[req[20]] || '';
+                                var oldStatus = statusLabels[req[12]] || '';
+                                var newStatus = statusLabels[req[14]] || '';
                                 if (oldStatus !== newStatus) {
-                                    var oldClass = statusClasses2[req[15]] || '';
-                                    var newClass = statusClasses2[req[20]] || '';
+                                    var oldClass = statusClasses2[req[12]] || '';
+                                    var newClass = statusClasses2[req[14]] || '';
                                     var td = document.getElementById('profStatus');
                                     td.style.backgroundColor = '#fef9c3';
                                     td.innerHTML =
@@ -396,8 +360,8 @@
                         if (po2.length) po2[0].values.forEach(function(v) { polMap[v[0]] = { cat: v[1], sys: v[2] }; });
 
                         // resolveSource: convert old_* column values (array) to display values
-                        // sd = [old_territory_id, old_policy_id, old_limit_amount, old_approval_cc_id, old_exception, old_temp,
-                        //       old_temp_start_date, old_temp_end_date, old_business_rationale, old_business_control, old_account_restriction, old_currency]
+                        // sd = [old_territory_id, old_policy_id, old_limit_amount, old_approval_cc_id, old_exception,
+                        //       old_temp, old_temp_start_date, old_temp_end_date, old_business_rationale, old_business_control, old_account_restriction, old_currency]
                         function resolveSource(sd) {
                             var sp = polMap[sd[1]] || {};
                             return [
@@ -406,7 +370,7 @@
                                 sd[11] || '', ccMap[sd[3]] || '',
                                 sd[4] ? 'Y' : 'N', sd[5] ? 'Y' : 'N',
                                 sd[6] || '\u2014', sd[7] || '\u2014',
-                                sd[8] ? 'Y' : 'N', sd[9] ? 'Y' : 'N',
+                                sd[8] || '', sd[9] || '',
                                 sp.sys || '', sd[10] || ''
                             ];
                         }
@@ -431,7 +395,7 @@
                             vals.forEach(function(v, i) {
                                 var td = document.createElement('td');
                                 td.textContent = v;
-                                if ((i >= 5 && i <= 6) || (i >= 9 && i <= 10)) td.className = 'text-center';
+                        if (i >= 5 && i <= 8) td.className = 'text-center';
                                 if (fn) fn(td, i);
                                 tr.appendChild(td);
                             });
@@ -440,10 +404,12 @@
 
                         var lrRes = db.exec(
                             "SELECT lr.action, " +
-                            "lr.old_territory_id, lr.old_policy_id, lr.old_limit_amount, lr.old_approval_cc_id, lr.old_exception, lr.old_temp, " +
-                            "lr.old_temp_start_date, lr.old_temp_end_date, lr.old_business_rationale, lr.old_business_control, lr.old_account_restriction, lr.old_currency, " +
-                            "lr.new_territory_id, lr.new_policy_id, lr.new_limit_amount, lr.new_approval_cc_id, lr.new_exception, lr.new_temp, " +
-                            "lr.new_temp_start_date, lr.new_temp_end_date, lr.new_business_rationale, lr.new_business_control, lr.new_account_restriction, lr.new_currency " +
+                            "lr.old_territory_id, lr.old_policy_id, lr.old_limit_amount, lr.old_approval_cc_id, lr.old_exception, " +
+                            "lr.old_temp, lr.old_temp_start_date, lr.old_temp_end_date, " +
+                            "lr.old_business_rationale, lr.old_business_control, lr.old_account_restriction, lr.old_currency, " +
+                            "lr.new_territory_id, lr.new_policy_id, lr.new_limit_amount, lr.new_approval_cc_id, lr.new_exception, " +
+                            "lr.new_temp, lr.new_temp_start_date, lr.new_temp_end_date, " +
+                            "lr.new_business_rationale, lr.new_business_control, lr.new_account_restriction, lr.new_currency " +
                             "FROM req_signer_limit lr WHERE lr.req_signer_id = ? ORDER BY lr.id", [reqNum]
                         );
                         var tbody = document.getElementById('limitsBody');
@@ -459,7 +425,7 @@
                                     lr[24] || '', ccMap[lr[16]] || '',
                                     lr[17] ? 'Y' : 'N', lr[18] ? 'Y' : 'N',
                                     lr[19] || '\u2014', lr[20] || '\u2014',
-                                    lr[21] ? 'Y' : 'N', lr[22] ? 'Y' : 'N',
+                                    lr[21] || '', lr[22] || '',
                                     np.sys || '', lr[23] || ''
                                 ];
                                 if (act === 'Change' && oldCols[0] != null) {
@@ -500,7 +466,7 @@
 
                 // Table 1: Signer Profile
                 var profRes = db.exec(
-                    "SELECT s.gad_id, s.status, s.pickup_cheque, s.temp, s.temp_start_date, s.temp_end_date, " +
+                    "SELECT s.gad_id, s.status, s.pickup_cheque, " +
                     "u.last_name, u.first_name, u.employee_id, " +
                     "b.name AS bu_name, " +
                     "u.signer_cost_center, " +
@@ -518,17 +484,14 @@
                 if (profRes.length && profRes[0].values.length) {
                     var r = profRes[0].values[0];
                     document.getElementById('gadId').textContent = r[0] || '';
-                    document.getElementById('profLastName').textContent = r[6] || '';
-                    document.getElementById('profFirstName').textContent = r[7] || '';
-                    document.getElementById('profBU').textContent = r[9] || '';
-                    document.getElementById('profCC').textContent = r[10] || '';
-                    document.getElementById('profJobGrade').textContent = r[11] || '';
-                    document.getElementById('profJobTitle').textContent = r[12] || '';
-                    document.getElementById('profEmpNo').textContent = r[8] || '';
+                    document.getElementById('profLastName').textContent = r[3] || '';
+                    document.getElementById('profFirstName').textContent = r[4] || '';
+                    document.getElementById('profBU').textContent = r[6] || '';
+                    document.getElementById('profCC').textContent = r[7] || '';
+                    document.getElementById('profJobGrade').textContent = r[8] || '';
+                    document.getElementById('profJobTitle').textContent = r[9] || '';
+                    document.getElementById('profEmpNo').textContent = r[5] || '';
                     document.getElementById('profPickup').textContent = r[2] ? 'Y' : 'N';
-                    document.getElementById('profTemp').textContent = r[3] ? 'Y' : 'N';
-                    document.getElementById('profTempStart').textContent = r[4] || '—';
-                    document.getElementById('profTempEnd').textContent = r[5] || '—';
                     document.getElementById('profStatus').innerHTML =
                         '<span class="status-badge ' +
                         (statusClasses[r[1]] || '') + '">' + (statusLabels[r[1]] || '') + '</span>';
@@ -553,9 +516,6 @@
                         document.getElementById('profJobTitle').textContent = u[6] || '';
                         document.getElementById('profEmpNo').textContent = u[3] || '';
                         document.getElementById('profPickup').textContent = 'N';
-                        document.getElementById('profTemp').textContent = 'N';
-                        document.getElementById('profTempStart').textContent = '—';
-                        document.getElementById('profTempEnd').textContent = '—';
                         document.getElementById('profStatus').innerHTML =
                             '<span class="status-badge ' +
                             (statusClasses[0] || '') + '">' + (statusLabels[0] || '') + '</span>';
@@ -565,7 +525,8 @@
                 // Table 2: Signing Limit Authorizations (1:M via gad_id)
                 var limRes = db.exec(
                     "SELECT t.country_code, p.category, sl.limit_amount, sl.currency, " +
-                    "cc.name, sl.exception, sl.temp, sl.temp_start_date, sl.temp_end_date, sl.business_rationale, sl.business_control, " +
+                    "cc.name, sl.exception, sl.temp, sl.temp_start_date, sl.temp_end_date, " +
+                    "sl.business_rationale, sl.business_control, " +
                     "p.system, sl.account_restriction " +
                     "FROM signer_limit sl " +
                     "LEFT JOIN wd_territory t ON sl.territory_id = t.id " +
@@ -590,14 +551,15 @@
                         var amt = r[2] != null ? Number(r[2]).toLocaleString() : '';
                         var vals = [
                             r[0] || '', r[1] || '', amt, r[3] || '', r[4] || '',
-                            r[5] ? 'Y' : 'N', r[6] ? 'Y' : 'N', r[7] || '\u2014', r[8] || '\u2014',
-                            r[9] ? 'Y' : 'N', r[10] ? 'Y' : 'N',
+                            r[5] ? 'Y' : 'N', r[6] ? 'Y' : 'N',
+                            r[7] || '\u2014', r[8] || '\u2014',
+                            r[9] || '', r[10] || '',
                             r[11] || '', r[12] || ''
                         ];
                         vals.forEach(function(v, idx) {
                             var td = document.createElement('td');
                             td.textContent = v;
-                            if (idx >= 5 && idx <= 6 || idx >= 9 && idx <= 10) td.className = 'text-center';
+                            if (idx >= 5 && idx <= 8) td.className = 'text-center';
                             tr.appendChild(td);
                         });
                         tbody.appendChild(tr);
@@ -623,9 +585,9 @@
                     'Job Title': 'Principal Engineer'
                 },
                 limits: [
-                    { type: 'update', rowIndex: 0, newData: ['NA', 'EXP', '20,000', 'USD', '1010', 'N', 'N', 'N', 'N', 'AP', '000000-123456'] },
+                    { type: 'update', rowIndex: 0, newData: ['NA', 'EXP', '20,000', 'USD', '1010', 'N', 'N', '\u2014', '\u2014', '', '', 'AP', '000000-123456'] },
                     { type: 'delete', rowIndex: 1 },
-                    { type: 'new', newData: ['US', 'EXP', '5,000', 'CAD', '1010', 'N', 'N', 'N', 'N', 'AP', '000000-999999'] }
+                    { type: 'new', newData: ['US', 'EXP', '5,000', 'CAD', '1010', 'N', 'N', '\u2014', '\u2014', '', '', 'AP', '000000-999999'] }
                 ]
             }
         };
@@ -640,15 +602,15 @@
             4: [], // Approval Cost Center - loaded from infor_cost_center
             5: ['Y','N'],
             6: ['Y','N'],
-            7: 'date', // Temporary Start Date
-            8: 'date', // Temporary End Date
-            9: ['Y','N'],
-            10: ['Y','N'],
+            7: 'date',
+            8: 'date',
+            9: 'text',
+            10: 'text',
             11: ['AP','SNOW','Concur'],
             12: 'text'
         };
         // Columns that should render as <select> dropdowns instead of datalist
-        var limitSelectCols = [5, 6, 9, 10, 11];
+        var limitSelectCols = [5, 6, 11];
 
         // Wire up action links with UPN
         if (upn) {
@@ -667,54 +629,21 @@
 
         var originalProfileData = {};
 
-        function toggleTempDates(val) {
-            var startRow = document.getElementById('rowTempStart');
-            var endRow = document.getElementById('rowTempEnd');
-            if (val === 'Y') {
-                startRow.style.display = '';
-                endRow.style.display = '';
-            } else {
-                startRow.style.display = 'none';
-                endRow.style.display = 'none';
-                // Clear date inputs if in edit mode
-                var startInput = document.getElementById('profTempStart').querySelector('input[type="date"]');
-                var endInput = document.getElementById('profTempEnd').querySelector('input[type="date"]');
-                if (startInput) {
-                    startInput.value = '';
-                    if (startInput.value !== startInput.getAttribute('data-orig')) startInput.style.backgroundColor = '#fef9c3';
-                    else startInput.style.backgroundColor = '';
-                }
-                if (endInput) {
-                    endInput.value = '';
-                    if (endInput.value !== endInput.getAttribute('data-orig')) endInput.style.backgroundColor = '#fef9c3';
-                    else endInput.style.backgroundColor = '';
-                }
-            }
-        }
-
         function enterEditMode() {
             isEditMode = true;
-            // Show delete button on profile
-            document.getElementById('btnDeleteSigner').style.display = 'inline-block';
             document.getElementById('btnNewRow').style.display = 'inline-block';
 
             // Show Save/Cancel in action bar, hide view actions
             document.getElementById('editActions').style.display = 'contents';
             document.getElementById('viewActions').style.display = 'none';
 
-            // Make profile fields editable: BU, Pickup Cheques, Temporary, Temp Start/End, Status
+            // Make profile fields editable: BU, Pickup Cheques, Status
             var buTd = document.getElementById('profBU');
             var pickupTd = document.getElementById('profPickup');
-            var tempTd = document.getElementById('profTemp');
-            var tempStartTd = document.getElementById('profTempStart');
-            var tempEndTd = document.getElementById('profTempEnd');
             var statusTd = document.getElementById('profStatus');
 
             originalProfileData.bu = buTd.textContent.trim();
             originalProfileData.pickup = pickupTd.textContent.trim();
-            originalProfileData.temp = tempTd.textContent.trim();
-            originalProfileData.tempStart = tempStartTd.textContent.trim();
-            originalProfileData.tempEnd = tempEndTd.textContent.trim();
             originalProfileData.statusText = statusTd.textContent.trim();
             originalProfileData.statusHTML = statusTd.innerHTML;
 
@@ -732,29 +661,12 @@
             var pickupVal = originalProfileData.pickup;
             pickupTd.innerHTML = '<select class="edit-input" data-orig="' + pickupVal + '" style="padding:4px; width:auto;"><option value="Y"' + (pickupVal === 'Y' ? ' selected' : '') + '>Y</option><option value="N"' + (pickupVal === 'N' ? ' selected' : '') + '>N</option></select>';
 
-            // Temporary → Y/N select
-            var tempVal = originalProfileData.temp;
-            tempTd.innerHTML = '<select class="edit-input" data-orig="' + tempVal + '" style="padding:4px; width:auto;" onchange="toggleTempDates(this.value)"><option value="Y"' + (tempVal === 'Y' ? ' selected' : '') + '>Y</option><option value="N"' + (tempVal === 'N' ? ' selected' : '') + '>N</option></select>';
-
-            // Temporary Start Date → date input
-            var tempStartVal = originalProfileData.tempStart === '—' ? '' : originalProfileData.tempStart;
-            tempStartTd.innerHTML = '<input type="date" class="edit-input" data-orig="' + tempStartVal + '" value="' + tempStartVal + '" style="padding:4px; width:auto;">' +
-                '<button type="button" onclick="var inp=this.previousElementSibling;inp.value=\'\';if(inp.value===inp.getAttribute(\'data-orig\')){inp.style.backgroundColor=\'\';}else{inp.style.backgroundColor=\'#fef9c3\';}" style="margin-left:4px; padding:2px 8px; font-size:0.75rem; cursor:pointer;">Clear</button>';
-
-            // Temporary End Date → date input
-            var tempEndVal = originalProfileData.tempEnd === '—' ? '' : originalProfileData.tempEnd;
-            tempEndTd.innerHTML = '<input type="date" class="edit-input" data-orig="' + tempEndVal + '" value="' + tempEndVal + '" style="padding:4px; width:auto;">' +
-                '<button type="button" onclick="var inp=this.previousElementSibling;inp.value=\'\';if(inp.value===inp.getAttribute(\'data-orig\')){inp.style.backgroundColor=\'\';}else{inp.style.backgroundColor=\'#fef9c3\';}" style="margin-left:4px; padding:2px 8px; font-size:0.75rem; cursor:pointer;">Clear</button>';
-
             // Status → Active/Inactive select
             var isActive = originalProfileData.statusText === 'Active';
             statusTd.innerHTML = '<select class="edit-input" data-orig="' + (isActive ? 'Active' : 'Inactive') + '" style="padding:4px; width:auto;"><option value="Active"' + (isActive ? ' selected' : '') + '>Active</option><option value="Inactive"' + (!isActive ? ' selected' : '') + '>Inactive</option></select>';
 
-            // Show/hide temp date rows based on current Temporary value
-            toggleTempDates(tempVal);
-
             // Attach highlight listeners to profile edits
-            var editableTds = [buTd, pickupTd, tempTd, tempStartTd, tempEndTd, statusTd];
+            var editableTds = [buTd, pickupTd, statusTd];
             editableTds.forEach(function(td) {
                 var input = td.querySelector('.edit-input');
                 if (input) {
@@ -844,7 +756,6 @@
 
         function exitEditMode() {
             isEditMode = false;
-            document.getElementById('btnDeleteSigner').style.display = 'none';
             document.getElementById('btnNewRow').style.display = 'none';
             document.getElementById('editActions').style.display = 'none';
             document.getElementById('viewActions').style.display = 'contents';
@@ -852,14 +763,7 @@
             // Restore profile fields
             document.getElementById('profBU').textContent = originalProfileData.bu;
             document.getElementById('profPickup').textContent = originalProfileData.pickup;
-            document.getElementById('profTemp').textContent = originalProfileData.temp;
-            document.getElementById('profTempStart').textContent = originalProfileData.tempStart;
-            document.getElementById('profTempEnd').textContent = originalProfileData.tempEnd;
             document.getElementById('profStatus').innerHTML = originalProfileData.statusHTML;
-
-            // Restore temp date row visibility
-            document.getElementById('rowTempStart').style.display = '';
-            document.getElementById('rowTempEnd').style.display = '';
 
             document.querySelectorAll('.action-col').forEach(el => el.style.display = 'none');
 
@@ -958,8 +862,8 @@
         // Column names for validation error messages
         var limitColNames = [
             'Country (Territory)', 'Policy Category', 'Limit Amounts', 'Currency',
-            'Approval Cost Center', 'Exception', 'Temporary', 'Temporary Start Date',
-            'Temporary End Date', 'Business Rationale', 'Business Controls', 'System',
+            'Approval Cost Center', 'Exception', 'Temporary', 'Temporary Start Date', 'Temporary End Date',
+            'Business Rationale', 'Business Controls', 'System',
             'Accounts Restriction'
         ];
 
@@ -990,17 +894,13 @@
                 var rowLabel = (status === 'new') ? 'New Row ' + (rIdx + 1) : 'Row ' + (rIdx + 1);
 
                 // Collect specific inputs for cross-field validation
-                var startInput = null, endInput = null;
-                var countryInput = null, policyInput = null, limitInput = null, tempInput = null;
+                var countryInput = null, policyInput = null, limitInput = null;
                 cells.forEach(function(cell, cIdx) {
                     if (cIdx === 0) return;
                     var idx = cIdx - 1;
                     if (idx === 0) countryInput = cell.querySelector('.edit-input');
                     if (idx === 1) policyInput = cell.querySelector('.edit-input');
                     if (idx === 2) limitInput = cell.querySelector('.edit-input');
-                    if (idx === 6) tempInput = cell.querySelector('.edit-input');
-                    if (idx === 7) startInput = cell.querySelector('.edit-input');
-                    if (idx === 8) endInput = cell.querySelector('.edit-input');
                 });
 
                 cells.forEach(function(cell, cIdx) {
@@ -1038,36 +938,6 @@
                     }
                 });
 
-                // Date pair validation: both must be filled or both empty, end >= start
-                var startResult = validateDateInput(startInput);
-                var endResult = validateDateInput(endInput);
-                var startHasValue = (startResult === 'valid');
-                var endHasValue = (endResult === 'valid');
-                if (startHasValue && !endHasValue && endResult === 'empty') {
-                    errors.push(rowLabel + ': "Temporary End Date" is required when "Temporary Start Date" is filled.');
-                    if (endInput) endInput.style.outline = '2px solid red';
-                } else if (!startHasValue && startResult === 'empty' && endHasValue) {
-                    errors.push(rowLabel + ': "Temporary Start Date" is required when "Temporary End Date" is filled.');
-                    if (startInput) startInput.style.outline = '2px solid red';
-                } else if (startHasValue && endHasValue) {
-                    if (endInput.value < startInput.value) {
-                        errors.push(rowLabel + ': "Temporary End Date" must be on or after "Temporary Start Date".');
-                        if (endInput) endInput.style.outline = '2px solid red';
-                    }
-                }
-
-                // Temporary=N: dates must be empty
-                if (tempInput && tempInput.value === 'N') {
-                    if (startResult === 'valid' || startResult === 'incomplete' || startResult === 'invalid') {
-                        errors.push(rowLabel + ': "Temporary Start Date" must be empty when "Temporary" is N.');
-                        if (startInput) startInput.style.outline = '2px solid red';
-                    }
-                    if (endResult === 'valid' || endResult === 'incomplete' || endResult === 'invalid') {
-                        errors.push(rowLabel + ': "Temporary End Date" must be empty when "Temporary" is N.');
-                        if (endInput) endInput.style.outline = '2px solid red';
-                    }
-                }
-
                 // Cross-field: Policy Category + Country combination must exist in gdas_policy
                 var countryVal = countryInput ? countryInput.value.trim() : '';
                 var policyVal = policyInput ? policyInput.value.trim() : '';
@@ -1096,63 +966,8 @@
         }
 
         function reviewChanges() {
-            // Validate profile date inputs
+            // Validate profile inputs
             var profileErrors = [];
-            var profTempStartInput = document.getElementById('profTempStart').querySelector('input[type="date"]');
-            var profTempEndInput = document.getElementById('profTempEnd').querySelector('input[type="date"]');
-            if (profTempStartInput) {
-                profTempStartInput.style.outline = '';
-                var result = validateDateInput(profTempStartInput);
-                if (result === 'incomplete') {
-                    profileErrors.push('"Temporary Start Date" has an incomplete or invalid date.');
-                    profTempStartInput.style.outline = '2px solid red';
-                } else if (result === 'invalid') {
-                    profileErrors.push('"Temporary Start Date" is not a valid date.');
-                    profTempStartInput.style.outline = '2px solid red';
-                }
-            }
-            if (profTempEndInput) {
-                profTempEndInput.style.outline = '';
-                var result = validateDateInput(profTempEndInput);
-                if (result === 'incomplete') {
-                    profileErrors.push('"Temporary End Date" has an incomplete or invalid date.');
-                    profTempEndInput.style.outline = '2px solid red';
-                } else if (result === 'invalid') {
-                    profileErrors.push('"Temporary End Date" is not a valid date.');
-                    profTempEndInput.style.outline = '2px solid red';
-                }
-            }
-            // Profile date pair validation
-            if (profTempStartInput && profTempEndInput) {
-                var startResult = validateDateInput(profTempStartInput);
-                var endResult = validateDateInput(profTempEndInput);
-                if (startResult === 'valid' && endResult === 'empty') {
-                    profileErrors.push('"Temporary End Date" is required when "Temporary Start Date" is filled.');
-                    profTempEndInput.style.outline = '2px solid red';
-                } else if (startResult === 'empty' && endResult === 'valid') {
-                    profileErrors.push('"Temporary Start Date" is required when "Temporary End Date" is filled.');
-                    profTempStartInput.style.outline = '2px solid red';
-                } else if (startResult === 'valid' && endResult === 'valid') {
-                    if (profTempEndInput.value < profTempStartInput.value) {
-                        profileErrors.push('"Temporary End Date" must be on or after "Temporary Start Date".');
-                        profTempEndInput.style.outline = '2px solid red';
-                    }
-                }
-            }
-            // Profile Temporary=N: dates must be empty
-            var profTempSelect = document.getElementById('profTemp').querySelector('.edit-input');
-            if (profTempSelect && profTempSelect.value === 'N' && profTempStartInput && profTempEndInput) {
-                var sResult = validateDateInput(profTempStartInput);
-                var eResult = validateDateInput(profTempEndInput);
-                if (sResult !== 'empty') {
-                    profileErrors.push('"Temporary Start Date" must be empty when "Temporary" is N.');
-                    profTempStartInput.style.outline = '2px solid red';
-                }
-                if (eResult !== 'empty') {
-                    profileErrors.push('"Temporary End Date" must be empty when "Temporary" is N.');
-                    profTempEndInput.style.outline = '2px solid red';
-                }
-            }
 
             // Validate limit inputs
             document.querySelectorAll('#limitsBody .edit-input').forEach(function(input) {
@@ -1176,13 +991,46 @@
 
             var contentDiv = document.getElementById('reviewModalContent');
             contentDiv.innerHTML = '';
-            
+            var hasChanges = false;
+
+            // --- Profile Changes ---
+            var profileHTML = '<h3 style="margin:0 0 8px 0;">Signer Profile</h3>';
+            var profileLabels = ['Business Unit', 'Pickup Cheques', 'Status'];
+            var profileIds = ['profBU', 'profPickup', 'profStatus'];
+            var profileOriginals = [originalProfileData.bu, originalProfileData.pickup, originalProfileData.statusText === 'Active' ? 'Active' : 'Inactive'];
+            var profileChanged = false;
+
+            profileHTML += '<table class="detail-table" style="width:100%; margin-bottom:16px;">';
+            for (var pi = 0; pi < profileLabels.length; pi++) {
+                var profInput = document.getElementById(profileIds[pi]).querySelector('.edit-input');
+                if (!profInput) continue;
+                var profVal = profInput.value;
+                var profOrig = profileOriginals[pi];
+                if (profVal !== profOrig) {
+                    profileChanged = true;
+                    hasChanges = true;
+                    profileHTML += '<tr><th>' + profileLabels[pi] + '</th><td>' +
+                        '<span style="color:#777;text-decoration:line-through;">' + profOrig + '</span>' +
+                        ' <span style="color:#999;margin:0 4px;">&#8594;</span>' +
+                        '<span style="font-weight:bold;background:#fef9c3;padding:1px 4px;">' + profVal + '</span></td></tr>';
+                } else {
+                    profileHTML += '<tr><th>' + profileLabels[pi] + '</th><td>' + profVal + '</td></tr>';
+                }
+            }
+            profileHTML += '</table>';
+
+            if (profileChanged) hasChanges = true;
+            contentDiv.innerHTML += profileHTML;
+
+            // --- Limit Changes ---
+            contentDiv.innerHTML += '<h3 style="margin:0 0 8px 0;">Signing Limit Authorizations</h3>';
+
             var tableHTML = '<table class="data-table" style="width:100%; border-collapse:collapse;">';
             var headerHTML = document.querySelector('#limitsTable thead').innerHTML;
             tableHTML += headerHTML.replace(/<th class="action-col"[\s\S]*?<\/th>/, '<th>Change Type</th>');
             tableHTML += '<tbody>';
 
-            var hasChanges = false;
+            var hasLimitChanges = false;
             var rows = document.querySelectorAll('#limitsBody tr');
             
             rows.forEach(function(row, rIdx) {
@@ -1190,14 +1038,15 @@
                 var cells = row.querySelectorAll('td');
                 
                 if (status === 'deleted') {
+                    hasLimitChanges = true;
                     hasChanges = true;
-                    // Find original data
                     var origData = originalData.find(item => item.rowRef === row).data;
                     tableHTML += '<tr style="background:#ffe6e6; text-decoration:line-through; border-top: 3px solid #999; border-bottom: 3px solid #999;"><td style="font-weight:bold; color:red;">Deleted</td>';
                     origData.forEach(val => tableHTML += '<td>' + val + '</td>');
                     tableHTML += '</tr>';
                 } 
                 else if (status === 'new') {
+                    hasLimitChanges = true;
                     hasChanges = true;
                     tableHTML += '<tr style="background:#e6ffe6; border-top: 3px solid #999; border-bottom: 3px solid #999;"><td style="font-weight:bold; color:green;">New</td>';
                     cells.forEach((cell, cIdx) => {
@@ -1216,15 +1065,14 @@
                     });
                     
                     if (isChanged) {
+                        hasLimitChanges = true;
                         hasChanges = true;
                         var origData = originalData.find(item => item.rowRef === row).data;
                         
-                        // Before row
                         tableHTML += '<tr style="color:#777; border-top: 3px solid #999; border-bottom: 1px dashed #ddd;"><td style="font-weight:bold; font-size:0.85rem;">Before</td>';
                         origData.forEach(val => tableHTML += '<td>' + val + '</td>');
                         tableHTML += '</tr>';
                         
-                        // After row
                         tableHTML += '<tr style="border-bottom: 3px solid #999;"><td style="font-weight:bold; color:#2e86c1;">After</td>';
                         cells.forEach((cell, cIdx) => {
                             if (cIdx === 0) return;
@@ -1248,11 +1096,16 @@
 
             tableHTML += '</tbody></table>';
 
+            if (!hasLimitChanges) {
+                contentDiv.innerHTML += '<p style="color:#555;">No limit changes.</p>';
+            } else {
+                contentDiv.innerHTML += tableHTML;
+            }
+
             if (!hasChanges) {
-                contentDiv.innerHTML = '<p style="color:#555;">No changes detected in Signing Limit Authorizations.</p>';
+                contentDiv.innerHTML = '<p style="color:#555;">No changes detected.</p>';
                 document.getElementById('btnConfirmSubmit').style.display = 'none';
             } else {
-                contentDiv.innerHTML = tableHTML;
                 document.getElementById('btnConfirmSubmit').style.display = 'inline-block';
             }
 
@@ -1275,11 +1128,7 @@
             exitEditMode();
         }
 
-        function deleteSigner() {
-            if (confirm('Are you sure you want to delete this signer?')) {
-                alert('Delete triggered – connect to backend API.');
-            }
-        }
+
 
         // Simulate current logged-in user
         var currentUser = 'alice.smith@manulife.com';
@@ -1606,9 +1455,6 @@ Job Level/Job Grade = wd_user_profile.job_level_id -> wd_job_level.job_grade
 Job Title           = wd_user_profile.job_level_id -> wd_job_level.job_title
 Employee No.        = wd_user_profile.employee_id
 Pickup Cheques      = Y/N (editable)
-Temporary           = Y/N (editable)
-Temp Start Date     = Date Picker (editable)
-Temp End Date       = Date Picker (editable)
 Status              = Active/Inactive (editable)</pre>
                 </div>
                 <div style="flex:1;">
@@ -1624,9 +1470,6 @@ Job Level/Job Grade = signer.gad_id -> wd_user_profile.job_level_id -> wd_job_le
 Job Title           = signer.gad_id -> wd_user_profile.job_level_id -> wd_job_level.job_title
 Employee No.        = signer.gad_id -> wd_user_profile.employee_id
 Pickup Cheques      = signer.pickup_cheque
-Temporary           = signer.temp
-Temp Start Date     = signer.temp_start_date
-Temp End Date       = signer.temp_end_date
 Status              = signer.status</pre>
                 </div>
                 <div style="flex:1;">
@@ -1642,9 +1485,6 @@ Job Level/Job Grade = signer.gad_id -> wd_user_profile.job_level_id -> wd_job_le
 Job Title           = signer.gad_id -> wd_user_profile.job_level_id -> wd_job_level.job_title
 Employee No.        = signer.gad_id -> wd_user_profile.employee_id
 Pickup Cheques      = signer.pickup_cheque (editable)
-Temporary           = signer.temp (editable)
-Temp Start Date     = signer.temp_start_date (editable)
-Temp End Date       = signer.temp_end_date (editable)
 Status              = signer.status (editable)</pre>
                 </div>
             </div>
@@ -1656,16 +1496,10 @@ Status              = signer.status (editable)</pre>
 - Editable fields from req_signer:
 Old values:
   Pickup Cheques      = req_signer.old_pickup_cheque
-  Temporary           = req_signer.old_temp
-  Temp Start Date     = req_signer.old_temp_start_date
-  Temp End Date       = req_signer.old_temp_end_date
   Status              = req_signer.old_status
 New values:
   GAD ID              = req_signer.gad_id
   Pickup Cheques      = req_signer.new_pickup_cheque
-  Temporary           = req_signer.new_temp
-  Temp Start Date     = req_signer.new_temp_start_date
-  Temp End Date       = req_signer.new_temp_end_date
   Status              = req_signer.new_status
 
 - Lookup fields (by gad_id):
@@ -1734,11 +1568,7 @@ DAD Request
 - signer_limit</pre>
             <h4 style="margin:12px 0 6px 0;color:#6a1b9a;">Data Validation (on Submit for Review):</h4>
             <pre style="background:#f3e5f5;padding:12px;border-radius:6px;font-size:0.82rem;white-space:pre;overflow-x:auto;">Signer Profile:
-1. Temporary Start Date / End Date must be valid dates (YYYY-MM-DD)
-   - Incomplete or partial dates are rejected
-2. Both dates must be filled or both empty (cannot have only one)
-3. End Date must be >= Start Date
-4. If Temporary = N, both Start Date and End Date must be empty</pre>
+No additional validation rules.</pre>
             <div style="text-align:right;margin-top:12px;"><button onclick="document.getElementById('devNoteProfileModal').style.display='none'" style="padding:4px 14px;cursor:pointer;">Close</button></div>
         </div>
     </div>
@@ -1823,17 +1653,15 @@ DAD Request
    - Policy Category: gdas_policy.category WHERE status=1
    - Currency: infor_currency.currency WHERE status=1
    - Approval Cost Center: infor_cost_center.name WHERE status=1
-2. Dropdown fields: Exception, Temporary, Business Rationale, Business Controls, System
+2. Dropdown fields: Exception, Temporary, System
    - Constrained by select options (no free-text)
-3. Accounts Restriction: free text input (no validation)
-4. Temporary Start Date / End Date must be valid dates (YYYY-MM-DD)
-   - Incomplete or partial dates are rejected
-5. Both dates must be filled or both empty (cannot have only one)
-6. End Date must be >= Start Date
-7. If Temporary = N, both Start Date and End Date must be empty
-8. Country + Policy Category combination must exist in gdas_policy table
+3. Date fields: Temporary Start Date, Temporary End Date
+   - Must be valid date (YYYY-MM-DD) or empty
+4. Free text fields: Business Rationale, Business Controls, Accounts Restriction
+   - No validation
+5. Country + Policy Category combination must exist in gdas_policy table
    - Lookup: gdas_policy.country_code + gdas_policy.category (status=1)
-9. Limit Amounts must not exceed gdas_policy.threshold_amount
+6. Limit Amounts must not exceed gdas_policy.threshold_amount
    - Only checked when Country + Policy Category combination is valid</pre>
             <div style="text-align:right;margin-top:12px;"><button onclick="document.getElementById('devNoteLimitsModal').style.display='none'" style="padding:4px 14px;cursor:pointer;">Close</button></div>
         </div>

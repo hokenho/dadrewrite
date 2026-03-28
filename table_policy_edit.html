@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DAD - Update Policies Categories</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="js/sql-js/sql-wasm.js"></script>
+    <style>
+        .status-badge{display:inline-block;padding:2px 10px;border-radius:12px;font-size:.78rem;font-weight:600}
+        .status-active{background:#dcfce7;color:#166534}
+        .status-inactive{background:#fee2e2;color:#991b1b}
+        .edit-input{width:100%;box-sizing:border-box;padding:2px 4px;font-size:0.82rem;border:1px solid #bbb;border-radius:3px;}
+        .edit-input:focus{outline:2px solid #2e86c1;border-color:#2e86c1;}
+        .edit-input.changed{background:rgb(255,255,0);}
+        .action-col{width:30px;text-align:center;}
+        tr[data-status="deleted"]{display:none;}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="page-header">
+            <h1>Disbursement Authorization Database <span class="subtitle">– Update Policies Categories</span></h1>
+        </div>
+
+        <script src="js/navbar.js"></script>
+
+        <!-- Action Bar -->
+        <div class="action-bar action-bar--blue">
+            <span class="action-bar-label">Actions:</span>
+            <button onclick="saveChanges()">Save Changes</button>
+            <button onclick="location.reload()">Discard &amp; Reload</button>
+            <a href="table_policy.html" class="action-bar-link">View Read-Only</a>
+            <a href="audit_table_policy.html" class="action-bar-link">View Audit Log</a>
+        </div>
+
+        <!-- Results Table -->
+        <div class="panel panel--blue">
+            <div class="panel-title" style="position:relative;">Update Policies Categories
+                <button style="margin-left:10px; font-size:0.75rem; padding:2px 10px;" onclick="addNewRow()">Add Row</button>
+            </div>
+            <div class="data-table-wrapper">
+                <table class="data-table" id="resultsTable">
+                    <thead>
+                        <tr>
+                            <th class="action-col"></th>
+                            <th>Countries</th>
+                            <th>Policy Category</th>
+                            <th>Description</th>
+                            <th>System Type</th>
+                            <th>No. of Approvals</th>
+                            <th>Threshold Amount</th>
+                            <th>Manual Approval Required</th>
+                            <th>Last Update Date</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="resultsBody">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        var dbRef = null;
+
+        (async function() {
+            var SQL = await initSqlJs({ locateFile: function() { return 'js/sql-js/sql-wasm.wasm'; } });
+            var buf = await fetch('db/data.db').then(function(r) { return r.arrayBuffer(); });
+            dbRef = new SQL.Database(new Uint8Array(buf));
+            loadTable();
+        })();
+
+        function loadTable() {
+            var results = dbRef.exec('SELECT id, country_code, category, description, system, approval_count, threshold_amount, manual_approval, last_update_date, status FROM gdas_policy ORDER BY id');
+            var tbody = document.getElementById('resultsBody');
+            tbody.innerHTML = '';
+            if (results.length > 0) {
+                results[0].values.forEach(function(row) {
+                    var tr = createEditableRow(row);
+                    tbody.appendChild(tr);
+                });
+            }
+        }
+
+        function createEditableRow(row) {
+            // row: [id, country_code, category, description, system, approval_count, threshold_amount, manual_approval, last_update_date, status]
+            var tr = document.createElement('tr');
+            tr.setAttribute('data-status', 'original');
+            tr.setAttribute('data-id', row[0]);
+
+            // Delete button
+            var actionTd = document.createElement('td');
+            actionTd.className = 'action-col';
+            actionTd.innerHTML = '<button onclick="deleteRow(this)" style="color:red;cursor:pointer;border:none;background:none;font-weight:bold;font-size:1rem;" title="Delete row">X</button>';
+            tr.appendChild(actionTd);
+
+            var cols = [
+                { val: row[1], type: 'text' },                          // country_code
+                { val: row[2], type: 'text' },                          // category
+                { val: row[3], type: 'text' },                          // description
+                { val: row[4], type: 'text' },                          // system
+                { val: row[5], type: 'number' },                        // approval_count
+                { val: row[6], type: 'number', step: '0.01' },          // threshold_amount
+                { val: row[7] ? 'Y' : 'N', type: 'select', options: ['Y','N'] }, // manual_approval
+                { val: row[8] || '', type: 'date' },                    // last_update_date
+                { val: row[9] ? 'Active' : 'Inactive', type: 'select', options: ['Active','Inactive'] } // status
+            ];
+
+            cols.forEach(function(col) {
+                var td = document.createElement('td');
+                var origVal = col.val != null ? String(col.val) : '';
+                if (col.type === 'select') {
+                    var sel = document.createElement('select');
+                    sel.className = 'edit-input';
+                    sel.setAttribute('data-orig', origVal);
+                    col.options.forEach(function(opt) {
+                        var o = document.createElement('option');
+                        o.value = opt; o.textContent = opt;
+                        if (opt === origVal) o.selected = true;
+                        sel.appendChild(o);
+                    });
+                    sel.addEventListener('change', function() {
+                        this.classList.toggle('changed', this.value !== this.getAttribute('data-orig'));
+                    });
+                    td.appendChild(sel);
+                } else {
+                    var inp = document.createElement('input');
+                    inp.type = col.type;
+                    inp.className = 'edit-input';
+                    inp.value = origVal;
+                    inp.setAttribute('data-orig', origVal);
+                    if (col.step) inp.step = col.step;
+                    inp.addEventListener('input', function() {
+                        this.classList.toggle('changed', this.value !== this.getAttribute('data-orig'));
+                    });
+                    td.appendChild(inp);
+                }
+                tr.appendChild(td);
+            });
+
+            return tr;
+        }
+
+        function addNewRow() {
+            var tbody = document.getElementById('resultsBody');
+            var tr = document.createElement('tr');
+            tr.setAttribute('data-status', 'new');
+            tr.setAttribute('data-id', '');
+
+            // Delete button
+            var actionTd = document.createElement('td');
+            actionTd.className = 'action-col';
+            actionTd.innerHTML = '<button onclick="deleteRow(this)" style="color:red;cursor:pointer;border:none;background:none;font-weight:bold;font-size:1rem;" title="Delete row">X</button>';
+            tr.appendChild(actionTd);
+
+            var today = new Date().toISOString().slice(0,10);
+            var cols = [
+                { val: '', type: 'text' },
+                { val: '', type: 'text' },
+                { val: '', type: 'text' },
+                { val: '', type: 'text' },
+                { val: '', type: 'number' },
+                { val: '', type: 'number', step: '0.01' },
+                { val: 'Y', type: 'select', options: ['Y','N'] },
+                { val: today, type: 'date' },
+                { val: 'Active', type: 'select', options: ['Active','Inactive'] }
+            ];
+
+            cols.forEach(function(col) {
+                var td = document.createElement('td');
+                if (col.type === 'select') {
+                    var sel = document.createElement('select');
+                    sel.className = 'edit-input';
+                    sel.setAttribute('data-orig', '');
+                    col.options.forEach(function(opt) {
+                        var o = document.createElement('option');
+                        o.value = opt; o.textContent = opt;
+                        if (opt === col.val) o.selected = true;
+                        sel.appendChild(o);
+                    });
+                    td.appendChild(sel);
+                } else {
+                    var inp = document.createElement('input');
+                    inp.type = col.type;
+                    inp.className = 'edit-input';
+                    inp.value = col.val;
+                    inp.setAttribute('data-orig', '');
+                    if (col.step) inp.step = col.step;
+                    td.appendChild(inp);
+                }
+                tr.appendChild(td);
+            });
+
+            tbody.appendChild(tr);
+            tr.querySelector('.edit-input').focus();
+        }
+
+        function deleteRow(btn) {
+            var tr = btn.closest('tr');
+            if (tr.getAttribute('data-status') === 'new') {
+                tr.remove();
+            } else {
+                tr.setAttribute('data-status', 'deleted');
+            }
+        }
+
+        function saveChanges() {
+            // Validate required fields
+            var errors = [];
+            var rows = document.querySelectorAll('#resultsBody tr');
+            rows.forEach(function(row, idx) {
+                if (row.getAttribute('data-status') === 'deleted') return;
+                var inputs = row.querySelectorAll('.edit-input');
+                var country = inputs[0].value.trim();
+                var category = inputs[1].value.trim();
+                if (!country) errors.push('Row ' + (idx+1) + ': Countries is required.');
+                if (!category) errors.push('Row ' + (idx+1) + ': Policy Category is required.');
+            });
+            if (errors.length > 0) {
+                alert('Validation errors:\n' + errors.join('\n'));
+                return;
+            }
+
+            alert('Changes submitted to backend API.');
+            location.reload();
+        }
+
+        function exportTable(tableId, filename) {
+            var table = document.getElementById(tableId);
+            var csv = [];
+            var headers = [];
+            table.querySelectorAll('thead th').forEach(function(th) {
+                if (th.classList.contains('action-col')) return;
+                headers.push('"' + th.textContent.trim() + '"');
+            });
+            csv.push(headers.join(','));
+            table.querySelectorAll('tbody tr').forEach(function(tr) {
+                if (tr.getAttribute('data-status') === 'deleted') return;
+                var rowData = [];
+                tr.querySelectorAll('td').forEach(function(td) {
+                    if (td.classList.contains('action-col')) return;
+                    var input = td.querySelector('.edit-input');
+                    var val = input ? input.value : td.textContent.trim();
+                    rowData.push('"' + val.replace(/"/g, '""') + '"');
+                });
+                csv.push(rowData.join(','));
+            });
+            var blob = new Blob([csv.join('\n')], { type: 'text/csv;charset=utf-8;' });
+            var link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            var now = new Date(); var ts = '_' + now.getFullYear() + String(now.getMonth()+1).padStart(2,'0') + String(now.getDate()).padStart(2,'0') + String(now.getHours()).padStart(2,'0') + String(now.getMinutes()).padStart(2,'0') + String(now.getSeconds()).padStart(2,'0');
+            link.download = filename + ts + '.csv';
+            link.click();
+            URL.revokeObjectURL(link.href);
+        }
+    </script>
+</body>
+</html>

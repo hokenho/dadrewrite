@@ -22,40 +22,9 @@
 
         <div class="action-bar action-bar--blue">
             <span class="action-bar-label">Actions:</span>
-            <button onclick="doSearch()">Search</button>
             <button onclick="location.reload()">Refresh</button>
             <button onclick="window.print()">Print</button>
             <a href="audit_table_country.html" class="action-bar-link">View Audit Log</a>
-        </div>
-
-        <div class="panel panel--blue" id="searchPanel" style="display:none;">
-            <div class="panel-title">Search Countries/Territories</div>
-            <div class="filter-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
-                <div class="filter-field">
-                    <label for="fCode">Country Code</label>
-                    <input type="text" id="fCode" placeholder="e.g. NA">
-                </div>
-                <div class="filter-field">
-                    <label for="fTerritory">Territory</label>
-                    <input type="text" id="fTerritory" placeholder="e.g. North America">
-                </div>
-                <div class="filter-field">
-                    <label for="fLastUpdate">Last Update Date</label>
-                    <input type="date" id="fLastUpdate">
-                </div>
-                <div class="filter-field">
-                    <label for="fStatus">Status</label>
-                    <select id="fStatus">
-                        <option value="">-- All --</option>
-                        <option value="Active">Active</option>
-                        <option value="Inactive">Inactive</option>
-                    </select>
-                </div>
-            </div>
-            <div class="filter-actions">
-                <button class="btn btn-primary" onclick="filterTable()">Apply Filter</button>
-                <button class="btn btn-secondary" onclick="clearFilters()">Clear</button>
-            </div>
         </div>
 
         <div class="panel panel--blue">
@@ -100,31 +69,7 @@
             db.close();
         })();
 
-        function doSearch() {
-            var panel = document.getElementById('searchPanel');
-            panel.style.display = (panel.style.display === 'none') ? 'block' : 'none';
-        }
-        function filterTable() {
-            var code = document.getElementById('fCode').value.trim().toLowerCase();
-            var terr = document.getElementById('fTerritory').value.trim().toLowerCase();
-            var dt   = document.getElementById('fLastUpdate').value;
-            var stat = document.getElementById('fStatus').value;
-            document.querySelectorAll('#resultsBody tr').forEach(function(row) {
-                var cells = row.querySelectorAll('td');
-                var match = (!code || cells[0].textContent.trim().toLowerCase().includes(code))
-                         && (!terr || cells[1].textContent.trim().toLowerCase().includes(terr))
-                         && (!dt   || cells[2].textContent.trim() === dt)
-                         && (!stat || cells[3].textContent.trim() === stat);
-                row.style.display = match ? '' : 'none';
-            });
-        }
-        function clearFilters() {
-            document.getElementById('fCode').value = '';
-            document.getElementById('fTerritory').value = '';
-            document.getElementById('fLastUpdate').value = '';
-            document.getElementById('fStatus').value = '';
-            document.querySelectorAll('#resultsBody tr').forEach(function(r) { r.style.display = ''; });
-        }
+
         function exportTable(tableId, filename) {
             var table = document.getElementById(tableId);
             var csv = [];
@@ -147,9 +92,6 @@
             URL.revokeObjectURL(link.href);
         }
 
-        document.getElementById('searchPanel').addEventListener('keydown', function(e) {
-            if (e.key === 'Enter') { e.preventDefault(); filterTable(); }
-        });
     </script>
 
     <!-- DEV Note Modal: Countries/Territories -->

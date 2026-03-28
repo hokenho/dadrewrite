@@ -6,7 +6,7 @@
         { label: 'Signer Authorization', href: 'signer.html' },
         { label: 'Signer Onboarding', children: [
             { label: 'Request New Signer', href: 'request_signer.html' },
-            { label: 'Signer Request Status', href: 'request_status.html' },
+            { label: 'My Signer Request Status', href: 'request_status.html' },
             { label: 'Signer Request Approval (AVP+)', href: 'req_approval.html?mode=approver1' }
         ]},
         { label: 'Tables Administration', children: [
@@ -25,7 +25,8 @@
             { label: 'Dashboard', href: 'dashboard.html' },
             { label: 'Signer Request Approval (TSA)', href: 'req_approval.html?mode=approver2' },
             { label: 'User Access', href: 'user_access.html' },
-            { label: 'Upload Tool', href: 'upload.html' }
+            { label: 'Upload Tool', href: 'upload.html' },
+            { label: 'Update Policies Categories table', href: 'table_policy_edit.html' }
         ]}
     ];
 

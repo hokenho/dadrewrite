@@ -32,6 +32,9 @@
         .snapshot-modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;border-bottom:2px solid #1565c0;padding-bottom:10px;}
         .snapshot-modal-header h3{margin:0;color:#1565c0;font-size:1rem;}
         .snapshot-modal-close{padding:4px 14px;cursor:pointer;font-size:0.9rem;}
+        .filter-row th{padding:4px 3px;background:#eef3fa;}
+        .filter-row input,.filter-row select{width:100%;box-sizing:border-box;font-size:0.72rem;padding:3px 4px;border:1px solid #b0c4de;border-radius:3px;}
+        .filter-row input[type="date"]{width:90px;font-size:0.65rem;padding:2px 2px;}
     </style>
 </head>
 <body>
@@ -45,7 +48,6 @@
         <!-- Action Bar -->
         <div class="action-bar action-bar--blue">
             <span class="action-bar-label">Actions:</span>
-            <button onclick="doSearch()">Search</button>
             <button onclick="location.reload()">Refresh</button>
             <button onclick="window.print()">Print</button>
             <a id="btnBack" href="signer_details.html" class="action-bar-link">Back to Signer Details</a>
@@ -59,46 +61,23 @@
             </table>
         </div>
 
-        <!-- Section 1: Search Filters -->
-        <div class="panel panel--blue" id="searchPanel" style="display:none;">
-            <div class="panel-title" style="position:relative;">Section 1: Search Audit Log
-                <button onclick="document.getElementById('devNoteSearchModal').style.display='flex'" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);padding:2px 10px;font-size:0.72rem;font-weight:600;color:#fff;background:#6a1b9a;border:none;border-radius:4px;cursor:pointer;">DEV Note</button>
-            </div>
-            <div class="filter-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
-                <div class="filter-field">
-                    <label for="fChangeDate">Change Date</label>
-                    <input type="date" id="fChangeDate">
-                </div>
-                <div class="filter-field">
-                    <label for="fAction">Change Type</label>
-                    <select id="fAction">
-                        <option value="">-- All --</option>
-                        <option value="INSERT">INSERT</option>
-                        <option value="UPDATE">UPDATE</option>
-                        <option value="DELETE">DELETE</option>
-                    </select>
-                </div>
-                <div class="filter-field">
-                    <label for="fChangeBy">Changed By</label>
-                    <input type="text" id="fChangeBy" placeholder="e.g. admin.user">
-                </div>
-            </div>
-            <div class="filter-actions">
-                <button class="btn btn-primary" onclick="filterAll()">Apply Filter</button>
-                <button class="btn btn-secondary" onclick="clearFilters()">Clear</button>
-            </div>
-        </div>
-
         <!-- Section 2: Audit Summary (click to open popup) -->
         <div class="panel panel--blue">
             <div class="panel-title" style="position:relative;">Audit Log: Signer (TOP 50)
-                <button style="margin-left:10px; font-size:0.75rem; padding:2px 10px;" onclick="exportSignerData()">Export All Signer Audit Data</button>
+                <button class="btn btn-primary" style="margin-left:10px;font-size:0.75rem;padding:2px 10px;" onclick="filterAll()">Apply Filter</button>
+                <button class="btn btn-secondary" style="margin-left:6px;font-size:0.75rem;padding:2px 10px;" onclick="clearFilters()">Clear</button>
+                <button style="margin-left:10px; font-size:0.75rem; padding:2px 10px;" onclick="exportSignerData()">Export All Profile Audit Data</button>
                 <button style="margin-left:4px; font-size:0.75rem; padding:2px 10px;" onclick="exportLimitData()">Export All Limit Audit Data</button>
                 <button onclick="document.getElementById('devNoteResultsModal').style.display='flex'" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);padding:2px 10px;font-size:0.72rem;font-weight:600;color:#fff;background:#6a1b9a;border:none;border-radius:4px;cursor:pointer;">DEV Note</button>
             </div>
             <div class="data-table-wrapper">
                 <table class="data-table" id="summaryTable">
                     <thead>
+                        <tr class="filter-row">
+                            <th><input type="date" id="fChangeDate"></th>
+                            <th><select id="fAction"><option value="">All</option><option value="INSERT">INSERT</option><option value="UPDATE">UPDATE</option><option value="DELETE">DELETE</option></select></th>
+                            <th><input type="text" id="fChangeBy" placeholder="Filter"></th>
+                        </tr>
                         <tr>
                             <th>Change Date</th>
                             <th>Change Type</th>
@@ -240,8 +219,8 @@ UNCHANGE  = grey background, blue-grey badge, current values</pre>
 
         // ===================== SNAPSHOT POPUP =====================
         var _signerDetailSql = 'SELECT id, gad_id, action, ' +
-            'old_bu_security_group, old_bu_name, old_pickup_cheque, old_temp, old_temp_start_date, old_temp_end_date, old_status, ' +
-            'new_bu_security_group, new_bu_name, new_pickup_cheque, new_temp, new_temp_start_date, new_temp_end_date, new_status, ' +
+            'old_bu_security_group, old_bu_name, old_pickup_cheque, old_status, ' +
+            'new_bu_security_group, new_bu_name, new_pickup_cheque, new_status, ' +
             'change_by, change_date FROM audit_signer WHERE gad_id = ? AND change_date = ? AND change_by = ? ORDER BY id DESC';
 
         var _limitDetailSql = 'SELECT id, signer_limit_id, gad_id, action, ' +
@@ -258,8 +237,7 @@ UNCHANGE  = grey background, blue-grey badge, current values</pre>
             'change_by, change_date FROM audit_signer_limit WHERE gad_id = ? AND change_date = ? AND change_by = ? ORDER BY signer_limit_id, id DESC';
 
         // Query unchanged signer profile: current signer row with BU FK JOIN
-        var _unchangedSignerSql = 'SELECT bu.security_group, bu.name, s.pickup_cheque, s.temp, ' +
-            's.temp_start_date, s.temp_end_date, s.status ' +
+        var _unchangedSignerSql = 'SELECT bu.security_group, bu.name, s.pickup_cheque, s.status ' +
             'FROM signer s LEFT JOIN infor_business_unit bu ON s.bu_id = bu.id ' +
             'WHERE s.gad_id = ?';
 
@@ -277,7 +255,7 @@ UNCHANGE  = grey background, blue-grey badge, current values</pre>
             'WHERE sl.gad_id = ?';
 
         function formatSignerRow(vals) {
-            return [fmtVal(vals[0]), fmtVal(vals[1]), fmtYN(vals[2]), fmtYN(vals[3]), fmtVal(vals[4]), fmtVal(vals[5]), fmtStatus(vals[6])];
+            return [fmtVal(vals[0]), fmtVal(vals[1]), fmtYN(vals[2]), fmtStatus(vals[3])];
         }
 
         function formatLimitRow(vals) {
@@ -286,7 +264,7 @@ UNCHANGE  = grey background, blue-grey badge, current values</pre>
                 fmtVal(vals[5]), fmtVal(vals[6]), fmtAmount(vals[7]), fmtYN(vals[8]),
                 fmtAmount(vals[9]), fmtVal(vals[10]), fmtVal(vals[11]),
                 fmtYN(vals[12]), fmtYN(vals[13]), fmtVal(vals[14]), fmtVal(vals[15]),
-                fmtYN(vals[16]), fmtYN(vals[17]), fmtVal(vals[18]), fmtVal(vals[19])
+                fmtVal(vals[16]), fmtVal(vals[17]), fmtVal(vals[18]), fmtVal(vals[19])
             ];
         }
 
@@ -309,21 +287,43 @@ UNCHANGE  = grey background, blue-grey badge, current values</pre>
             var html = '';
 
             // --- Signer Profile ---
+            // Fetch live user profile fields (not audited)
+            var profileInfo = { lastName: '', firstName: '', cc: '', jobTitle: '', empNo: '' };
+            var profRes = _db.exec('SELECT u.last_name, u.first_name, u.signer_cost_center, j.job_title, u.employee_id FROM wd_user_profile u LEFT JOIN wd_job_level j ON u.job_level_id = j.id WHERE u.gad_id = ?', [_upn]);
+            if (profRes.length && profRes[0].values.length) {
+                var p = profRes[0].values[0];
+                profileInfo = { lastName: fmtVal(p[0]), firstName: fmtVal(p[1]), cc: fmtVal(p[2]), jobTitle: fmtVal(p[3]), empNo: fmtVal(p[4]) };
+            }
             var signerResults = _db.exec(_signerDetailSql, [_upn, changeDate, changeBy]);
             html += '<div class="detail-section"><div class="detail-section-title">Signer Profile</div>';
-            var signerLabels = ['BU Security Group', 'BU Name', 'Pickup Cheque', 'Temporary', 'Temp Start Date', 'Temp End Date', 'Status'];
+            var profilePrefix = '<table class="detail-table" style="margin-bottom:0;"><tbody>' +
+                '<tr><th>GAD ID</th><td>' + fmtVal(_upn) + '</td></tr>' +
+                '<tr><th>Last Name</th><td>' + profileInfo.lastName + '</td></tr>' +
+                '<tr><th>First Name</th><td>' + profileInfo.firstName + '</td></tr>';
+            var signerLabels = ['BU Security Group', 'BU Name', 'Pickup Cheque', 'Status'];
+            var profileSuffix = '</tbody></table>';
             if (signerResults.length > 0 && signerResults[0].values.length > 0) {
                 signerResults[0].values.forEach(function(row) {
                     var action = row[2];
-                    var oldVals = row.slice(3, 10), newVals = row.slice(10, 17);
-                    html += renderSignerDetailTable(action, formatSignerRow(oldVals), formatSignerRow(newVals), signerLabels);
+                    var oldVals = row.slice(3, 7), newVals = row.slice(7, 11);
+                    html += profilePrefix;
+                    html += renderSignerDetailTableRows(action, formatSignerRow(oldVals), formatSignerRow(newVals), signerLabels);
+                    html += '<tr><th>Signers Cost Center</th><td>' + profileInfo.cc + '</td></tr>' +
+                        '<tr><th>Job Title</th><td>' + profileInfo.jobTitle + '</td></tr>' +
+                        '<tr><th>Employee No.</th><td>' + profileInfo.empNo + '</td></tr>';
+                    html += profileSuffix;
                 });
             } else {
                 // No audit_signer change — show current signer as UNCHANGE snapshot
                 var ucSigner = _db.exec(_unchangedSignerSql, [_upn]);
                 if (ucSigner.length > 0 && ucSigner[0].values.length > 0) {
                     var sv = formatSignerRow(ucSigner[0].values[0]);
-                    html += renderSignerDetailTable('UNCHANGE', sv, sv, signerLabels);
+                    html += profilePrefix;
+                    html += renderSignerDetailTableRows('UNCHANGE', sv, sv, signerLabels);
+                    html += '<tr><th>Signers Cost Center</th><td>' + profileInfo.cc + '</td></tr>' +
+                        '<tr><th>Job Title</th><td>' + profileInfo.jobTitle + '</td></tr>' +
+                        '<tr><th>Employee No.</th><td>' + profileInfo.empNo + '</td></tr>';
+                    html += profileSuffix;
                 } else {
                     html += '<span class="detail-none">No signer profile data</span>';
                 }
@@ -384,6 +384,13 @@ UNCHANGE  = grey background, blue-grey badge, current values</pre>
         function renderSignerDetailTable(action, od, nd, labels) {
             var html = '<table class="detail-table" style="margin-bottom:10px;"><tbody>';
             html += '<tr><th>Change Type</th><td>' + makeActionBadge(action) + '</td></tr>';
+            html += renderSignerDetailTableRows(action, od, nd, labels);
+            html += '</tbody></table>';
+            return html;
+        }
+
+        function renderSignerDetailTableRows(action, od, nd, labels) {
+            var html = '';
             if (action === 'UPDATE') {
                 for (var i = 0; i < labels.length; i++) {
                     var ch = od[i] !== nd[i];
@@ -400,7 +407,6 @@ UNCHANGE  = grey background, blue-grey badge, current values</pre>
             } else {
                 for (var i = 0; i < labels.length; i++) html += '<tr><th>' + labels[i] + '</th><td>' + od[i] + '</td></tr>';
             }
-            html += '</tbody></table>';
             return html;
         }
 
@@ -438,7 +444,7 @@ UNCHANGE  = grey background, blue-grey badge, current values</pre>
             loadAll();
         })();
 
-        function doSearch() { var p = document.getElementById('searchPanel'); p.style.display = (p.style.display === 'none') ? 'block' : 'none'; }
+
         function filterAll() { loadAll(); }
         function clearFilters() {
             document.getElementById('fChangeDate').value = '';
@@ -449,8 +455,8 @@ UNCHANGE  = grey background, blue-grey badge, current values</pre>
 
         // ===================== EXPORT =====================
         var _signerExportSql = 'SELECT id, gad_id, action, ' +
-            'old_bu_security_group, old_bu_name, old_pickup_cheque, old_temp, old_temp_start_date, old_temp_end_date, old_status, ' +
-            'new_bu_security_group, new_bu_name, new_pickup_cheque, new_temp, new_temp_start_date, new_temp_end_date, new_status, ' +
+            'old_bu_security_group, old_bu_name, old_pickup_cheque, old_status, ' +
+            'new_bu_security_group, new_bu_name, new_pickup_cheque, new_status, ' +
             'change_by, change_date FROM audit_signer';
 
         var _limitExportSql = 'SELECT id, signer_limit_id, gad_id, action, ' +
@@ -492,9 +498,9 @@ UNCHANGE  = grey background, blue-grey badge, current values</pre>
             if (!_db || !_upn) return;
             var ew = buildExportWhere();
             var results = _db.exec(_signerExportSql + ew.where + ' ORDER BY change_date DESC, id DESC', ew.params);
-            var csv = ['"Change Date","Change Type","Changed By","Row","BU Security Group","BU Name","Pickup Cheque","Temporary","Temp Start Date","Temp End Date","Status"'];
+            var csv = ['"Change Date","Change Type","Changed By","Row","BU Security Group","BU Name","Pickup Cheque","Status"'];
             if (results.length > 0) results[0].values.forEach(function(row) {
-                var action = row[2], cd = row[18] || '', cb = row[17] || '', ov = row.slice(3,10), nv = row.slice(10,17);
+                var action = row[2], cd = row[12] || '', cb = row[11] || '', ov = row.slice(3,7), nv = row.slice(7,11);
                 if (action === 'UPDATE') { var od = formatSignerRow(ov), nd = formatSignerRow(nv); csv.push([cd,action,cb,'Before'].concat(od).map(csvQuote).join(',')); csv.push([cd,action,cb,'After'].concat(nd).map(csvQuote).join(',')); }
                 else if (action === 'INSERT') { var nd = formatSignerRow(nv); csv.push([cd,action,cb,'New'].concat(nd).map(csvQuote).join(',')); }
                 else if (action === 'DELETE') { var od = formatSignerRow(ov); csv.push([cd,action,cb,'Deleted'].concat(od).map(csvQuote).join(',')); }
@@ -521,7 +527,9 @@ UNCHANGE  = grey background, blue-grey badge, current values</pre>
             downloadCsv(csv, 'audit_signer_limits_' + _upn);
         }
 
-        document.getElementById('searchPanel').addEventListener('keydown', function(e) { if (e.key === 'Enter') { e.preventDefault(); filterAll(); } });
+        document.querySelectorAll('.filter-row input, .filter-row select').forEach(function(el) {
+            el.addEventListener('keydown', function(e) { if (e.key === 'Enter') { e.preventDefault(); filterAll(); } });
+        });
     </script>
 </body>
 </html>
